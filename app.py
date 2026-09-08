@@ -41,114 +41,646 @@ st.markdown(
     """
 <style>
 
-    /* =========================
-       MAIN APP
-       ========================= */
+    /* ========================================================
+       GOOGLE FONT
+       ======================================================== */
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+
+    /* ========================================================
+       GLOBAL APP
+       ======================================================== */
 
     .stApp {
-        background-color: #07091a;
+        background:
+            radial-gradient(
+                circle at 15% 15%,
+                rgba(78, 55, 180, 0.22) 0%,
+                transparent 30%
+            ),
+            radial-gradient(
+                circle at 85% 20%,
+                rgba(0, 140, 255, 0.16) 0%,
+                transparent 28%
+            ),
+            radial-gradient(
+                circle at 50% 90%,
+                rgba(116, 44, 255, 0.12) 0%,
+                transparent 30%
+            ),
+            linear-gradient(
+                135deg,
+                #030511 0%,
+                #070a1f 45%,
+                #040718 100%
+            );
+
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
     }
+
+
+    /* ========================================================
+       QUANTUM GRID BACKGROUND
+       ======================================================== */
+
+    .stApp::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+
+        background-image:
+            linear-gradient(
+                rgba(100, 110, 255, 0.045) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                90deg,
+                rgba(100, 110, 255, 0.045) 1px,
+                transparent 1px
+            );
+
+        background-size: 45px 45px;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+
+    /* ========================================================
+       QUANTUM GLOW
+       ======================================================== */
+
+    .stApp::after {
+        content: "";
+        position: fixed;
+        width: 500px;
+        height: 500px;
+
+        left: 50%;
+        top: 50%;
+
+        transform: translate(-50%, -50%);
+
+        background:
+            radial-gradient(
+                circle,
+                rgba(90, 80, 255, 0.08) 0%,
+                transparent 65%
+            );
+
+        filter: blur(20px);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+
+    /* ========================================================
+       MAIN CONTENT
+       ======================================================== */
 
     [data-testid="stMain"] {
-        background-color: #07091a;
+        background: transparent;
+    }
+
+    .main .block-container {
+        position: relative;
+        z-index: 2;
+        padding-top: 1.5rem;
+        padding-bottom: 3rem;
+        max-width: 1250px;
     }
 
 
-    /* =========================
+    /* ========================================================
        SIDEBAR
-       ========================= */
+       ======================================================== */
 
     [data-testid="stSidebar"] {
-        background-color: #08091b;
+        background:
+            linear-gradient(
+                180deg,
+                #060817 0%,
+                #080b20 50%,
+                #050714 100%
+            );
+
+        border-right: 1px solid rgba(125, 105, 255, 0.20);
+    }
+
+    [data-testid="stSidebar"] > div:first-child {
+        background: transparent;
     }
 
     [data-testid="stSidebar"] h1 {
-        color: white;
+        color: #ffffff !important;
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        letter-spacing: 1px;
+    }
+
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        color: #e8e9ff !important;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+
+    [data-testid="stSidebar"] p {
+        color: #9fa6c7;
     }
 
 
-    /* =========================
-       BUTTONS
-       ========================= */
+    /* ========================================================
+       SIDEBAR BUTTONS
+       ======================================================== */
 
     [data-testid="stSidebar"] .stButton > button {
         width: 100%;
-        border-radius: 8px;
-        min-height: 42px;
-        background-color: #292b37;
-        border: 1px solid #3c3e50;
-        color: white;
+        min-height: 44px;
+
+        border-radius: 10px;
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(36, 39, 65, 0.95),
+                rgba(21, 24, 45, 0.95)
+            );
+
+        border: 1px solid rgba(111, 105, 180, 0.25);
+
+        color: #e9eaff;
+
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+
+        transition:
+            all 0.2s ease;
+
+        box-shadow:
+            0 4px 15px rgba(0, 0, 0, 0.18);
     }
 
     [data-testid="stSidebar"] .stButton > button:hover {
-        background-color: #363847;
-        border-color: #6c63ff;
+        background:
+            linear-gradient(
+                135deg,
+                rgba(77, 66, 150, 0.75),
+                rgba(31, 47, 94, 0.85)
+            );
+
+        border-color: rgba(125, 110, 255, 0.70);
+
+        color: white;
+
+        transform: translateY(-1px);
+
+        box-shadow:
+            0 6px 20px rgba(84, 65, 255, 0.20);
     }
 
 
-    /* =========================
-       HERO
-       ========================= */
+    /* ========================================================
+       SIDEBAR DIVIDERS
+       ======================================================== */
+
+    [data-testid="stSidebar"] hr {
+        border-color: rgba(120, 120, 170, 0.14);
+    }
+
+
+    /* ========================================================
+       HERO BOX
+       ======================================================== */
 
     .hero-box {
-        background-color: #191b25;
-        border: 1px solid #292c3a;
-        border-radius: 15px;
-        padding: 55px 20px;
+        position: relative;
+        overflow: hidden;
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(24, 28, 61, 0.88),
+                rgba(9, 13, 36, 0.92)
+            );
+
+        border:
+            1px solid rgba(120, 105, 255, 0.30);
+
+        border-radius: 24px;
+
+        padding: 55px 25px;
+
         text-align: center;
-        margin-top: 25px;
-        margin-bottom: 25px;
+
+        margin-top: 15px;
+        margin-bottom: 28px;
+
+        box-shadow:
+            0 20px 60px rgba(0, 0, 0, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
+
+
+    /* Decorative quantum glow */
+
+    .hero-box::before {
+        content: "";
+
+        position: absolute;
+
+        width: 300px;
+        height: 300px;
+
+        left: -100px;
+        top: -150px;
+
+        background:
+            radial-gradient(
+                circle,
+                rgba(102, 74, 255, 0.22),
+                transparent 70%
+            );
+
+        pointer-events: none;
+    }
+
+    .hero-box::after {
+        content: "";
+
+        position: absolute;
+
+        width: 300px;
+        height: 300px;
+
+        right: -120px;
+        bottom: -160px;
+
+        background:
+            radial-gradient(
+                circle,
+                rgba(0, 174, 255, 0.18),
+                transparent 70%
+            );
+
+        pointer-events: none;
+    }
+
+
+    /* ========================================================
+       HERO ICON
+       ======================================================== */
 
     .hero-icon {
-        font-size: 48px;
+        font-size: 52px;
+
+        text-shadow:
+            0 0 10px rgba(123, 103, 255, 0.9),
+            0 0 25px rgba(66, 180, 255, 0.5);
+
+        position: relative;
+        z-index: 2;
     }
 
+
+    /* ========================================================
+       HERO TITLE
+       ======================================================== */
+
     .hero-title {
-        font-size: 42px;
+        font-family: 'Space Grotesk', sans-serif;
+
+        font-size: 44px;
+
         font-weight: 700;
-        color: white;
+
+        letter-spacing: -1px;
+
+        color: #ffffff;
+
         margin-top: 10px;
+
+        position: relative;
+        z-index: 2;
+
+        text-shadow:
+            0 0 25px rgba(120, 105, 255, 0.30);
     }
+
+
+    /* ========================================================
+       HERO SUBTITLE
+       ======================================================== */
 
     .hero-subtitle {
         font-size: 17px;
-        color: #aeb1c5;
+
+        color: #aeb5d8;
+
         margin-top: 10px;
+
+        position: relative;
+        z-index: 2;
     }
+
+
+    /* ========================================================
+       ONLINE STATUS
+       ======================================================== */
 
     .online {
-        color: #42e88b;
-        font-size: 14px;
+        color: #45f29a;
+
+        font-size: 13px;
+
+        font-weight: 600;
+
+        letter-spacing: 1px;
+
         margin-top: 18px;
+
+        position: relative;
+        z-index: 2;
+
+        text-shadow:
+            0 0 12px rgba(69, 242, 154, 0.50);
     }
 
 
-    /* =========================
+    /* ========================================================
        LEARNING BOX
-       ========================= */
+       ======================================================== */
 
     .learning-box {
-        background-color: #10294e;
-        border: 1px solid #193d70;
-        border-radius: 10px;
+        background:
+            linear-gradient(
+                135deg,
+                rgba(22, 48, 94, 0.85),
+                rgba(11, 28, 58, 0.85)
+            );
+
+        border:
+            1px solid rgba(65, 139, 255, 0.30);
+
+        border-radius: 12px;
+
         padding: 16px;
+
         margin-top: 20px;
+
+        box-shadow:
+            0 8px 25px rgba(0, 0, 0, 0.20);
     }
 
 
-    /* =========================
-       LOGIN
-       ========================= */
+    /* ========================================================
+       LOGIN BOX
+       ======================================================== */
 
     .login-box {
+        position: relative;
+        overflow: hidden;
+
         max-width: 550px;
-        margin: 100px auto;
-        background-color: #191b25;
-        border: 1px solid #292c3a;
-        border-radius: 15px;
-        padding: 40px;
+
+        margin: 90px auto 30px auto;
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(25, 30, 65, 0.94),
+                rgba(9, 12, 31, 0.96)
+            );
+
+        border:
+            1px solid rgba(120, 105, 255, 0.35);
+
+        border-radius: 24px;
+
+        padding: 45px;
+
         text-align: center;
+
+        box-shadow:
+            0 25px 80px rgba(0, 0, 0, 0.50),
+            0 0 50px rgba(74, 65, 255, 0.08);
+
+        backdrop-filter: blur(15px);
+    }
+
+    .login-box::before {
+        content: "";
+
+        position: absolute;
+
+        width: 220px;
+        height: 220px;
+
+        top: -100px;
+        left: -80px;
+
+        background:
+            radial-gradient(
+                circle,
+                rgba(92, 68, 255, 0.20),
+                transparent 70%
+            );
+    }
+
+    .login-box h1 {
+        font-family: 'Space Grotesk', sans-serif;
+
+        color: white;
+
+        font-size: 36px;
+    }
+
+    .login-box p {
+        color: #aeb5d8;
+        font-size: 16px;
+    }
+
+
+    /* ========================================================
+       TEXT INPUTS
+       ======================================================== */
+
+    .stTextInput input {
+        background-color: rgba(10, 13, 32, 0.85) !important;
+
+        color: white !important;
+
+        border:
+            1px solid rgba(100, 100, 160, 0.30) !important;
+
+        border-radius: 10px !important;
+
+        min-height: 45px;
+    }
+
+    .stTextInput input:focus {
+        border-color:
+            rgba(112, 96, 255, 0.80) !important;
+
+        box-shadow:
+            0 0 15px rgba(96, 78, 255, 0.15) !important;
+    }
+
+
+    /* ========================================================
+       LOGIN BUTTON
+       ======================================================== */
+
+    .stButton > button {
+        border-radius: 10px;
+
+        min-height: 45px;
+
+        font-weight: 600;
+
+        background:
+            linear-gradient(
+                135deg,
+                #5146d8,
+                #2869d8
+            );
+
+        border: 1px solid rgba(150, 140, 255, 0.35);
+
+        color: white;
+
+        box-shadow:
+            0 8px 25px rgba(61, 75, 220, 0.20);
+
+        transition: all 0.2s ease;
+    }
+
+    .stButton > button:hover {
+        transform: translateY(-1px);
+
+        box-shadow:
+            0 10px 30px rgba(61, 75, 220, 0.35);
+    }
+
+
+    /* ========================================================
+       CHAT MESSAGES
+       ======================================================== */
+
+    [data-testid="stChatMessage"] {
+        border-radius: 15px;
+
+        margin-bottom: 12px;
+    }
+
+
+    /* ========================================================
+       CHAT INPUT
+       ======================================================== */
+
+    [data-testid="stChatInput"] {
+        border-radius: 15px;
+    }
+
+    [data-testid="stChatInput"] textarea {
+        background-color: rgba(11, 15, 36, 0.95) !important;
+
+        color: white !important;
+
+        border:
+            1px solid rgba(108, 99, 255, 0.35) !important;
+
+        border-radius: 15px !important;
+    }
+
+
+    /* ========================================================
+       EXPANDER
+       ======================================================== */
+
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        background-color: rgba(18, 21, 43, 0.80);
+
+        border:
+            1px solid rgba(100, 100, 160, 0.20);
+
+        border-radius: 10px;
+    }
+
+
+    /* ========================================================
+       INFO BOX
+       ======================================================== */
+
+    [data-testid="stSidebar"] .stAlert {
+        background:
+            linear-gradient(
+                135deg,
+                rgba(20, 42, 80, 0.85),
+                rgba(12, 28, 58, 0.85)
+            );
+
+        border:
+            1px solid rgba(55, 125, 220, 0.30);
+
+        border-radius: 12px;
+    }
+
+
+    /* ========================================================
+       CHAT TEXT
+       ======================================================== */
+
+    [data-testid="stChatMessage"] p {
+        line-height: 1.65;
+    }
+
+
+    /* ========================================================
+       SCROLLBAR
+       ======================================================== */
+
+    ::-webkit-scrollbar {
+        width: 7px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #050713;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #35365b;
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #5a55a0;
+    }
+
+
+    /* ========================================================
+       RESPONSIVE
+       ======================================================== */
+
+    @media (max-width: 768px) {
+
+        .hero-title {
+            font-size: 32px;
+        }
+
+        .hero-subtitle {
+            font-size: 15px;
+        }
+
+        .hero-box {
+            padding: 40px 15px;
+        }
+
+        .login-box {
+            margin: 50px auto;
+            padding: 30px 20px;
+        }
+
     }
 
 </style>
@@ -232,9 +764,19 @@ if not st.session_state.logged_in:
     st.markdown(
         """
 <div class="login-box">
-    <div class="hero-icon">⚛️</div>
-    <h1>Quantum Lab</h1>
-    <p>AI-Powered Learning Space</p>
+
+    <div class="hero-icon">
+        ⚛️
+    </div>
+
+    <h1>
+        Quantum Lab
+    </h1>
+
+    <p>
+        AI-Powered Learning Space
+    </p>
+
 </div>
 """,
         unsafe_allow_html=True
@@ -585,4 +1127,3 @@ if question:
     st.session_state.chats[current_chat] = messages
 
     st.rerun()
-

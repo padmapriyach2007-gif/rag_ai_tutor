@@ -32,7 +32,7 @@ st.markdown(
 
     /* =====================================================
        GLOBAL
-    ===================================================== */
+       ===================================================== */
 
     .stApp {
         background:
@@ -60,10 +60,9 @@ st.markdown(
         background: transparent;
     }
 
-
     /* =====================================================
        SIDEBAR
-    ===================================================== */
+       ===================================================== */
 
     [data-testid="stSidebar"] {
         background: rgba(8, 8, 24, 0.96);
@@ -92,10 +91,9 @@ st.markdown(
         margin-top: 5px;
     }
 
-
     /* =====================================================
        USER CARD
-    ===================================================== */
+       ===================================================== */
 
     .user-card {
         background: linear-gradient(
@@ -122,10 +120,9 @@ st.markdown(
         word-break: break-word;
     }
 
-
     /* =====================================================
        SIDE CARDS
-    ===================================================== */
+       ===================================================== */
 
     .side-card {
         background: linear-gradient(
@@ -151,10 +148,9 @@ st.markdown(
         line-height: 1.5;
     }
 
-
     /* =====================================================
        MAIN HEADER
-    ===================================================== */
+       ===================================================== */
 
     .hero {
         text-align: center;
@@ -221,10 +217,9 @@ st.markdown(
         font-weight: 600;
     }
 
-
     /* =====================================================
        WELCOME CARD
-    ===================================================== */
+       ===================================================== */
 
     .welcome-card {
         max-width: 850px;
@@ -262,10 +257,9 @@ st.markdown(
         font-size: 14px;
     }
 
-
     /* =====================================================
        CHAT
-    ===================================================== */
+       ===================================================== */
 
     [data-testid="stChatMessage"] {
         border-radius: 18px;
@@ -278,10 +272,9 @@ st.markdown(
         line-height: 1.65;
     }
 
-
     /* =====================================================
        CHAT INPUT
-    ===================================================== */
+       ===================================================== */
 
     [data-testid="stChatInput"] {
         border-radius: 18px;
@@ -306,10 +299,9 @@ st.markdown(
         color: white;
     }
 
-
     /* =====================================================
        BUTTONS
-    ===================================================== */
+       ===================================================== */
 
     .stButton > button {
         border-radius: 12px;
@@ -343,10 +335,9 @@ st.markdown(
         transform: translateY(-1px);
     }
 
-
     /* =====================================================
        DIVIDER
-    ===================================================== */
+       ===================================================== */
 
     .glow-line {
         height: 1px;
@@ -362,10 +353,9 @@ st.markdown(
         );
     }
 
-
     /* =====================================================
        FOOTER
-    ===================================================== */
+       ===================================================== */
 
     .footer {
         text-align: center;
@@ -402,6 +392,9 @@ if "messages" not in st.session_state:
 
 if "sessions" not in st.session_state:
     st.session_state.sessions = []
+
+if "pending_question" not in st.session_state:
+    st.session_state.pending_question = None
 
 
 # =========================================================
@@ -470,9 +463,7 @@ if not st.session_state.logged_in:
 
             if not email.strip():
 
-                st.error(
-                    "Please enter your email."
-                )
+                st.error("Please enter your email.")
 
             else:
 
@@ -490,18 +481,12 @@ if not st.session_state.logged_in:
                     st.session_state.user_id = user_id
                     st.session_state.user_email = clean_email
 
-                    # -------------------------------------------------
-                    # LOAD USER'S PREVIOUS CHAT SESSIONS
-                    # -------------------------------------------------
-
+                    # Load previous chat sessions
                     sessions = get_user_sessions(user_id)
 
                     st.session_state.sessions = sessions
 
-                    # -------------------------------------------------
-                    # RESTORE LATEST CHAT
-                    # -------------------------------------------------
-
+                    # Restore latest chat
                     if sessions:
 
                         latest_session = sessions[0]
@@ -531,10 +516,7 @@ if not st.session_state.logged_in:
                             for msg in history
                         ]
 
-                    # -------------------------------------------------
-                    # CREATE FIRST CHAT
-                    # -------------------------------------------------
-
+                    # No previous chat
                     else:
 
                         new_session_id = create_chat_session(
@@ -590,7 +572,6 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-
     # =====================================================
     # CURRENT USER
     # =====================================================
@@ -611,7 +592,6 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-
 
     # =====================================================
     # NEW CHAT
@@ -649,18 +629,27 @@ with st.sidebar:
                 f"Could not create chat: {str(e)}"
             )
 
-
     # =====================================================
     # PREVIOUS CHATS
     # =====================================================
 
     st.markdown("### 💬 Your Chats")
 
-    sessions = get_user_sessions(
-        st.session_state.user_id
-    )
+    try:
 
-    st.session_state.sessions = sessions
+        sessions = get_user_sessions(
+            st.session_state.user_id
+        )
+
+        st.session_state.sessions = sessions
+
+    except Exception as e:
+
+        sessions = []
+
+        st.error(
+            f"Could not load chats: {str(e)}"
+        )
 
     if sessions:
 
@@ -673,9 +662,12 @@ with st.sidebar:
 
             session_id = session["session_id"]
 
+            # Make sure Streamlit button keys are unique
+            button_key = f"chat_{session_id}"
+
             if st.button(
                 f"💬 {session_title}",
-                key=f"chat_{session_id}",
+                key=button_key,
                 use_container_width=True
             ):
 
@@ -716,7 +708,6 @@ with st.sidebar:
             "No previous chats yet."
         )
 
-
     # =====================================================
     # DELETE CURRENT CHAT
     # =====================================================
@@ -747,10 +738,7 @@ with st.sidebar:
 
                 st.session_state.sessions = sessions
 
-                # ---------------------------------------------
                 # Open another existing chat
-                # ---------------------------------------------
-
                 if sessions:
 
                     next_session_id = sessions[0][
@@ -778,10 +766,7 @@ with st.sidebar:
                         for msg in history
                     ]
 
-                # ---------------------------------------------
-                # No chats left -> create new chat
-                # ---------------------------------------------
-
+                # No chats left
                 else:
 
                     new_session_id = create_chat_session(
@@ -803,7 +788,6 @@ with st.sidebar:
                     f"Delete error: {str(e)}"
                 )
 
-
     # =====================================================
     # CLEAR CURRENT CONVERSATION
     # =====================================================
@@ -813,13 +797,12 @@ with st.sidebar:
         use_container_width=True
     ):
 
-        # Clears only the displayed conversation.
-        # Database history remains available.
+        # Only clears the current Streamlit display.
+        # Database messages remain stored.
 
         st.session_state.messages = []
 
         st.rerun()
-
 
     # =====================================================
     # LOGOUT
@@ -838,7 +821,6 @@ with st.sidebar:
         st.session_state.sessions = []
 
         st.rerun()
-
 
     # =====================================================
     # INFORMATION
@@ -860,7 +842,6 @@ with st.sidebar:
 
         </div>
 
-
         <div class="side-card">
 
             <div class="side-card-title">
@@ -874,7 +855,6 @@ with st.sidebar:
 
         </div>
 
-
         <div class="side-card">
 
             <div class="side-card-title">
@@ -887,7 +867,6 @@ with st.sidebar:
             </div>
 
         </div>
-
 
         <div class="side-card">
 
@@ -1050,11 +1029,11 @@ prompt = st.chat_input(
 # HANDLE EXAMPLE BUTTON
 # =========================================================
 
-if "pending_question" in st.session_state:
+if st.session_state.pending_question:
 
     prompt = st.session_state.pending_question
 
-    del st.session_state.pending_question
+    st.session_state.pending_question = None
 
 
 # =========================================================
@@ -1086,7 +1065,6 @@ if prompt:
 
             st.stop()
 
-
     # -----------------------------------------------------
     # Display user message
     # -----------------------------------------------------
@@ -1103,10 +1081,7 @@ if prompt:
         avatar="👩‍💻"
     ):
 
-        st.markdown(
-            prompt
-        )
-
+        st.markdown(prompt)
 
     # -----------------------------------------------------
     # Generate AI response
@@ -1117,20 +1092,14 @@ if prompt:
         avatar="⚛️"
     ):
 
-        with st.spinner(
-            "🧠 Thinking..."
-        ):
+        with st.spinner("🧠 Thinking..."):
 
             try:
 
                 response = answer_question(
                     query=prompt,
-                    session_id=(
-                        st.session_state.session_id
-                    ),
-                    user_id=(
-                        st.session_state.user_id
-                    )
+                    session_id=st.session_state.session_id,
+                    user_id=st.session_state.user_id
                 )
 
             except Exception as e:
@@ -1141,10 +1110,7 @@ if prompt:
                     f"**Error:** `{str(e)}`"
                 )
 
-        st.markdown(
-            response
-        )
-
+        st.markdown(response)
 
     # -----------------------------------------------------
     # Store assistant message locally
@@ -1156,7 +1122,6 @@ if prompt:
             "content": response
         }
     )
-
 
     # -----------------------------------------------------
     # Refresh session list

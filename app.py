@@ -1,1127 +1,544 @@
 import streamlit as st
+from openai import OpenAI
+import os
 
-from rag_engine import (
-    answer_question,
-    get_or_create_user,
-    create_chat_session,
-    get_user_sessions,
-    restore_chat,
-    delete_chat,
-)
-
-
-# =========================================================
+# ============================================================
 # PAGE CONFIG
-# =========================================================
+# ============================================================
 
 st.set_page_config(
-    page_title="Quantum Lab | AI Tutor",
+    page_title="Quantum Lab",
     page_icon="⚛️",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
 
-# =========================================================
+# ============================================================
+# SESSION STATE
+# ============================================================
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "user_email" not in st.session_state:
+    st.session_state.user_email = ""
+
+if "chats" not in st.session_state:
+    st.session_state.chats = {
+        "Quantum Learning": []
+    }
+
+if "current_chat" not in st.session_state:
+    st.session_state.current_chat = "Quantum Learning"
+
+
+# ============================================================
 # CUSTOM CSS
-# =========================================================
+# ============================================================
 
 st.markdown(
     """
-    <style>
+<style>
 
-    /* =====================================================
-       GLOBAL
-    ===================================================== */
+    /* =========================
+       MAIN APP
+       ========================= */
 
     .stApp {
-        background:
-            radial-gradient(
-                circle at 10% 10%,
-                rgba(110, 80, 255, 0.18),
-                transparent 28%
-            ),
-            radial-gradient(
-                circle at 90% 20%,
-                rgba(0, 200, 255, 0.12),
-                transparent 30%
-            ),
-            linear-gradient(
-                135deg,
-                #070714 0%,
-                #0b0b1f 50%,
-                #080817 100%
-            );
-
-        color: #f5f5ff;
+        background-color: #07091a;
     }
 
-    [data-testid="stHeader"] {
-        background: transparent;
+    [data-testid="stMain"] {
+        background-color: #07091a;
     }
 
-    /* =====================================================
+
+    /* =========================
        SIDEBAR
-    ===================================================== */
+       ========================= */
 
     [data-testid="stSidebar"] {
-        background: rgba(8, 8, 24, 0.96);
-        border-right: 1px solid rgba(150, 120, 255, 0.18);
+        background-color: #08091b;
     }
 
-    .sidebar-brand {
-        text-align: center;
-        padding: 10px 5px 25px 5px;
-    }
-
-    .sidebar-logo {
-        font-size: 48px;
-        margin-bottom: 5px;
-    }
-
-    .sidebar-title {
-        font-size: 22px;
-        font-weight: 800;
-        letter-spacing: 1px;
-    }
-
-    .sidebar-subtitle {
-        color: #9999bb;
-        font-size: 13px;
-        margin-top: 5px;
-    }
-
-    /* =====================================================
-       USER CARD
-    ===================================================== */
-
-    .user-card {
-        background: linear-gradient(
-            145deg,
-            rgba(100, 80, 220, 0.20),
-            rgba(20, 20, 55, 0.55)
-        );
-
-        border: 1px solid rgba(130, 110, 255, 0.25);
-        border-radius: 15px;
-        padding: 14px;
-        margin: 10px 0 18px 0;
-    }
-
-    .user-title {
-        font-weight: 700;
-        font-size: 14px;
-        margin-bottom: 5px;
-    }
-
-    .user-email {
-        color: #aaaac4;
-        font-size: 12px;
-        word-break: break-word;
-    }
-
-    /* =====================================================
-       SIDE CARDS
-    ===================================================== */
-
-    .side-card {
-        background: linear-gradient(
-            145deg,
-            rgba(100, 80, 220, 0.15),
-            rgba(20, 20, 55, 0.45)
-        );
-
-        border: 1px solid rgba(130, 110, 255, 0.22);
-        border-radius: 15px;
-        padding: 15px;
-        margin: 12px 0;
-    }
-
-    .side-card-title {
-        font-weight: 700;
-        margin-bottom: 7px;
-    }
-
-    .side-card-text {
-        color: #aaaac4;
-        font-size: 13px;
-        line-height: 1.5;
-    }
-
-    /* =====================================================
-       MAIN HERO
-    ===================================================== */
-
-    .hero {
-        text-align: center;
-        padding: 35px 15px 20px 15px;
-    }
-
-    .quantum-symbol {
-        font-size: 58px;
-        line-height: 1;
-        margin-bottom: 12px;
-
-        filter:
-            drop-shadow(
-                0 0 18px
-                rgba(120, 100, 255, 0.7)
-            );
-    }
-
-    .hero-title {
-        font-size: clamp(32px, 5vw, 54px);
-        font-weight: 850;
-        letter-spacing: -1px;
-
-        background:
-            linear-gradient(
-                90deg,
-                #ffffff,
-                #b9b1ff,
-                #8be9ff
-            );
-
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-
-    .hero-subtitle {
-        color: #a9a9c4;
-        font-size: 16px;
-        margin-top: 10px;
-    }
-
-    .status-pill {
-        display: inline-block;
-        margin-top: 18px;
-        padding: 7px 15px;
-        border-radius: 30px;
-
-        background: rgba(80, 220, 160, 0.08);
-
-        border: 1px solid rgba(80, 220, 160, 0.25);
-
-        color: #8ff0bd;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
-    /* =====================================================
-       WELCOME CARD
-    ===================================================== */
-
-    .welcome-card {
-        max-width: 850px;
-        margin: 20px auto 25px auto;
-        padding: 28px;
-        border-radius: 22px;
-
-        background: linear-gradient(
-            145deg,
-            rgba(40, 35, 85, 0.65),
-            rgba(15, 15, 38, 0.78)
-        );
-
-        border: 1px solid rgba(140, 120, 255, 0.20);
-
-        box-shadow:
-            0 20px 60px
-            rgba(0, 0, 0, 0.25);
-    }
-
-    .welcome-title {
-        font-size: 23px;
-        font-weight: 750;
-        margin-bottom: 8px;
-    }
-
-    .welcome-text {
-        color: #b4b4cc;
-        line-height: 1.6;
-        font-size: 14px;
-    }
-
-    /* =====================================================
-       CHAT
-    ===================================================== */
-
-    [data-testid="stChatMessage"] {
-        border-radius: 18px;
-        padding: 5px 10px;
-        margin-bottom: 8px;
-    }
-
-    [data-testid="stChatMessageContent"] {
-        font-size: 15px;
-        line-height: 1.65;
-    }
-
-    /* =====================================================
-       CHAT INPUT
-    ===================================================== */
-
-    [data-testid="stChatInput"] {
-        border-radius: 18px;
-    }
-
-    [data-testid="stChatInput"] textarea {
-        background: rgba(20, 20, 45, 0.85);
-
-        border: 1px solid rgba(140, 120, 255, 0.25);
-
-        border-radius: 16px;
+    [data-testid="stSidebar"] h1 {
         color: white;
     }
 
-    /* =====================================================
+
+    /* =========================
        BUTTONS
-    ===================================================== */
+       ========================= */
 
-    .stButton > button {
-        border-radius: 12px;
-
-        border: 1px solid rgba(140, 120, 255, 0.25);
-
-        background: rgba(45, 40, 85, 0.55);
-
-        color: #eeeeff;
-        transition: all 0.2s ease;
-    }
-
-    .stButton > button:hover {
-        border-color: rgba(160, 140, 255, 0.65);
-        transform: translateY(-1px);
-    }
-
-    /* =====================================================
-       DIVIDER
-    ===================================================== */
-
-    .glow-line {
-        height: 1px;
+    [data-testid="stSidebar"] .stButton > button {
         width: 100%;
-        margin: 15px 0 25px 0;
-
-        background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(140, 120, 255, 0.5),
-            rgba(80, 210, 255, 0.5),
-            transparent
-        );
+        border-radius: 8px;
+        min-height: 42px;
+        background-color: #292b37;
+        border: 1px solid #3c3e50;
+        color: white;
     }
 
-    /* =====================================================
-       FOOTER
-    ===================================================== */
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background-color: #363847;
+        border-color: #6c63ff;
+    }
 
-    .footer {
+
+    /* =========================
+       HERO
+       ========================= */
+
+    .hero-box {
+        background-color: #191b25;
+        border: 1px solid #292c3a;
+        border-radius: 15px;
+        padding: 55px 20px;
         text-align: center;
-        color: #666681;
-        font-size: 11px;
-        margin-top: 35px;
-        padding-bottom: 15px;
+        margin-top: 25px;
+        margin-bottom: 25px;
     }
 
-    </style>
-    """,
-    unsafe_allow_html=True,
+    .hero-icon {
+        font-size: 48px;
+    }
+
+    .hero-title {
+        font-size: 42px;
+        font-weight: 700;
+        color: white;
+        margin-top: 10px;
+    }
+
+    .hero-subtitle {
+        font-size: 17px;
+        color: #aeb1c5;
+        margin-top: 10px;
+    }
+
+    .online {
+        color: #42e88b;
+        font-size: 14px;
+        margin-top: 18px;
+    }
+
+
+    /* =========================
+       LEARNING BOX
+       ========================= */
+
+    .learning-box {
+        background-color: #10294e;
+        border: 1px solid #193d70;
+        border-radius: 10px;
+        padding: 16px;
+        margin-top: 20px;
+    }
+
+
+    /* =========================
+       LOGIN
+       ========================= */
+
+    .login-box {
+        max-width: 550px;
+        margin: 100px auto;
+        background-color: #191b25;
+        border: 1px solid #292c3a;
+        border-radius: 15px;
+        padding: 40px;
+        text-align: center;
+    }
+
+</style>
+""",
+    unsafe_allow_html=True
 )
 
 
-# =========================================================
-# SESSION STATE
-# =========================================================
+# ============================================================
+# QUANTUM AI RESPONSE
+# ============================================================
 
-defaults = {
-    "logged_in": False,
-    "user_id": None,
-    "user_email": None,
-    "session_id": None,
-    "messages": [],
-    "sessions": [],
-}
+def ai_response(question):
 
-for key, value in defaults.items():
+    client = OpenAI(
+        api_key=os.environ["DASHSCOPE_API_KEY"],
+        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    )
 
-    if key not in st.session_state:
-        st.session_state[key] = value
+    response = client.chat.completions.create(
+        model="qwen-plus",
+        messages=[
+            {
+                "role": "system",
+                "content": """
+You are a helpful, intelligent AI assistant.
 
+You can answer questions about any subject, including:
+science, mathematics, programming, technology, education,
+history, general knowledge, writing, and everyday questions.
 
-# =========================================================
+Do not restrict yourself to quantum computing.
+
+Explain things clearly and adapt your answer to the user's level.
+If the user asks for code, provide working code and explain it.
+If the user asks a conceptual question, explain it with examples.
+If the question is unclear, ask a useful clarification.
+"""
+            },
+            {
+                "role": "user",
+                "content": question
+            }
+        ]
+    )
+
+    return response.choices[0].message.content
+# ============================================================
 # LOGIN SCREEN
-# =========================================================
+# ============================================================
 
 if not st.session_state.logged_in:
 
     st.markdown(
         """
-        <div class="hero">
-
-            <div class="quantum-symbol">
-                ⚛️
-            </div>
-
-            <div class="hero-title">
-                Quantum AI Tutor
-            </div>
-
-            <div class="hero-subtitle">
-                Your intelligent learning assistant
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True,
+<div class="login-box">
+    <div class="hero-icon">⚛️</div>
+    <h1>Quantum Lab</h1>
+    <p>AI-Powered Learning Space</p>
+</div>
+""",
+        unsafe_allow_html=True
     )
 
-    st.markdown(
-        '<div class="glow-line"></div>',
-        unsafe_allow_html=True,
+    st.subheader("🔐 Login")
+
+    email = st.text_input(
+        "Email address",
+        placeholder="Enter your email"
     )
 
-    col1, col2, col3 = st.columns([1, 2, 1])
+    if st.button("🚀 Login", use_container_width=True):
 
-    with col2:
+        if email.strip() == "":
+            st.error("Please enter your email address.")
 
-        st.markdown(
-            """
-            <div class="welcome-card">
+        else:
+            st.session_state.user_email = email.strip()
+            st.session_state.logged_in = True
 
-                <div class="welcome-title">
-                    🔐 Welcome
-                </div>
+            st.success("Login successful!")
 
-                <div class="welcome-text">
-                    Enter your email to access your personal
-                    AI Tutor and restore your previous chats.
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        email = st.text_input(
-            "Email",
-            placeholder="student@example.com",
-        )
-
-        if st.button(
-            "🚀 Enter Quantum Lab",
-            use_container_width=True,
-        ):
-
-            if not email.strip():
-
-                st.error("Please enter your email.")
-
-            else:
-
-                try:
-
-                    clean_email = email.strip().lower()
-
-                    # =================================================
-                    # GET OR CREATE USER
-                    # =================================================
-
-                    user_id = get_or_create_user(
-                        email=clean_email,
-                        role="student",
-                    )
-
-                    st.session_state.logged_in = True
-                    st.session_state.user_id = user_id
-                    st.session_state.user_email = clean_email
-
-                    # =================================================
-                    # LOAD PREVIOUS CHATS
-                    # =================================================
-
-                    sessions = get_user_sessions(user_id)
-
-                    st.session_state.sessions = sessions
-
-                    # =================================================
-                    # RESTORE LATEST CHAT
-                    # =================================================
-
-                    if sessions:
-
-                        latest_session = sessions[0]
-
-                        latest_session_id = latest_session[
-                            "session_id"
-                        ]
-
-                        history = restore_chat(
-                            latest_session_id,
-                            user_id,
-                        )
-
-                        st.session_state.session_id = (
-                            latest_session_id
-                        )
-
-                        st.session_state.messages = [
-                            {
-                                "role": (
-                                    "user"
-                                    if msg["sender"] == "user"
-                                    else "assistant"
-                                ),
-                                "content": msg["content"],
-                            }
-                            for msg in history
-                        ]
-
-                    # =================================================
-                    # FIRST LOGIN
-                    # =================================================
-
-                    else:
-
-                        new_session_id = create_chat_session(
-                            user_id,
-                            "Quantum Learning",
-                        )
-
-                        st.session_state.session_id = (
-                            new_session_id
-                        )
-
-                        st.session_state.messages = []
-
-                        st.session_state.sessions = (
-                            get_user_sessions(user_id)
-                        )
-
-                    st.rerun()
-
-                except Exception as e:
-
-                    st.error(
-                        f"Login error: {str(e)}"
-                    )
+            st.rerun()
 
     st.stop()
 
 
-# =========================================================
+# ============================================================
 # SIDEBAR
-# =========================================================
+# ============================================================
 
 with st.sidebar:
 
-    # =====================================================
+    # --------------------------------------------------------
     # BRAND
-    # =====================================================
+    # --------------------------------------------------------
 
-    st.markdown(
-        """
-        <div class="sidebar-brand">
+    st.title("⚛️ QUANTUM LAB")
 
-            <div class="sidebar-logo">
-                ⚛️
-            </div>
+    st.caption("AI-Powered Learning Space")
 
-            <div class="sidebar-title">
-                QUANTUM LAB
-            </div>
 
-            <div class="sidebar-subtitle">
-                AI-Powered Learning Space
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # =====================================================
+    # --------------------------------------------------------
     # USER
-    # =====================================================
+    # --------------------------------------------------------
 
-    st.markdown(
-        f"""
-        <div class="user-card">
+    st.markdown("---")
 
-            <div class="user-title">
-                👤 Logged In
-            </div>
+    st.write("👤 **Logged In**")
 
-            <div class="user-email">
-                {st.session_state.user_email}
-            </div>
+    st.caption(st.session_state.user_email)
 
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
-    # =====================================================
+    # --------------------------------------------------------
     # NEW CHAT
-    # =====================================================
+    # --------------------------------------------------------
+
+    st.markdown("---")
 
     if st.button(
         "➕ New Chat",
-        use_container_width=True,
+        use_container_width=True
     ):
 
-        try:
+        chat_number = 1
 
-            new_session_id = create_chat_session(
-                st.session_state.user_id,
-                "New Quantum Chat",
-            )
+        while f"New Quantum Chat {chat_number}" in st.session_state.chats:
+            chat_number += 1
 
-            st.session_state.session_id = new_session_id
-            st.session_state.messages = []
+        new_chat_name = f"New Quantum Chat {chat_number}"
 
-            st.session_state.sessions = (
-                get_user_sessions(
-                    st.session_state.user_id
-                )
-            )
+        st.session_state.chats[new_chat_name] = []
+
+        st.session_state.current_chat = new_chat_name
+
+        st.toast("New chat created!")
+
+        st.rerun()
+
+
+    # --------------------------------------------------------
+    # YOUR CHATS
+    # --------------------------------------------------------
+
+    st.markdown("---")
+
+    st.subheader("💬 Your Chats")
+
+
+    chat_names = list(st.session_state.chats.keys())
+
+    for chat_name in chat_names:
+
+        is_current = (
+            chat_name == st.session_state.current_chat
+        )
+
+        button_text = (
+            f"🟣 {chat_name}"
+            if is_current
+            else f"💬 {chat_name}"
+        )
+
+        if st.button(
+            button_text,
+            key=f"open_{chat_name}",
+            use_container_width=True
+        ):
+
+            st.session_state.current_chat = chat_name
 
             st.rerun()
 
-        except Exception as e:
 
-            st.error(
-                f"Could not create chat: {str(e)}"
-            )
+    # --------------------------------------------------------
+    # RENAME CHAT
+    # --------------------------------------------------------
 
-    # =====================================================
-    # PREVIOUS CHATS
-    # =====================================================
+    st.markdown("---")
 
-    st.markdown("### 💬 Your Chats")
+    with st.expander("✏️ Rename Current Chat"):
 
-    try:
+        current_name = st.session_state.current_chat
 
-        sessions = get_user_sessions(
-            st.session_state.user_id
+        new_name = st.text_input(
+            "New chat name",
+            value=current_name,
+            key="rename_input"
         )
 
-        st.session_state.sessions = sessions
+        if st.button(
+            "Save New Name",
+            use_container_width=True
+        ):
 
-    except Exception as e:
+            new_name = new_name.strip()
 
-        sessions = []
+            if new_name == "":
+                st.error("Chat name cannot be empty.")
 
-        st.error(
-            f"Could not load chats: {str(e)}"
-        )
+            elif new_name == current_name:
+                st.info("This is already the current name.")
 
-    if sessions:
+            elif new_name in st.session_state.chats:
+                st.error("A chat with this name already exists.")
 
-        for session in sessions:
+            else:
 
-            session_id = session["session_id"]
+                st.session_state.chats[new_name] = (
+                    st.session_state.chats.pop(current_name)
+                )
 
-            session_title = session.get(
-                "title",
-                "Untitled Chat",
-            )
+                st.session_state.current_chat = new_name
 
-            if st.button(
-                f"💬 {session_title}",
-                key=f"chat_{session_id}",
-                use_container_width=True,
-            ):
+                st.success("Chat renamed!")
 
-                try:
+                st.rerun()
 
-                    history = restore_chat(
-                        session_id,
-                        st.session_state.user_id,
-                    )
 
-                    st.session_state.session_id = session_id
-
-                    st.session_state.messages = [
-                        {
-                            "role": (
-                                "user"
-                                if msg["sender"] == "user"
-                                else "assistant"
-                            ),
-                            "content": msg["content"],
-                        }
-                        for msg in history
-                    ]
-
-                    st.rerun()
-
-                except Exception as e:
-
-                    st.error(
-                        f"Could not restore chat: {str(e)}"
-                    )
-
-    else:
-
-        st.caption(
-            "No previous chats yet."
-        )
-
-    # =====================================================
+    # --------------------------------------------------------
     # DELETE CURRENT CHAT
-    # =====================================================
+    # --------------------------------------------------------
 
     st.markdown("---")
 
     if st.button(
         "🗑️ Delete Current Chat",
-        use_container_width=True,
+        use_container_width=True
     ):
 
-        current_session_id = (
-            st.session_state.session_id
-        )
+        current_name = st.session_state.current_chat
 
-        if current_session_id:
+        if len(st.session_state.chats) == 1:
 
-            try:
+            st.session_state.chats[current_name] = []
 
-                delete_chat(
-                    current_session_id,
-                    st.session_state.user_id,
-                )
+            st.toast("Chat cleared!")
 
-                sessions = get_user_sessions(
-                    st.session_state.user_id
-                )
+        else:
 
-                st.session_state.sessions = sessions
+            del st.session_state.chats[current_name]
 
-                # =============================================
-                # OPEN ANOTHER CHAT
-                # =============================================
+            remaining_chats = list(
+                st.session_state.chats.keys()
+            )
 
-                if sessions:
+            st.session_state.current_chat = remaining_chats[0]
 
-                    next_session_id = sessions[0][
-                        "session_id"
-                    ]
+            st.toast("Chat deleted!")
 
-                    history = restore_chat(
-                        next_session_id,
-                        st.session_state.user_id,
-                    )
+        st.rerun()
 
-                    st.session_state.session_id = (
-                        next_session_id
-                    )
 
-                    st.session_state.messages = [
-                        {
-                            "role": (
-                                "user"
-                                if msg["sender"] == "user"
-                                else "assistant"
-                            ),
-                            "content": msg["content"],
-                        }
-                        for msg in history
-                    ]
-
-                # =============================================
-                # CREATE NEW CHAT
-                # =============================================
-
-                else:
-
-                    new_session_id = create_chat_session(
-                        st.session_state.user_id,
-                        "Quantum Learning",
-                    )
-
-                    st.session_state.session_id = (
-                        new_session_id
-                    )
-
-                    st.session_state.messages = []
-
-                st.rerun()
-
-            except Exception as e:
-
-                st.error(
-                    f"Delete error: {str(e)}"
-                )
-
-    # =====================================================
-    # CLEAR DISPLAYED CONVERSATION
-    # =====================================================
+    # --------------------------------------------------------
+    # CLEAR CONVERSATION
+    # --------------------------------------------------------
 
     if st.button(
         "🧹 Clear Conversation",
-        use_container_width=True,
+        use_container_width=True
     ):
 
-        # Only clears Streamlit display.
-        # Database messages remain saved.
+        current_name = st.session_state.current_chat
 
-        st.session_state.messages = []
+        st.session_state.chats[current_name] = []
+
+        st.toast("Conversation cleared!")
 
         st.rerun()
 
-    # =====================================================
+
+    # --------------------------------------------------------
     # LOGOUT
-    # =====================================================
+    # --------------------------------------------------------
 
     if st.button(
         "🚪 Logout",
-        use_container_width=True,
+        use_container_width=True
     ):
 
         st.session_state.logged_in = False
-        st.session_state.user_id = None
-        st.session_state.user_email = None
-        st.session_state.session_id = None
-        st.session_state.messages = []
-        st.session_state.sessions = []
 
         st.rerun()
 
-    # =====================================================
-    # INFORMATION
-    # =====================================================
 
-    st.markdown(
+    # --------------------------------------------------------
+    # LEARNING MODE
+    # --------------------------------------------------------
+
+    st.markdown("---")
+
+    st.info(
         """
-        <div class="side-card">
+🧠 **Learning Mode**
 
-            <div class="side-card-title">
-                🧠 AI Tutor
-            </div>
+Ask questions about:
 
-            <div class="side-card-text">
-                Ask questions about quantum computing,
-                programming, mathematics, physics,
-                algorithms, Qiskit, or general topics.
-            </div>
+• Quantum Computing
 
-        </div>
+• Qubits
 
-        <div class="side-card">
+• Quantum Gates
 
-            <div class="side-card-title">
-                💾 Chat Restoration
-            </div>
-
-            <div class="side-card-text">
-                Your conversations are stored in
-                Supabase and can be restored later.
-            </div>
-
-        </div>
-
-        <div class="side-card">
-
-            <div class="side-card-title">
-                👥 Multi-User Support
-            </div>
-
-            <div class="side-card-text">
-                Each email is associated with its own
-                user account and chat sessions.
-            </div>
-
-        </div>
-
-        <div class="side-card">
-
-            <div class="side-card-title">
-                🌐 Web Search
-            </div>
-
-            <div class="side-card-text">
-                Current and external information can
-                be searched when required.
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True,
+• Qiskit
+        """
     )
 
 
-# =========================================================
-# MAIN HERO
-# =========================================================
+# ============================================================
+# MAIN AREA
+# ============================================================
 
 st.markdown(
     """
-    <div class="hero">
+<div class="hero-box">
 
-        <div class="quantum-symbol">
-            ⚛️
-        </div>
+<div class="hero-icon">
+⚛️
+</div>
 
-        <div class="hero-title">
-            Quantum AI Tutor
-        </div>
+<div class="hero-title">
+Quantum AI Tutor
+</div>
 
-        <div class="hero-subtitle">
-            Ask questions and learn through conversation
-        </div>
+<div class="hero-subtitle">
+Explore quantum computing through conversation
+</div>
 
-        <div class="status-pill">
-            ● AI TUTOR ONLINE
-        </div>
+<div class="online">
+● AI TUTOR ONLINE
+</div>
 
-    </div>
-
-    <div class="glow-line"></div>
-    """,
-    unsafe_allow_html=True,
+</div>
+""",
+    unsafe_allow_html=True
 )
 
 
-# =========================================================
-# WELCOME SCREEN
-# =========================================================
+# ============================================================
+# CURRENT CHAT
+# ============================================================
 
-if not st.session_state.messages:
+current_chat = st.session_state.current_chat
 
-    st.markdown(
-        """
-        <div class="welcome-card">
-
-            <div class="welcome-title">
-                👋 Welcome to your AI Learning Space
-            </div>
-
-            <div class="welcome-text">
-                Ask me anything. I can explain concepts,
-                solve programming problems, help with
-                mathematics and physics, explain quantum
-                computing, or provide general knowledge.
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("### 💡 Try asking")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        if st.button(
-            "⚛️ What is a qubit?",
-            use_container_width=True,
-        ):
-
-            st.session_state.pending_question = (
-                "What is a qubit?"
-            )
-
-            st.rerun()
-
-        if st.button(
-            "💻 Explain Python loops",
-            use_container_width=True,
-        ):
-
-            st.session_state.pending_question = (
-                "Explain Python loops with examples"
-            )
-
-            st.rerun()
-
-    with col2:
-
-        if st.button(
-            "🧮 Explain recursion",
-            use_container_width=True,
-        ):
-
-            st.session_state.pending_question = (
-                "Explain recursion in programming"
-            )
-
-            st.rerun()
-
-        if st.button(
-            "🌐 What is artificial intelligence?",
-            use_container_width=True,
-        ):
-
-            st.session_state.pending_question = (
-                "What is artificial intelligence?"
-            )
-
-            st.rerun()
+messages = st.session_state.chats[current_chat]
 
 
-# =========================================================
-# DISPLAY EXISTING CHAT
-# =========================================================
+# ============================================================
+# DISPLAY CHAT
+# ============================================================
 
-for message in st.session_state.messages:
+for message in messages:
 
-    with st.chat_message(
-        message["role"],
-        avatar=(
-            "👩‍💻"
-            if message["role"] == "user"
-            else "⚛️"
-        ),
-    ):
+    if message["role"] == "user":
 
-        st.markdown(
-            message["content"],
-            unsafe_allow_html=True,
-        )
+        with st.chat_message("user"):
+            st.markdown(message["content"])
+
+    else:
+
+        with st.chat_message("assistant"):
+            st.markdown(message["content"])
 
 
-# =========================================================
+# ============================================================
 # CHAT INPUT
-# =========================================================
+# ============================================================
 
-prompt = st.chat_input(
-    "Ask anything..."
+question = st.chat_input(
+    "Ask anything about quantum computing..."
 )
 
 
-# =========================================================
-# EXAMPLE QUESTION
-# =========================================================
+if question:
 
-if "pending_question" in st.session_state:
+    # User message
+    messages.append({
+        "role": "user",
+        "content": question
+    })
 
-    prompt = st.session_state.pending_question
+    # AI response
+    answer = quantum_response(question)
 
-    del st.session_state.pending_question
+    messages.append({
+        "role": "assistant",
+        "content": answer
+    })
 
+    # Save
+    st.session_state.chats[current_chat] = messages
 
-# =========================================================
-# PROCESS QUESTION
-# =========================================================
-
-if prompt:
-
-    # =====================================================
-    # MAKE SURE SESSION EXISTS
-    # =====================================================
-
-    if not st.session_state.session_id:
-
-        try:
-
-            st.session_state.session_id = (
-                create_chat_session(
-                    st.session_state.user_id,
-                    "Quantum Learning",
-                )
-            )
-
-        except Exception as e:
-
-            st.error(
-                f"Could not create chat session: {str(e)}"
-            )
-
-            st.stop()
-
-    # =====================================================
-    # DISPLAY USER QUESTION
-    # =====================================================
-
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": prompt,
-        }
-    )
-
-    with st.chat_message(
-        "user",
-        avatar="👩‍💻",
-    ):
-
-        st.markdown(prompt, unsafe_allow_html=True)
-
-    # =====================================================
-    # GENERATE AI RESPONSE
-    # =====================================================
-
-    with st.chat_message(
-        "assistant",
-        avatar="⚛️",
-    ):
-
-        with st.spinner("🧠 Thinking..."):
-
-            try:
-
-                response = answer_question(
-                    query=prompt,
-                    session_id=(
-                        st.session_state.session_id
-                    ),
-                    user_id=(
-                        st.session_state.user_id
-                    ),
-                )
-
-            except Exception as e:
-
-                response = (
-                    "⚠️ I couldn't process that question.\n\n"
-                    f"**Error:** `{str(e)}`"
-                )
-
-        st.markdown(response, unsafe_allow_html=True)
-
-    # =====================================================
-    # SAVE RESPONSE IN LOCAL SESSION
-    # =====================================================
-
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": response,
-        }
-    )
-
-    # =====================================================
-    # REFRESH CHAT LIST
-    # =====================================================
-
-    try:
-
-        st.session_state.sessions = (
-            get_user_sessions(
-                st.session_state.user_id
-            )
-        )
-
-    except Exception:
-        pass
-
-
-# =========================================================
-# FOOTER
-# =========================================================
-
-st.markdown(
-    """
-    <div class="footer">
-
-        ⚛️ Powered by AI + RAG + Supabase
-        <br>
-        Built for interactive learning
-
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+    st.rerun()

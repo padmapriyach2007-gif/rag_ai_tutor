@@ -470,7 +470,9 @@ if not st.session_state.logged_in:
 
             if not email.strip():
 
-                st.error("Please enter your email.")
+                st.error(
+                    "Please enter your email."
+                )
 
             else:
 
@@ -679,7 +681,6 @@ with st.sidebar:
 
                 try:
 
-                    # Security check happens inside restore_chat
                     history = restore_chat(
                         session_id,
                         st.session_state.user_id
@@ -812,8 +813,9 @@ with st.sidebar:
         use_container_width=True
     ):
 
-        # Only clears the UI.
+        # Clears only the displayed conversation.
         # Database history remains available.
+
         st.session_state.messages = []
 
         st.rerun()
@@ -979,7 +981,6 @@ if not st.session_state.messages:
 
             st.rerun()
 
-
         if st.button(
             "🌌 Explain quantum superposition",
             use_container_width=True
@@ -990,7 +991,6 @@ if not st.session_state.messages:
             )
 
             st.rerun()
-
 
     with col2:
 
@@ -1004,7 +1004,6 @@ if not st.session_state.messages:
             )
 
             st.rerun()
-
 
         if st.button(
             "🐣 Explain quantum computing like I'm a beginner",
@@ -1104,7 +1103,9 @@ if prompt:
         avatar="👩‍💻"
     ):
 
-        st.markdown(prompt)
+        st.markdown(
+            prompt
+        )
 
 
     # -----------------------------------------------------
@@ -1132,24 +1133,6 @@ if prompt:
                     )
                 )
 
-            except TypeError:
-
-                # Compatibility with an answer_question()
-                # that only accepts query
-                try:
-
-                    response = answer_question(
-                        prompt
-                    )
-
-                except Exception as e:
-
-                    response = (
-                        "⚠️ I couldn't process that "
-                        "question right now.\n\n"
-                        f"**Error:** `{str(e)}`"
-                    )
-
             except Exception as e:
 
                 response = (
@@ -1158,7 +1141,9 @@ if prompt:
                     f"**Error:** `{str(e)}`"
                 )
 
-        st.markdown(response)
+        st.markdown(
+            response
+        )
 
 
     # -----------------------------------------------------
@@ -1177,11 +1162,16 @@ if prompt:
     # Refresh session list
     # -----------------------------------------------------
 
-    st.session_state.sessions = (
-        get_user_sessions(
-            st.session_state.user_id
+    try:
+
+        st.session_state.sessions = (
+            get_user_sessions(
+                st.session_state.user_id
+            )
         )
-    )
+
+    except Exception:
+        pass
 
 
 # =========================================================

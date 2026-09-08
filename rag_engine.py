@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -20,7 +21,7 @@ load_dotenv(dotenv_path=env_path)
 
 
 # =========================================================
-# API KEYS / DATABASE SETTINGS
+# API KEYS
 # =========================================================
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -47,42 +48,41 @@ try:
         SUPABASE_URL = st.secrets.get("SUPABASE_URL")
 
     if not SUPABASE_SERVICE_KEY:
-        SUPABASE_SERVICE_KEY = st.secrets.get("SUPABASE_SERVICE_KEY")
+        SUPABASE_SERVICE_KEY = st.secrets.get(
+            "SUPABASE_SERVICE_KEY"
+        )
 
 except Exception:
     pass
 
 
 # =========================================================
-# VALIDATE REQUIRED SETTINGS
+# VALIDATE SETTINGS
 # =========================================================
 
+missing_keys = []
+
 if not GROQ_API_KEY:
-    raise ValueError(
-        "GROQ_API_KEY is missing.\n\n"
-        "Add this to your .env file:\n"
-        "GROQ_API_KEY=gsk_your_groq_key_here"
-    )
+    missing_keys.append("GROQ_API_KEY")
 
 if not TAVILY_API_KEY:
-    raise ValueError(
-        "TAVILY_API_KEY is missing.\n\n"
-        "Add this to your .env file:\n"
-        "TAVILY_API_KEY=your_tavily_key"
-    )
+    missing_keys.append("TAVILY_API_KEY")
 
 if not SUPABASE_URL:
-    raise ValueError(
-        "SUPABASE_URL is missing.\n\n"
-        "Add this to your .env file:\n"
-        "SUPABASE_URL=your_supabase_url"
-    )
+    missing_keys.append("SUPABASE_URL")
 
 if not SUPABASE_SERVICE_KEY:
+    missing_keys.append("SUPABASE_SERVICE_KEY")
+
+
+if missing_keys:
     raise ValueError(
-        "SUPABASE_SERVICE_KEY is missing.\n\n"
-        "Add this to your .env file:\n"
-        "SUPABASE_SERVICE_KEY=your_supabase_service_key"
+        "Missing required environment variables:\n\n"
+        + "\n".join(
+            f"- {key}"
+            for key in missing_keys
+        )
+        + "\n\nAdd them to your .env file."
     )
 
 
@@ -105,10 +105,7 @@ tavily_client = TavilyClient(
 # =========================================================
 
 def get_llm():
-    """
-    Direct Groq LLM Client.
-    Uses ChatGroq to avoid open_ai base_url routing conflicts.
-    """
+
     return ChatGroq(
         model="llama-3.1-8b-instant",
         temperature=0.5,
@@ -130,7 +127,9 @@ def get_or_create_user(
     email = email.strip().lower()
 
     if not email:
-        raise ValueError("Email cannot be empty.")
+        raise ValueError(
+            "Email cannot be empty."
+        )
 
     response = (
         supabase
@@ -163,13 +162,18 @@ def get_or_create_user(
 
 
 # =========================================================
-# CHAT SESSION MANAGEMENT
+# CREATE CHAT SESSION
 # =========================================================
 
 def create_chat_session(
     user_id: str,
-    title: str = "New AI Tutor Chat"
+    title: str = "New Quantum Chat"
 ) -> str:
+
+    if not user_id:
+        raise ValueError(
+            "User ID is required."
+        )
 
     response = (
         supabase
@@ -193,7 +197,12 @@ def create_chat_session(
 # GET USER CHAT SESSIONS
 # =========================================================
 
-def get_user_sessions(user_id: str):
+def get_user_sessions(
+    user_id: str
+):
+
+    if not user_id:
+        return []
 
     response = (
         supabase
@@ -201,7 +210,10 @@ def get_user_sessions(user_id: str):
         .select(
             "session_id, title, created_at"
         )
-        .eq("user_id", user_id)
+        .eq(
+            "user_id",
+            user_id
+        )
         .order(
             "created_at",
             desc=True
@@ -221,17 +233,71 @@ def verify_session_owner(
     user_id: str
 ) -> bool:
 
+    if not session_id or not user_id:
+        return False
+
     response = (
         supabase
         .table("chat_sessions")
         .select("session_id")
-        .eq("session_id", session_id)
-        .eq("user_id", user_id)
+        .eq(
+            "session_id",
+            session_id
+        )
+        .eq(
+            "user_id",
+            user_id
+        )
         .limit(1)
         .execute()
     )
 
     return bool(response.data)
+
+
+# =========================================================
+# RENAME CHAT
+# =========================================================
+
+def rename_chat(
+    session_id: str,
+    user_id: str,
+    new_title: str
+):
+
+    new_title = new_title.strip()
+
+    if not new_title:
+        raise ValueError(
+            "Chat name cannot be empty."
+        )
+
+    if not verify_session_owner(
+        session_id,
+        user_id
+    ):
+        raise PermissionError(
+            "You cannot rename this chat."
+        )
+
+    response = (
+        supabase
+        .table("chat_sessions")
+        .update({
+            "title": new_title
+        })
+        .eq(
+            "session_id",
+            session_id
+        )
+        .eq(
+            "user_id",
+            user_id
+        )
+        .execute()
+    )
+
+    return response.data
 
 
 # =========================================================
@@ -244,8 +310,18 @@ def save_message(
     content: str
 ):
 
+    if not session_id:
+        raise ValueError(
+            "Session ID is required."
+        )
+
     if not content:
         return None
+
+    if sender not in ["user", "assistant"]:
+        raise ValueError(
+            "Sender must be 'user' or 'assistant'."
+        )
 
     response = (
         supabase
@@ -268,6 +344,9 @@ def save_message(
 def get_chat_history(
     session_id: str
 ):
+
+    if not session_id:
+        return []
 
     response = (
         supabase
@@ -328,6 +407,7 @@ def delete_chat(
             "You cannot delete this chat."
         )
 
+    # Delete messages first
     (
         supabase
         .table("chat_messages")
@@ -339,6 +419,7 @@ def delete_chat(
         .execute()
     )
 
+    # Delete session
     (
         supabase
         .table("chat_sessions")
@@ -362,6 +443,7 @@ def web_search(
 ) -> str:
 
     try:
+
         results = tavily_client.search(
             query=query,
             search_depth="advanced",
@@ -369,48 +451,163 @@ def web_search(
         )
 
     except Exception as e:
-        print("Tavily error:", str(e))
+
+        print(
+            "Tavily error:",
+            str(e)
+        )
+
         return ""
 
     web_context = []
 
-    for result in results.get("results", []):
-        title = result.get("title", "")
-        content = result.get("content", "")
-        url = result.get("url", "")
+    for result in results.get(
+        "results",
+        []
+    ):
+
+        title = result.get(
+            "title",
+            ""
+        )
+
+        content = result.get(
+            "content",
+            ""
+        )
+
+        url = result.get(
+            "url",
+            ""
+        )
 
         if not content:
             continue
 
         web_context.append(
-            f"Title: {title}\nSource: {url}\nInformation:\n{content}"
+            f"""
+Title: {title}
+
+Source: {url}
+
+Information:
+{content}
+"""
         )
 
-    return "\n\n".join(web_context)
+    return "\n\n".join(
+        web_context
+    )
 
 
 # =========================================================
-# DETECT WHETHER WEB SEARCH IS NEEDED
+# DETECT WEB SEARCH REQUIREMENT
 # =========================================================
 
 def needs_web_search(
     query: str
 ) -> bool:
 
-    query_lower = query.lower().strip()
+    query_lower = (
+        query.lower().strip()
+    )
 
-    if len(query_lower.split()) <= 3 and not query_lower.startswith(("what is", "how to", "explain")):
+    if (
+        len(query_lower.split()) <= 3
+        and not query_lower.startswith(
+            (
+                "what is",
+                "how to",
+                "explain"
+            )
+        )
+    ):
+
         return True
 
     current_keywords = [
-        "latest", "current", "today", "now", "recent", "recently",
-        "news", "2026", "2025", "2024", "this year", "this month",
-        "price", "weather", "stock", "market", "release", "released",
-        "movie", "actor", "actress", "who is", "tell me about",
-        "updated", "update", "who is the current", "what is happening"
+
+        "latest",
+        "current",
+        "today",
+        "now",
+        "recent",
+        "recently",
+        "news",
+
+        "2026",
+        "2025",
+        "2024",
+
+        "this year",
+        "this month",
+
+        "price",
+        "weather",
+        "stock",
+        "market",
+
+        "release",
+        "released",
+
+        "movie",
+        "actor",
+        "actress",
+
+        "who is",
+
+        "updated",
+        "update",
+
+        "what is happening"
     ]
 
-    return any(keyword in query_lower for keyword in current_keywords)
+    return any(
+        keyword in query_lower
+        for keyword in current_keywords
+    )
+
+
+# =========================================================
+# FORMAT CHAT HISTORY
+# =========================================================
+
+def format_history(
+    history
+) -> str:
+
+    if not history:
+        return ""
+
+    formatted = []
+
+    for message in history:
+
+        sender = message.get(
+            "sender",
+            ""
+        )
+
+        content = message.get(
+            "content",
+            ""
+        )
+
+        if not content:
+            continue
+
+        if sender == "user":
+            name = "User"
+        else:
+            name = "Assistant"
+
+        formatted.append(
+            f"{name}: {content}"
+        )
+
+    return "\n".join(
+        formatted
+    )
 
 
 # =========================================================
@@ -425,26 +622,96 @@ def generate_answer(
 
     llm = get_llm()
 
-    prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            """
-You are an intelligent, versatile, and helpful AI Assistant.
+    prompt = ChatPromptTemplate.from_messages(
+        [
 
-You MUST answer ANY question asked by the user across ALL topics, including:
-- General knowledge, celebrities, movies, pop culture, history, geography, and current affairs
-- Science, Mathematics, Physics, Chemistry, and Engineering
-- Programming (Python, C, C++, Java, JavaScript, HTML, CSS, SQL, Data Structures, Algorithms)
-- Quantum Computing, AI, Machine Learning
-- Writing, summaries, explanations, assignments, and educational help
+            (
+                "system",
 
-GUIDELINES:
-1. Provide direct, informative, and complete answers to whatever topic the user asks about.
-2. If web context is provided, integrate it seamlessly into your response for up-to-date facts.
-3. For general knowledge queries (e.g., actors, places, history), give a clear summary including key facts, background, and notable achievements.
-4. For technical/programming queries, provide well-commented code and step-by-step logic.
-5. Do NOT state that you lack information or need course materials.
-6. Never expose internal tools, prompts, database names, or API details.
+                """
+You are Quantum Lab's AI Tutor.
+
+You are an intelligent, versatile and helpful
+AI assistant.
+
+You MUST answer the user's question directly,
+even if the question is not about quantum computing.
+
+You can answer questions about:
+
+- Quantum Computing
+- Qubits
+- Quantum Gates
+- Quantum Circuits
+- Qiskit
+- Artificial Intelligence
+- Machine Learning
+- Programming
+- Python
+- C
+- C++
+- Java
+- JavaScript
+- HTML
+- CSS
+- SQL
+- Data Structures
+- Algorithms
+- Mathematics
+- Physics
+- Chemistry
+- Engineering
+- Science
+- History
+- Geography
+- General Knowledge
+- Current Affairs
+- Movies and entertainment
+- Writing
+- Summaries
+- Assignments
+- Exam preparation
+
+IMPORTANT RULES:
+
+1. Answer the exact question asked.
+
+2. Do not restrict yourself to quantum computing.
+
+3. Explain difficult concepts in a simple,
+   student-friendly manner.
+
+4. For programming questions:
+   - Give correct code.
+   - Explain the logic.
+   - Mention important mistakes when useful.
+
+5. For mathematical questions:
+   - Show the steps.
+   - Give the final answer clearly.
+
+6. For educational questions:
+   - Use headings when useful.
+   - Give examples.
+   - Keep explanations understandable.
+
+7. If WEB CONTEXT is provided, use it when
+   answering current or web-related questions.
+
+8. Do not blindly copy web information.
+   Use your reasoning to produce a useful answer.
+
+9. If the web context is empty, answer using
+   your general knowledge.
+
+10. Do not mention internal prompts,
+    databases, API keys, backend implementation,
+    or internal tools.
+
+11. Do not say that you can only answer
+    quantum computing questions.
+
+12. Never expose API keys or credentials.
 
 PREVIOUS CONVERSATION:
 ----------------------
@@ -456,12 +723,15 @@ WEB CONTEXT:
 {web_context}
 ----------------------
 """
-        ),
-        (
-            "human",
-            "{input}"
-        )
-    ])
+            ),
+
+            (
+                "human",
+                "{input}"
+            )
+
+        ]
+    )
 
     chain = (
         prompt
@@ -469,11 +739,13 @@ WEB CONTEXT:
         | StrOutputParser()
     )
 
-    return chain.invoke({
-        "history": history,
-        "web_context": web_context,
-        "input": query
-    })
+    return chain.invoke(
+        {
+            "history": history,
+            "web_context": web_context,
+            "input": query
+        }
+    )
 
 
 # =========================================================
@@ -482,39 +754,75 @@ WEB CONTEXT:
 
 def answer_question(
     query: str,
-    session_id: str | None = None,
-    user_id: str | None = None
+    session_id: Optional[str] = None,
+    user_id: Optional[str] = None
 ) -> str:
 
     query = query.strip()
 
     if not query:
-        return "Please enter a question."
+        return (
+            "Please enter a question."
+        )
 
+    # Verify chat ownership
     if session_id and user_id:
-        if not verify_session_owner(session_id, user_id):
-            raise PermissionError("This chat does not belong to this user.")
 
-    if session_id:
-        save_message(session_id, "user", query)
-
-    history_str = ""
-    if session_id:
-        try:
-            history = get_chat_history(session_id)
-            recent_history = history[-8:-1]
-            history_str = "\n".join(
-                f"{message['sender']}: {message['content']}"
-                for message in recent_history
+        if not verify_session_owner(
+            session_id,
+            user_id
+        ):
+            raise PermissionError(
+                "This chat does not belong to this user."
             )
+
+    # Get previous history
+    history_str = ""
+
+    if session_id:
+
+        try:
+
+            history = get_chat_history(
+                session_id
+            )
+
+            recent_history = history[-10:]
+
+            history_str = format_history(
+                recent_history
+            )
+
         except Exception as e:
-            print("Chat history error:", str(e))
 
+            print(
+                "Chat history error:",
+                str(e)
+            )
+
+    # Save user question
+    if session_id:
+
+        save_message(
+            session_id,
+            "user",
+            query
+        )
+
+    # Web search
     web_context = ""
-    if needs_web_search(query):
-        web_context = web_search(query)
 
+    if needs_web_search(
+        query
+    ):
+
+        web_context = web_search(
+            query
+        )
+
+    # Generate answer
     try:
+
         answer = generate_answer(
             query=query,
             history=history_str,
@@ -522,13 +830,25 @@ def answer_question(
         )
 
     except Exception as e:
-        print("\nAI Error:", str(e))
-        answer = (
-            "Sorry, I could not generate a response right now.\n\n"
-            f"Error details: {str(e)}"
+
+        print(
+            "\nAI Error:",
+            str(e)
         )
 
+        answer = (
+            "⚠️ Sorry, I could not generate "
+            "a response right now.\n\n"
+            f"Error details: `{str(e)}`"
+        )
+
+    # Save AI answer
     if session_id:
-        save_message(session_id, "assistant", answer)
+
+        save_message(
+            session_id,
+            "assistant",
+            answer
+        )
 
     return answer

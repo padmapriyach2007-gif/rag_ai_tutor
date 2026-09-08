@@ -4,31 +4,23 @@ from pathlib import Path
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
 from tavily import TavilyClient
-
-from ingest import build_vector_db
 
 
 # =========================================================
 # LOAD ENVIRONMENT VARIABLES
 # =========================================================
 
-BASE_DIR = Path(__file__).resolve().parent
-env_path = BASE_DIR / ".env"
-
+env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 
 # =========================================================
-# GET API KEYS
+# API KEYS / DATABASE SETTINGS
 # =========================================================
 
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -62,34 +54,40 @@ except Exception:
 
 
 # =========================================================
-# VALIDATE REQUIRED KEYS
+# VALIDATE REQUIRED SETTINGS
 # =========================================================
 
-missing_keys = []
-
 if not HF_TOKEN:
-    missing_keys.append("HF_TOKEN")
+    raise ValueError(
+        "HF_TOKEN is missing.\n\n"
+        "Add this to your .env file:\n"
+        "HF_TOKEN=your_huggingface_token"
+    )
 
 if not TAVILY_API_KEY:
-    missing_keys.append("TAVILY_API_KEY")
+    raise ValueError(
+        "TAVILY_API_KEY is missing.\n\n"
+        "Add this to your .env file:\n"
+        "TAVILY_API_KEY=your_tavily_key"
+    )
 
 if not SUPABASE_URL:
-    missing_keys.append("SUPABASE_URL")
+    raise ValueError(
+        "SUPABASE_URL is missing.\n\n"
+        "Add this to your .env file:\n"
+        "SUPABASE_URL=your_supabase_url"
+    )
 
 if not SUPABASE_SERVICE_KEY:
-    missing_keys.append("SUPABASE_SERVICE_KEY")
-
-if missing_keys:
     raise ValueError(
-        "Missing environment variables: "
-        + ", ".join(missing_keys)
-        + "\n\n"
-        "Add them to your .env file."
+        "SUPABASE_SERVICE_KEY is missing.\n\n"
+        "Add this to your .env file:\n"
+        "SUPABASE_SERVICE_KEY=your_supabase_service_key"
     )
 
 
 # =========================================================
-# SUPABASE CONNECTION
+# CONNECTIONS
 # =========================================================
 
 supabase: Client = create_client(
@@ -97,25 +95,18 @@ supabase: Client = create_client(
     SUPABASE_SERVICE_KEY
 )
 
-
-# =========================================================
-# TAVILY CONNECTION
-# =========================================================
-
 tavily_client = TavilyClient(
     api_key=TAVILY_API_KEY
 )
 
 
 # =========================================================
-# LLM
+# AI MODEL
 # =========================================================
 
 def get_llm():
     """
-    Hugging Face Router LLM.
-
-    Uses the Hugging Face token instead of Gemini.
+    Hugging Face Router + GPT-OSS model.
     """
 
     return ChatOpenAI(
@@ -123,22 +114,6 @@ def get_llm():
         temperature=0.4,
         api_key=HF_TOKEN,
         base_url="https://router.huggingface.co/v1"
-    )
-
-
-# =========================================================
-# EMBEDDINGS
-# =========================================================
-
-def get_embeddings():
-    """
-    Local Hugging Face embedding model.
-
-    No Gemini API key is required.
-    """
-
-    return HuggingFaceEmbeddings(
-        model_name="all-MiniLM-L6-v2"
     )
 
 
@@ -153,7 +128,13 @@ def get_or_create_user(
 
     email = email.strip().lower()
 
+    if not email:
+        raise ValueError("Email cannot be empty.")
+
+    # -----------------------------------------------------
     # Check existing user
+    # -----------------------------------------------------
+
     response = (
         supabase
         .table("users")
@@ -166,7 +147,10 @@ def get_or_create_user(
     if response.data:
         return response.data[0]["user_id"]
 
+    # -----------------------------------------------------
     # Create new user
+    # -----------------------------------------------------
+
     response = (
         supabase
         .table("users")
@@ -186,7 +170,7 @@ def get_or_create_user(
 
 
 # =========================================================
-# CREATE CHAT SESSION
+# CHAT SESSION MANAGEMENT
 # =========================================================
 
 def create_chat_session(
@@ -236,7 +220,7 @@ def get_user_sessions(user_id: str):
 
 
 # =========================================================
-# VERIFY SESSION OWNER
+# VERIFY CHAT OWNER
 # =========================================================
 
 def verify_session_owner(
@@ -248,14 +232,8 @@ def verify_session_owner(
         supabase
         .table("chat_sessions")
         .select("session_id")
-        .eq(
-            "session_id",
-            session_id
-        )
-        .eq(
-            "user_id",
-            user_id
-        )
+        .eq("session_id", session_id)
+        .eq("user_id", user_id)
         .limit(1)
         .execute()
     )
@@ -357,7 +335,7 @@ def delete_chat(
             "You cannot delete this chat."
         )
 
-    # Delete messages first
+    # Delete messages
     (
         supabase
         .table("chat_messages")
@@ -385,22 +363,6 @@ def delete_chat(
 
 
 # =========================================================
-# VECTOR STORE
-# =========================================================
-
-def get_vectorstore():
-
-    embeddings = get_embeddings()
-
-    return Chroma(
-        persist_directory=str(
-            BASE_DIR / "chroma_db"
-        ),
-        embedding_function=embeddings
-    )
-
-
-# =========================================================
 # WEB SEARCH
 # =========================================================
 
@@ -413,14 +375,14 @@ def web_search(
         results = tavily_client.search(
             query=query,
             search_depth="advanced",
-            max_results=8
+            max_results=6
         )
 
     except Exception as e:
 
         print(
             "Tavily error:",
-            e
+            str(e)
         )
 
         return ""
@@ -467,158 +429,144 @@ Information:
 
 
 # =========================================================
-# RAG SEARCH
+# DETECT WHETHER WEB SEARCH IS NEEDED
 # =========================================================
 
-def get_rag_context(
+def needs_web_search(
     query: str
-) -> str:
+) -> bool:
 
-    chroma_path = (
-        BASE_DIR / "chroma_db"
-    )
+    query_lower = query.lower()
 
-    # Build database if it doesn't exist
-    if not chroma_path.exists():
+    current_keywords = [
+        "latest",
+        "current",
+        "today",
+        "now",
+        "recent",
+        "recently",
+        "news",
+        "2026",
+        "this year",
+        "this month",
+        "price",
+        "weather",
+        "stock",
+        "market",
+        "release",
+        "released",
+        "new version",
+        "updated",
+        "update",
+        "who is the current",
+        "what is happening",
+    ]
 
-        print(
-            "Chroma DB not found."
-        )
-
-        build_vector_db()
-
-    try:
-
-        vector_store = (
-            get_vectorstore()
-        )
-
-        retriever = (
-            vector_store
-            .as_retriever(
-                search_kwargs={
-                    "k": 4
-                }
-            )
-        )
-
-        docs = retriever.invoke(
-            query
-        )
-
-    except Exception as e:
-
-        print(
-            "RAG retrieval error:",
-            e
-        )
-
-        return (
-            "No relevant study material "
-            "could be retrieved."
-        )
-
-    if not docs:
-
-        return (
-            "No relevant study material "
-            "was found."
-        )
-
-    return "\n\n".join(
-        doc.page_content
-        for doc in docs
+    return any(
+        keyword in query_lower
+        for keyword in current_keywords
     )
 
 
 # =========================================================
-# QUESTION ROUTER
+# GENERAL AI ANSWER
 # =========================================================
 
-def classify_question(
+def generate_answer(
     query: str,
-    llm
+    history: str = "",
+    web_context: str = ""
 ) -> str:
 
-    router_prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                """
-You are a question router for an intelligent AI tutor.
+    llm = get_llm()
 
-Classify the user's question into exactly ONE category:
+    prompt = ChatPromptTemplate.from_messages([
+        (
+            "system",
+            """
+You are Quantum AI Tutor, a highly capable and friendly
+AI assistant for students.
 
-RAG
-Questions about quantum computing, Qiskit,
-quantum algorithms, qubits, quantum circuits,
-or information that should come from study material.
+Your job is to answer ANY question the user asks.
 
-WEB
-Current events, latest information,
-current companies, current technologies,
-places, recent facts, or information requiring
-the internet.
+You can answer questions about:
 
-HYBRID
-Questions requiring both study material
-and web information.
+- Quantum Computing
+- Qiskit
+- Qubits
+- Quantum Algorithms
+- Artificial Intelligence
+- Machine Learning
+- Python
+- C
+- C++
+- Java
+- JavaScript
+- HTML
+- CSS
+- SQL
+- Data Structures
+- Algorithms
+- Mathematics
+- Physics
+- Engineering
+- Computer Science
+- Programming
+- Projects
+- Assignments
+- General knowledge
+- Writing and explanations
+- Other normal educational questions
 
-GENERAL
-Normal programming, Python, Java, C,
-physics, mathematics, writing,
-or general explanations.
+IMPORTANT:
 
-Return ONLY one word:
+1. Do NOT say that you need study material.
+2. Do NOT say "No relevant study material was found."
+3. Do NOT depend on a local document or knowledge base.
+4. Answer using your own knowledge.
+5. If web information is provided, use it to improve
+   accuracy for current topics.
+6. Clearly explain concepts for students.
+7. Use step-by-step explanations when useful.
+8. For programming questions, provide correct code when
+   requested and explain the important parts.
+9. For mathematics, show the calculation steps.
+10. If the question is ambiguous, make a reasonable
+    interpretation and answer it.
+11. Never mention internal implementation details such as
+    LangChain, Supabase, Tavily, Hugging Face, prompts,
+    vector databases, or RAG.
+12. Do not pretend that information is current if it is
+    not supported by the provided web information.
 
-RAG
-WEB
-HYBRID
-GENERAL
+PREVIOUS CONVERSATION:
+----------------------
+{history}
+----------------------
+
+CURRENT WEB INFORMATION:
+----------------------
+{web_context}
+----------------------
 """
-            ),
-            (
-                "human",
-                "{input}"
-            )
-        ]
-    )
+        ),
+        (
+            "human",
+            "{input}"
+        )
+    ])
 
     chain = (
-        router_prompt
+        prompt
         | llm
         | StrOutputParser()
     )
 
-    try:
-
-        route = (
-            chain
-            .invoke({
-                "input": query
-            })
-            .strip()
-            .upper()
-        )
-
-    except Exception as e:
-
-        print(
-            "Router error:",
-            e
-        )
-
-        route = "GENERAL"
-
-    if route not in {
-        "RAG",
-        "WEB",
-        "HYBRID",
-        "GENERAL"
-    }:
-        route = "GENERAL"
-
-    return route
+    return chain.invoke({
+        "history": history,
+        "web_context": web_context,
+        "input": query
+    })
 
 
 # =========================================================
@@ -634,14 +582,11 @@ def answer_question(
     query = query.strip()
 
     if not query:
+        return "Please enter a question."
 
-        return (
-            "Please enter a question."
-        )
-
-    # -----------------------------------------------------
-    # Verify session ownership
-    # -----------------------------------------------------
+    # =====================================================
+    # VERIFY SESSION
+    # =====================================================
 
     if session_id and user_id:
 
@@ -654,9 +599,9 @@ def answer_question(
                 "This chat does not belong to this user."
             )
 
-    # -----------------------------------------------------
-    # Save user message
-    # -----------------------------------------------------
+    # =====================================================
+    # SAVE USER MESSAGE
+    # =====================================================
 
     if session_id:
 
@@ -666,65 +611,9 @@ def answer_question(
             query
         )
 
-    # -----------------------------------------------------
-    # Create LLM
-    # -----------------------------------------------------
-
-    llm = get_llm()
-
-    # -----------------------------------------------------
-    # Classify question
-    # -----------------------------------------------------
-
-    route = classify_question(
-        query,
-        llm
-    )
-
-    print(
-        f"Question route: {route}"
-    )
-
-    # -----------------------------------------------------
-    # RAG context
-    # -----------------------------------------------------
-
-    rag_context = ""
-
-    if route in {
-        "RAG",
-        "HYBRID"
-    }:
-
-        rag_context = get_rag_context(
-            query
-        )
-
-    # -----------------------------------------------------
-    # WEB context
-    # -----------------------------------------------------
-
-    web_context = ""
-
-    if route in {
-        "WEB",
-        "HYBRID"
-    }:
-
-        web_context = web_search(
-            query
-        )
-
-        if not web_context:
-
-            web_context = (
-                "No relevant web information "
-                "was found."
-            )
-
-    # -----------------------------------------------------
-    # CHAT HISTORY
-    # -----------------------------------------------------
+    # =====================================================
+    # LOAD CHAT HISTORY
+    # =====================================================
 
     history_str = ""
 
@@ -736,7 +625,7 @@ def answer_question(
                 session_id
             )
 
-            # Avoid duplicating the current question
+            # Don't duplicate the current question
             recent_history = history[-8:-1]
 
             history_str = "\n".join(
@@ -749,92 +638,38 @@ def answer_question(
 
             print(
                 "Chat history error:",
-                e
+                str(e)
             )
 
-    # -----------------------------------------------------
-    # FINAL PROMPT
-    # -----------------------------------------------------
+    # =====================================================
+    # OPTIONAL WEB SEARCH
+    # =====================================================
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                """
-You are an intelligent, friendly,
-and accurate AI Tutor.
+    web_context = ""
 
-Your job is to help students understand
-concepts clearly and step-by-step.
+    if needs_web_search(query):
 
-Use the provided study material when it
-is relevant.
+        web_context = web_search(
+            query
+        )
 
-Use web information when it is provided.
+        if not web_context:
 
-If study material is unavailable, you can
-still answer general questions using your
-knowledge.
-
-IMPORTANT:
-- Do not mention RAG.
-- Do not mention Chroma.
-- Do not mention embeddings.
-- Do not mention Supabase.
-- Do not mention vector databases.
-- Do not mention internal routing.
-- Explain concepts naturally.
-- For beginner questions, use simple language.
-- Give examples when useful.
-- Use equations/code when appropriate.
-
-STUDY MATERIAL
-=========================
-{rag_context}
-=========================
-
-WEB INFORMATION
-=========================
-{web_context}
-=========================
-
-PREVIOUS CHAT
-=========================
-{history}
-=========================
-"""
-            ),
-            (
-                "human",
-                "{input}"
+            web_context = (
+                "No web information was available. "
+                "Answer using your general knowledge."
             )
-        ]
-    )
 
-    # -----------------------------------------------------
-    # FINAL CHAIN
-    # -----------------------------------------------------
-
-    chain = (
-        {
-            "rag_context": lambda _: rag_context,
-            "web_context": lambda _: web_context,
-            "history": lambda _: history_str,
-            "input": RunnablePassthrough()
-        }
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
-
-    # -----------------------------------------------------
+    # =====================================================
     # GENERATE ANSWER
-    # -----------------------------------------------------
+    # =====================================================
 
     try:
 
-        answer = chain.invoke(
-            query
+        answer = generate_answer(
+            query=query,
+            history=history_str,
+            web_context=web_context
         )
 
     except Exception as e:
@@ -845,14 +680,14 @@ PREVIOUS CHAT
         )
 
         answer = (
-            "Sorry, I could not generate "
-            "a response right now.\n\n"
+            "Sorry, I could not generate a response "
+            "right now.\n\n"
             f"Error: {str(e)}"
         )
 
-    # -----------------------------------------------------
-    # SAVE ASSISTANT MESSAGE
-    # -----------------------------------------------------
+    # =====================================================
+    # SAVE AI RESPONSE
+    # =====================================================
 
     if session_id:
 

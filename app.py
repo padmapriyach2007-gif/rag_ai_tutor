@@ -165,6 +165,7 @@ st.markdown(
         font-size: 58px;
         line-height: 1;
         margin-bottom: 12px;
+
         filter:
             drop-shadow(
                 0 0 18px
@@ -435,9 +436,7 @@ if not st.session_state.logged_in:
         unsafe_allow_html=True
     )
 
-    col1, col2, col3 = st.columns(
-        [1, 2, 1]
-    )
+    col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
 
@@ -471,44 +470,50 @@ if not st.session_state.logged_in:
 
             if not email.strip():
 
-                st.error(
-                    "Please enter your email."
-                )
+                st.error("Please enter your email.")
 
             else:
 
                 try:
 
+                    clean_email = email.strip().lower()
+
+                    # Get existing user or create new user
                     user_id = get_or_create_user(
-                        email=email,
+                        email=clean_email,
                         role="student"
                     )
 
                     st.session_state.logged_in = True
                     st.session_state.user_id = user_id
-                    st.session_state.user_email = (
-                        email.strip().lower()
-                    )
+                    st.session_state.user_email = clean_email
 
-                    # Load previous chats
-                    sessions = get_user_sessions(
-                        user_id
-                    )
+                    # -------------------------------------------------
+                    # LOAD USER'S PREVIOUS CHAT SESSIONS
+                    # -------------------------------------------------
+
+                    sessions = get_user_sessions(user_id)
 
                     st.session_state.sessions = sessions
 
-                    # If previous chat exists,
-                    # automatically restore latest chat
+                    # -------------------------------------------------
+                    # RESTORE LATEST CHAT
+                    # -------------------------------------------------
+
                     if sessions:
 
                         latest_session = sessions[0]
 
+                        latest_session_id = latest_session[
+                            "session_id"
+                        ]
+
                         st.session_state.session_id = (
-                            latest_session["session_id"]
+                            latest_session_id
                         )
 
                         history = restore_chat(
-                            latest_session["session_id"],
+                            latest_session_id,
                             user_id
                         )
 
@@ -524,14 +529,20 @@ if not st.session_state.logged_in:
                             for msg in history
                         ]
 
+                    # -------------------------------------------------
+                    # CREATE FIRST CHAT
+                    # -------------------------------------------------
+
                     else:
 
-                        session_id = create_chat_session(
+                        new_session_id = create_chat_session(
                             user_id,
                             "Quantum Learning"
                         )
 
-                        st.session_state.session_id = session_id
+                        st.session_state.session_id = (
+                            new_session_id
+                        )
 
                         st.session_state.messages = []
 
@@ -641,9 +652,7 @@ with st.sidebar:
     # PREVIOUS CHATS
     # =====================================================
 
-    st.markdown(
-        "### 💬 Your Chats"
-    )
+    st.markdown("### 💬 Your Chats")
 
     sessions = get_user_sessions(
         st.session_state.user_id
@@ -655,16 +664,12 @@ with st.sidebar:
 
         for session in sessions:
 
-            session_title = (
-                session.get(
-                    "title",
-                    "Untitled Chat"
-                )
+            session_title = session.get(
+                "title",
+                "Untitled Chat"
             )
 
-            session_id = session[
-                "session_id"
-            ]
+            session_id = session["session_id"]
 
             if st.button(
                 f"💬 {session_title}",
@@ -674,6 +679,7 @@ with st.sidebar:
 
                 try:
 
+                    # Security check happens inside restore_chat
                     history = restore_chat(
                         session_id,
                         st.session_state.user_id
@@ -721,12 +727,16 @@ with st.sidebar:
         use_container_width=True
     ):
 
-        if st.session_state.session_id:
+        current_session_id = (
+            st.session_state.session_id
+        )
+
+        if current_session_id:
 
             try:
 
                 delete_chat(
-                    st.session_state.session_id,
+                    current_session_id,
                     st.session_state.user_id
                 )
 
@@ -736,19 +746,23 @@ with st.sidebar:
 
                 st.session_state.sessions = sessions
 
+                # ---------------------------------------------
+                # Open another existing chat
+                # ---------------------------------------------
+
                 if sessions:
 
-                    session_id = sessions[0][
+                    next_session_id = sessions[0][
                         "session_id"
                     ]
 
                     history = restore_chat(
-                        session_id,
+                        next_session_id,
                         st.session_state.user_id
                     )
 
                     st.session_state.session_id = (
-                        session_id
+                        next_session_id
                     )
 
                     st.session_state.messages = [
@@ -762,6 +776,10 @@ with st.sidebar:
                         }
                         for msg in history
                     ]
+
+                # ---------------------------------------------
+                # No chats left -> create new chat
+                # ---------------------------------------------
 
                 else:
 
@@ -794,6 +812,8 @@ with st.sidebar:
         use_container_width=True
     ):
 
+        # Only clears the UI.
+        # Database history remains available.
         st.session_state.messages = []
 
         st.rerun()
@@ -942,9 +962,7 @@ if not st.session_state.messages:
         unsafe_allow_html=True
     )
 
-    st.markdown(
-        "### 💡 Try asking"
-    )
+    st.markdown("### 💡 Try asking")
 
     col1, col2 = st.columns(2)
 
@@ -972,6 +990,7 @@ if not st.session_state.messages:
             )
 
             st.rerun()
+
 
     with col2:
 
@@ -1046,6 +1065,30 @@ if "pending_question" in st.session_state:
 if prompt:
 
     # -----------------------------------------------------
+    # Make sure a chat session exists
+    # -----------------------------------------------------
+
+    if not st.session_state.session_id:
+
+        try:
+
+            st.session_state.session_id = (
+                create_chat_session(
+                    st.session_state.user_id,
+                    "Quantum Learning"
+                )
+            )
+
+        except Exception as e:
+
+            st.error(
+                f"Could not create chat session: {str(e)}"
+            )
+
+            st.stop()
+
+
+    # -----------------------------------------------------
     # Display user message
     # -----------------------------------------------------
 
@@ -1061,9 +1104,7 @@ if prompt:
         avatar="👩‍💻"
     ):
 
-        st.markdown(
-            prompt
-        )
+        st.markdown(prompt)
 
 
     # -----------------------------------------------------
@@ -1091,6 +1132,24 @@ if prompt:
                     )
                 )
 
+            except TypeError:
+
+                # Compatibility with an answer_question()
+                # that only accepts query
+                try:
+
+                    response = answer_question(
+                        prompt
+                    )
+
+                except Exception as e:
+
+                    response = (
+                        "⚠️ I couldn't process that "
+                        "question right now.\n\n"
+                        f"**Error:** `{str(e)}`"
+                    )
+
             except Exception as e:
 
                 response = (
@@ -1099,9 +1158,7 @@ if prompt:
                     f"**Error:** `{str(e)}`"
                 )
 
-        st.markdown(
-            response
-        )
+        st.markdown(response)
 
 
     # -----------------------------------------------------
@@ -1113,6 +1170,17 @@ if prompt:
             "role": "assistant",
             "content": response
         }
+    )
+
+
+    # -----------------------------------------------------
+    # Refresh session list
+    # -----------------------------------------------------
+
+    st.session_state.sessions = (
+        get_user_sessions(
+            st.session_state.user_id
+        )
     )
 
 

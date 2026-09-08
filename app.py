@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 from groq import Groq
 import os
@@ -586,4 +585,4 @@ if question:
     st.session_state.chats[current_chat] = messages
 
     st.rerun()
-```
+

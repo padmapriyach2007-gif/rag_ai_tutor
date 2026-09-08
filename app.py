@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 from openai import OpenAI
 import os
@@ -183,8 +184,11 @@ history, general knowledge, writing, and everyday questions.
 Do not restrict yourself to quantum computing.
 
 Explain things clearly and adapt your answer to the user's level.
+
 If the user asks for code, provide working code and explain it.
+
 If the user asks a conceptual question, explain it with examples.
+
 If the question is unclear, ask a useful clarification.
 """
             },
@@ -196,6 +200,8 @@ If the question is unclear, ask a useful clarification.
     )
 
     return response.choices[0].message.content
+
+
 # ============================================================
 # LOGIN SCREEN
 # ============================================================
@@ -296,7 +302,6 @@ with st.sidebar:
     st.markdown("---")
 
     st.subheader("💬 Your Chats")
-
 
     chat_names = list(st.session_state.chats.keys())
 
@@ -453,7 +458,7 @@ Ask questions about:
 • Quantum Gates
 
 • Qiskit
-        """
+"""
     )
 
 
@@ -531,7 +536,7 @@ if question:
     })
 
     # AI response
-    answer = answer_question(question)
+    answer = ai_response(question)
 
     messages.append({
         "role": "assistant",
@@ -542,3 +547,4 @@ if question:
     st.session_state.chats[current_chat] = messages
 
     st.rerun()
+```

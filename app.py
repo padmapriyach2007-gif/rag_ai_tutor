@@ -34,7 +34,7 @@ if "current_chat" not in st.session_state:
 
 
 # ============================================================
-# CUSTOM CSS
+# GALAXY THEME CSS
 # ============================================================
 
 st.markdown(
@@ -42,43 +42,56 @@ st.markdown(
 <style>
 
 /* ============================================================
+   IMPORT FONT
+   ============================================================ */
+
+@import url(
+    'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap'
+);
+
+
+/* ============================================================
    GLOBAL
    ============================================================ */
 
 html, body {
-    font-family: "Inter", "Segoe UI", sans-serif;
+
+    font-family: 'Inter', sans-serif;
+
 }
 
 .stApp {
 
     background:
         radial-gradient(
-            circle at 10% 15%,
-            rgba(89, 70, 255, 0.18),
-            transparent 27%
+            circle at 15% 20%,
+            rgba(108, 63, 255, 0.18),
+            transparent 25%
         ),
         radial-gradient(
-            circle at 90% 20%,
-            rgba(0, 153, 255, 0.14),
-            transparent 30%
+            circle at 85% 15%,
+            rgba(0, 157, 255, 0.16),
+            transparent 28%
         ),
         radial-gradient(
-            circle at 50% 100%,
-            rgba(130, 55, 255, 0.12),
-            transparent 35%
+            circle at 50% 80%,
+            rgba(168, 52, 255, 0.13),
+            transparent 32%
         ),
-        #050716;
+        linear-gradient(
+            135deg,
+            #02030d,
+            #070b20,
+            #030716
+        );
 
     color: #ffffff;
-}
 
-[data-testid="stMain"] {
-    background: transparent;
 }
 
 
 /* ============================================================
-   QUANTUM GRID
+   GALAXY STAR FIELD
    ============================================================ */
 
 .stApp::before {
@@ -92,19 +105,117 @@ html, body {
     pointer-events: none;
 
     background-image:
+
+        radial-gradient(
+            1px 1px at 10% 20%,
+            rgba(255,255,255,0.8),
+            transparent
+        ),
+
+        radial-gradient(
+            1px 1px at 20% 80%,
+            rgba(160,190,255,0.8),
+            transparent
+        ),
+
+        radial-gradient(
+            1px 1px at 35% 35%,
+            rgba(255,255,255,0.7),
+            transparent
+        ),
+
+        radial-gradient(
+            1px 1px at 50% 15%,
+            rgba(170,120,255,0.8),
+            transparent
+        ),
+
+        radial-gradient(
+            1px 1px at 65% 70%,
+            rgba(255,255,255,0.7),
+            transparent
+        ),
+
+        radial-gradient(
+            1px 1px at 80% 40%,
+            rgba(100,180,255,0.8),
+            transparent
+        ),
+
+        radial-gradient(
+            2px 2px at 90% 85%,
+            rgba(255,255,255,0.9),
+            transparent
+        );
+
+    background-size:
+        250px 250px;
+
+    opacity: 0.7;
+
+    animation:
+        starsMove 25s linear infinite;
+
+}
+
+
+@keyframes starsMove {
+
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-15px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+
+}
+
+
+/* ============================================================
+   SUBTLE GRID
+   ============================================================ */
+
+.stApp::after {
+
+    content: "";
+
+    position: fixed;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    background-image:
+
         linear-gradient(
-            rgba(100, 110, 255, 0.035) 1px,
+            rgba(90, 90, 180, 0.025) 1px,
             transparent 1px
         ),
+
         linear-gradient(
             90deg,
-            rgba(100, 110, 255, 0.035) 1px,
+            rgba(90, 90, 180, 0.025) 1px,
             transparent 1px
         );
 
-    background-size: 32px 32px;
+    background-size: 35px 35px;
 
-    opacity: 0.8;
+}
+
+
+/* ============================================================
+   MAIN AREA
+   ============================================================ */
+
+[data-testid="stMain"] {
+
+    background: transparent;
+
 }
 
 
@@ -115,30 +226,34 @@ html, body {
 [data-testid="stSidebar"] {
 
     background:
+
         radial-gradient(
-            circle at 20% 5%,
-            rgba(100, 80, 255, 0.15),
-            transparent 25%
-        ),
-        radial-gradient(
-            circle at 90% 80%,
-            rgba(0, 130, 255, 0.08),
+            circle at 30% 5%,
+            rgba(105, 65, 255, 0.18),
             transparent 30%
         ),
+
+        radial-gradient(
+            circle at 80% 75%,
+            rgba(0, 150, 255, 0.10),
+            transparent 35%
+        ),
+
         linear-gradient(
             180deg,
-            #030511 0%,
-            #070a1c 50%,
-            #030510 100%
+            #03040e,
+            #070a1c,
+            #02030b
         ) !important;
 
     border-right:
-        1px solid rgba(100, 105, 190, 0.20);
+        1px solid rgba(120, 105, 255, 0.25);
+
 }
 
 
 /* ============================================================
-   SIDEBAR BRAND
+   BRAND
    ============================================================ */
 
 .quantum-brand {
@@ -150,79 +265,132 @@ html, body {
     gap: 12px;
 
     padding: 5px 0 10px 0;
+
 }
 
 
 .brand-icon {
 
-    width: 43px;
-    height: 43px;
+    width: 46px;
+
+    height: 46px;
 
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
-    border-radius: 12px;
+    border-radius: 14px;
 
     background:
+
         linear-gradient(
             135deg,
-            #7658ff,
-            #397cff
+            #8b5cff,
+            #397dff
         );
 
     border:
-        1px solid rgba(190, 180, 255, 0.60);
-
-    color: white;
+        1px solid rgba(210,190,255,0.6);
 
     font-size: 25px;
 
-    box-shadow:
-        0 0 25px rgba(90, 70, 255, 0.42);
+    color: white;
 
-    transition:
-        transform 0.3s ease,
-        box-shadow 0.3s ease;
+    box-shadow:
+
+        0 0 20px rgba(117, 75, 255, 0.55),
+
+        0 0 45px rgba(45, 120, 255, 0.25);
+
+    animation:
+        iconPulse 3s ease-in-out infinite;
+
 }
 
 
-.brand-icon:hover {
+@keyframes iconPulse {
 
-    transform:
-        rotate(8deg)
-        scale(1.08);
+    0%, 100% {
 
-    box-shadow:
-        0 0 35px rgba(100, 80, 255, 0.65);
+        box-shadow:
+            0 0 20px rgba(117,75,255,0.45),
+            0 0 40px rgba(45,120,255,0.15);
+
+    }
+
+    50% {
+
+        box-shadow:
+            0 0 30px rgba(117,75,255,0.75),
+            0 0 60px rgba(45,120,255,0.30);
+
+    }
+
 }
 
 
 .brand-title {
 
-    color: #ffffff;
+    font-family: 'Orbitron', sans-serif;
 
-    font-size: 19px;
+    font-size: 18px;
 
-    font-weight: 850;
+    font-weight: 800;
 
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
+
+    background:
+
+        linear-gradient(
+            90deg,
+            #ffffff,
+            #bca8ff,
+            #72b9ff,
+            #ffffff
+        );
+
+    background-size: 200% auto;
+
+    -webkit-background-clip: text;
+
+    -webkit-text-fill-color: transparent;
+
+    animation:
+        galaxyText 5s linear infinite;
+
 }
 
 
 .brand-subtitle {
 
-    color: #737b9b;
+    color: #737b9c;
 
-    font-size: 11px;
+    font-size: 10px;
 
-    margin-top: 3px;
+    margin-top: 4px;
+
+    letter-spacing: 0.5px;
+
+}
+
+
+@keyframes galaxyText {
+
+    0% {
+        background-position: 0% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+
 }
 
 
 /* ============================================================
-   SIDEBAR DIVIDERS
+   SIDEBAR DIVIDER
    ============================================================ */
 
 .side-divider {
@@ -232,53 +400,66 @@ html, body {
     margin: 18px 0;
 
     background:
+
         linear-gradient(
             90deg,
             transparent,
-            rgba(120, 115, 190, 0.24),
+            rgba(120,100,255,0.35),
+            rgba(40,150,255,0.25),
             transparent
         );
+
 }
 
 
 /* ============================================================
-   SIDEBAR LABELS
+   SIDEBAR TITLES
    ============================================================ */
 
 .section-label,
 .section-title {
 
-    color: #dce1f4;
+    font-family: 'Orbitron', sans-serif;
 
-    font-size: 14px;
+    color: #dfe5ff;
+
+    font-size: 13px;
 
     font-weight: 700;
 
-    margin-bottom: 9px;
+    letter-spacing: 0.5px;
+
 }
 
 
 /* ============================================================
-   USER EMAIL
+   EMAIL
    ============================================================ */
 
 .user-email {
 
-    color: #4d9eff;
+    color: #65aaff;
 
     font-size: 12px;
 
-    padding: 5px 0;
+    margin-top: 7px;
 
-    word-break: break-word;
+    text-shadow:
+        0 0 10px rgba(60,140,255,0.35);
 
     transition:
-        color 0.25s ease;
+        all 0.3s ease;
+
 }
 
 
 .user-email:hover {
-    color: #82bdff;
+
+    color: #b19aff;
+
+    text-shadow:
+        0 0 15px rgba(120,80,255,0.7);
+
 }
 
 
@@ -290,77 +471,81 @@ html, body {
 
     width: 100%;
 
-    min-height: 43px;
+    min-height: 44px;
 
-    border-radius: 11px;
+    border-radius: 12px;
 
     background:
+
         linear-gradient(
             135deg,
-            rgba(20, 24, 52, 0.92),
-            rgba(10, 14, 34, 0.92)
+            rgba(18,21,48,0.90),
+            rgba(8,11,30,0.95)
         );
 
     border:
-        1px solid rgba(105, 105, 170, 0.25);
+        1px solid rgba(105,105,180,0.28);
 
-    color: #c3c8df;
+    color: #bfc6e5;
 
-    font-size: 13px;
+    font-size: 12px;
 
     font-weight: 600;
 
     transition:
+
         transform 0.25s ease,
-        background 0.25s ease,
         border-color 0.25s ease,
         box-shadow 0.25s ease,
-        color 0.25s ease;
+        background 0.25s ease;
+
 }
 
 
 [data-testid="stSidebar"] .stButton > button:hover {
 
     transform:
-        translateX(4px);
+        translateX(5px);
 
     background:
+
         linear-gradient(
             100deg,
-            rgba(78, 63, 175, 0.90),
-            rgba(31, 73, 145, 0.90)
+            rgba(77,55,180,0.85),
+            rgba(27,82,160,0.85)
         );
 
     border-color:
-        rgba(120, 110, 255, 0.65);
+        rgba(130,115,255,0.8);
 
     color: #ffffff;
 
     box-shadow:
-        0 8px 24px rgba(65, 70, 190, 0.25);
+
+        0 8px 25px rgba(70,60,200,0.3),
+
+        0 0 18px rgba(90,70,255,0.12);
+
 }
 
 
 [data-testid="stSidebar"] .stButton > button:active {
 
     transform:
-        translateX(2px)
-        scale(0.97);
-}
+        scale(0.96);
 
-
-[data-testid="stSidebar"] .stButton {
-    margin-bottom: 6px;
 }
 
 
 /* ============================================================
-   NEW CHAT BUTTON
+   CHAT BUTTON CURRENT
    ============================================================ */
 
-[data-testid="stSidebar"] .stButton > button {
+[data-testid="stSidebar"] .stButton > button[kind="secondary"] {
 
-    overflow: hidden;
+    transition:
+        all 0.25s ease;
+
 }
 
 
@@ -371,31 +556,30 @@ html, body {
 [data-testid="stSidebar"] [data-testid="stExpander"] {
 
     background:
-        rgba(10, 14, 35, 0.75) !important;
+        rgba(7,10,29,0.8) !important;
 
     border:
-        1px solid rgba(105, 105, 170, 0.30) !important;
+        1px solid rgba(110,105,190,0.3) !important;
 
-    border-radius: 12px !important;
+    border-radius:
+        12px !important;
 
-    transition:
-        border-color 0.25s ease,
-        box-shadow 0.25s ease;
 }
 
 
 [data-testid="stSidebar"] [data-testid="stExpander"]:hover {
 
     border-color:
-        rgba(115, 105, 255, 0.60) !important;
+        rgba(130,110,255,0.7) !important;
 
     box-shadow:
-        0 0 20px rgba(75, 65, 200, 0.12);
+        0 0 25px rgba(80,65,220,0.15);
+
 }
 
 
 /* ============================================================
-   LEARNING MODE CARD
+   LEARNING MODE
    ============================================================ */
 
 .learning-card {
@@ -404,46 +588,50 @@ html, body {
 
     overflow: hidden;
 
-    padding: 17px;
+    padding: 18px;
 
-    border-radius: 17px;
+    border-radius: 18px;
 
     background:
+
         linear-gradient(
             145deg,
-            rgba(25, 62, 105, 0.97),
-            rgba(8, 28, 58, 0.97)
+            rgba(25,55,105,0.96),
+            rgba(8,22,52,0.96)
         );
 
     border:
-        1px solid rgba(72, 151, 255, 0.42);
+        1px solid rgba(76,150,255,0.45);
 
     box-shadow:
-        0 12px 30px rgba(0, 0, 0, 0.30),
-        inset 0 1px 0 rgba(255,255,255,0.05);
+
+        0 15px 40px rgba(0,0,0,0.35),
+
+        inset 0 1px 0
+        rgba(255,255,255,0.06);
 
     transition:
-        transform 0.3s ease,
-        border-color 0.3s ease,
-        box-shadow 0.3s ease;
+        all 0.35s ease;
+
 }
 
 
 .learning-card:hover {
 
     transform:
-        translateY(-3px);
+        translateY(-4px);
 
     border-color:
-        rgba(90, 170, 255, 0.72);
+        rgba(90,170,255,0.85);
 
     box-shadow:
-        0 18px 40px rgba(0, 0, 0, 0.40),
-        0 0 30px rgba(50, 130, 255, 0.15);
+
+        0 20px 45px rgba(0,0,0,0.45),
+
+        0 0 30px rgba(50,130,255,0.16);
+
 }
 
-
-/* Decorative glow */
 
 .learning-card::before {
 
@@ -451,28 +639,26 @@ html, body {
 
     position: absolute;
 
-    width: 170px;
-    height: 170px;
+    width: 200px;
 
-    right: -85px;
-    top: -85px;
+    height: 200px;
+
+    right: -100px;
+
+    top: -100px;
 
     border-radius: 50%;
 
     background:
+
         radial-gradient(
             circle,
-            rgba(80, 160, 255, 0.25),
+            rgba(100,150,255,0.30),
             transparent 70%
         );
 
-    pointer-events: none;
 }
 
-
-/* ============================================================
-   LEARNING HEADER
-   ============================================================ */
 
 .learning-header {
 
@@ -482,72 +668,79 @@ html, body {
 
     gap: 10px;
 
-    margin-bottom: 15px;
+    margin-bottom: 16px;
+
 }
 
 
 .learning-icon {
 
-    width: 38px;
-    height: 38px;
+    width: 40px;
+
+    height: 40px;
 
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
-    border-radius: 11px;
+    border-radius: 12px;
 
     background:
-        rgba(110, 85, 255, 0.18);
+        rgba(125,90,255,0.2);
 
     border:
-        1px solid rgba(150, 130, 255, 0.30);
+        1px solid rgba(160,135,255,0.35);
 
-    font-size: 19px;
+    font-size: 20px;
 
     box-shadow:
-        0 0 15px rgba(100, 80, 255, 0.15);
+        0 0 18px rgba(100,80,255,0.2);
+
 }
 
 
 .learning-title {
 
-    color: white;
+    font-family: 'Orbitron', sans-serif;
 
-    font-size: 15px;
+    color: #ffffff;
+
+    font-size: 13px;
 
     font-weight: 800;
+
+    letter-spacing: 0.5px;
+
 }
 
 
 .learning-status {
 
-    color: #63baff;
+    color: #61b8ff;
 
-    font-size: 8px;
+    font-size: 7px;
 
     font-weight: 700;
 
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
 
-    margin-top: 2px;
+    margin-top: 3px;
+
 }
 
 
 .learning-question {
 
-    color: #cbd5ec;
+    color: #b9c8e5;
 
     font-size: 12px;
 
     margin-bottom: 10px;
+
 }
 
-
-/* ============================================================
-   LEARNING TOPICS
-   ============================================================ */
 
 .learning-topic {
 
@@ -555,108 +748,43 @@ html, body {
 
     align-items: center;
 
-    gap: 8px;
+    gap: 9px;
 
-    padding: 8px 9px;
+    padding: 9px;
 
-    margin-bottom: 6px;
+    margin-bottom: 7px;
 
-    border-radius: 9px;
+    border-radius: 10px;
 
     background:
         rgba(255,255,255,0.035);
 
     border:
-        1px solid rgba(255,255,255,0.035);
+        1px solid rgba(255,255,255,0.04);
 
-    color: #d6e2f7;
+    color: #d9e4f8;
 
-    font-size: 12px;
+    font-size: 11px;
 
     transition:
-        transform 0.22s ease,
-        background 0.22s ease,
-        border-color 0.22s ease;
+        all 0.25s ease;
+
 }
 
 
 .learning-topic:hover {
 
     transform:
-        translateX(5px);
+        translateX(6px);
 
     background:
-        rgba(80, 160, 255, 0.12);
+        rgba(90,160,255,0.13);
 
     border-color:
-        rgba(100, 175, 255, 0.25);
-}
+        rgba(100,170,255,0.28);
 
+    color: white;
 
-/* ============================================================
-   QUANTUM DOTS
-   ============================================================ */
-
-.quantum-dots {
-
-    display: flex;
-
-    justify-content: center;
-
-    gap: 5px;
-
-    margin-top: 13px;
-}
-
-
-.quantum-dots span {
-
-    width: 5px;
-    height: 5px;
-
-    border-radius: 50%;
-
-    background: #70c5ff;
-
-    box-shadow:
-        0 0 8px rgba(80, 180, 255, 0.8);
-
-    animation:
-        quantumPulse 1.4s infinite ease-in-out;
-}
-
-
-.quantum-dots span:nth-child(2) {
-    animation-delay: 0.15s;
-}
-
-.quantum-dots span:nth-child(3) {
-    animation-delay: 0.30s;
-}
-
-.quantum-dots span:nth-child(4) {
-    animation-delay: 0.45s;
-}
-
-
-@keyframes quantumPulse {
-
-    0%,
-    100% {
-
-        opacity: 0.25;
-
-        transform:
-            scale(0.7);
-    }
-
-    50% {
-
-        opacity: 1;
-
-        transform:
-            scale(1.3);
-    }
 }
 
 
@@ -666,134 +794,170 @@ html, body {
 
 .hero-box {
 
-    width: min(850px, 90%);
+    width: min(820px, 92%);
 
-    margin: 35px auto 28px auto;
+    margin:
+        45px auto 30px auto;
 
-    padding: 38px 30px;
+    padding:
+        42px 30px;
 
-    background:
-        linear-gradient(
-            145deg,
-            rgba(22, 25, 55, 0.92),
-            rgba(9, 12, 30, 0.92)
-        );
+    position: relative;
 
-    border:
-        1px solid rgba(105, 100, 220, 0.32);
-
-    border-radius: 20px;
+    overflow: hidden;
 
     text-align: center;
 
+    border-radius: 24px;
+
+    background:
+
+        linear-gradient(
+            145deg,
+            rgba(20,24,58,0.88),
+            rgba(7,10,28,0.90)
+        );
+
+    border:
+        1px solid rgba(110,100,230,0.38);
+
     box-shadow:
-        0 15px 45px rgba(0,0,0,0.30);
+
+        0 20px 60px rgba(0,0,0,0.4),
+
+        0 0 50px rgba(75,60,255,0.10);
+
+}
+
+
+.hero-box::before {
+
+    content: "";
+
+    position: absolute;
+
+    width: 500px;
+
+    height: 180px;
+
+    left: 50%;
+
+    top: -130px;
+
+    transform:
+        translateX(-50%);
+
+    border-radius: 50%;
+
+    background:
+
+        radial-gradient(
+            ellipse,
+            rgba(112,76,255,0.38),
+            transparent 70%
+        );
+
 }
 
 
 .hero-icon {
 
-    font-size: 45px;
+    position: relative;
 
-    margin-bottom: 5px;
+    font-size: 48px;
+
+    text-shadow:
+
+        0 0 12px rgba(150,120,255,0.9),
+
+        0 0 35px rgba(75,100,255,0.7);
+
 }
 
 
 .hero-title {
 
+    position: relative;
+
+    font-family: 'Orbitron', sans-serif;
+
     font-size: 38px;
 
-    font-weight: 800;
+    font-weight: 900;
 
-    color: white;
+    letter-spacing: 1px;
 
-    letter-spacing: -0.5px;
+    background:
+
+        linear-gradient(
+            90deg,
+            #ffffff,
+            #a889ff,
+            #5ebaff,
+            #ffffff,
+            #a889ff
+        );
+
+    background-size: 300% auto;
+
+    -webkit-background-clip: text;
+
+    -webkit-text-fill-color: transparent;
+
+    animation:
+        galaxyTitle 6s linear infinite;
+
+    text-shadow:
+        0 0 25px rgba(110,80,255,0.15);
+
+}
+
+
+@keyframes galaxyTitle {
+
+    0% {
+        background-position: 0% center;
+    }
+
+    100% {
+        background-position: 300% center;
+    }
+
 }
 
 
 .hero-subtitle {
 
-    font-size: 15px;
+    position: relative;
 
-    color: #929ab8;
+    color: #929cbc;
 
-    margin-top: 7px;
+    font-size: 14px;
+
+    margin-top: 9px;
+
+    letter-spacing: 0.3px;
+
 }
 
 
 .online {
 
-    margin-top: 13px;
+    position: relative;
 
-    color: #43e89a;
+    margin-top: 15px;
 
-    font-size: 12px;
+    color: #4cf0a0;
 
-    font-weight: 700;
+    font-size: 11px;
 
-    letter-spacing: 1px;
-}
+    font-weight: 800;
 
+    letter-spacing: 2px;
 
-/* ============================================================
-   CHAT MESSAGES
-   ============================================================ */
+    text-shadow:
+        0 0 12px rgba(60,240,150,0.55);
 
-[data-testid="stChatMessage"] {
-
-    border-radius: 15px;
-
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-
-[data-testid="stChatMessage"]:hover {
-
-    transform:
-        translateY(-1px);
-
-    box-shadow:
-        0 5px 20px rgba(0,0,0,0.12);
-}
-
-
-/* ============================================================
-   CHAT INPUT
-   ============================================================ */
-
-[data-testid="stChatInput"] {
-
-    border-radius: 16px;
-}
-
-
-[data-testid="stChatInput"] textarea {
-
-    border-radius: 14px !important;
-
-    background:
-        rgba(10, 13, 32, 0.92) !important;
-
-    border:
-        1px solid rgba(105, 105, 170, 0.35) !important;
-
-    color: white !important;
-
-    transition:
-        border-color 0.25s ease,
-        box-shadow 0.25s ease;
-}
-
-
-[data-testid="stChatInput"] textarea:focus {
-
-    border-color:
-        rgba(115, 105, 255, 0.70) !important;
-
-    box-shadow:
-        0 0 25px rgba(85, 70, 255, 0.15) !important;
 }
 
 
@@ -803,38 +967,50 @@ html, body {
 
 .login-container {
 
-    width: min(440px, 90vw);
+    width: min(460px, 90vw);
 
-    margin: 7vh auto 0 auto;
+    margin:
+        7vh auto 22px auto;
 
-    padding: 36px 38px 34px 38px;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(22, 26, 58, 0.97),
-            rgba(8, 11, 29, 0.97)
-        );
-
-    border:
-        1px solid rgba(110, 105, 255, 0.45);
-
-    border-radius: 24px;
-
-    text-align: center;
+    padding:
+        38px 40px;
 
     position: relative;
 
     overflow: hidden;
 
+    text-align: center;
+
+    border-radius: 25px;
+
+    background:
+
+        radial-gradient(
+            circle at 50% 0%,
+            rgba(100,70,255,0.15),
+            transparent 45%
+        ),
+
+        linear-gradient(
+            145deg,
+            rgba(22,26,60,0.96),
+            rgba(6,9,26,0.98)
+        );
+
+    border:
+        1px solid rgba(120,105,255,0.50);
+
     box-shadow:
-        0 25px 70px rgba(0,0,0,0.45),
-        0 0 55px rgba(75,65,255,0.12),
-        inset 0 1px 0 rgba(255,255,255,0.07);
+
+        0 25px 80px rgba(0,0,0,0.50),
+
+        0 0 50px rgba(80,60,255,0.13),
+
+        inset 0 1px 0
+        rgba(255,255,255,0.08);
+
 }
 
-
-/* Login glow */
 
 .login-container::before {
 
@@ -843,10 +1019,12 @@ html, body {
     position: absolute;
 
     width: 300px;
+
     height: 300px;
 
     left: 50%;
-    top: -210px;
+
+    top: -220px;
 
     transform:
         translateX(-50%);
@@ -854,73 +1032,123 @@ html, body {
     border-radius: 50%;
 
     background:
+
         radial-gradient(
             circle,
-            rgba(100,80,255,0.35),
+            rgba(120,80,255,0.4),
             transparent 70%
         );
 
-    pointer-events: none;
 }
 
 
 .login-icon {
 
-    width: 70px;
-    height: 70px;
+    position: relative;
 
-    margin: 0 auto 17px auto;
+    width: 72px;
+
+    height: 72px;
+
+    margin:
+        0 auto 18px auto;
 
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
-    border-radius: 18px;
+    border-radius: 20px;
 
     background:
+
         linear-gradient(
             135deg,
-            #795cff,
-            #3979ff
+            #805dff,
+            #367eff
         );
 
     border:
-        1px solid rgba(190,180,255,0.65);
+        1px solid rgba(210,195,255,0.7);
 
-    font-size: 37px;
-
-    color: white;
+    font-size: 38px;
 
     box-shadow:
-        0 0 35px rgba(95,75,255,0.45);
+
+        0 0 25px rgba(110,75,255,0.55),
+
+        0 0 55px rgba(40,110,255,0.25);
 
     animation:
-        quantumFloat 3s ease-in-out infinite;
+        loginFloat 3s ease-in-out infinite;
+
+}
+
+
+@keyframes loginFloat {
+
+    0%, 100% {
+
+        transform:
+            translateY(0);
+
+    }
+
+    50% {
+
+        transform:
+            translateY(-6px);
+
+    }
+
 }
 
 
 .login-title {
 
-    color: white;
+    position: relative;
 
-    font-size: 31px;
+    font-family: 'Orbitron', sans-serif;
 
-    font-weight: 800;
+    font-size: 30px;
 
-    margin: 0;
+    font-weight: 900;
+
+    letter-spacing: 1px;
+
+    background:
+
+        linear-gradient(
+            90deg,
+            #ffffff,
+            #b59cff,
+            #67bfff,
+            #ffffff
+        );
+
+    background-size: 250% auto;
+
+    -webkit-background-clip: text;
+
+    -webkit-text-fill-color: transparent;
+
+    animation:
+        galaxyTitle 5s linear infinite;
+
 }
 
 
 .login-subtitle {
 
-    color: #8e96b5;
+    position: relative;
+
+    color: #858eae;
 
     font-size: 13px;
 
-    margin-top: 7px;
+    margin-top: 6px;
 
-    margin-bottom: 20px;
 }
 
 
@@ -930,11 +1158,12 @@ html, body {
 
 [data-testid="stTextInput"] label {
 
-    color: #d5daf0 !important;
+    color: #cdd4ed !important;
 
     font-size: 13px !important;
 
     font-weight: 600 !important;
+
 }
 
 
@@ -945,40 +1174,36 @@ html, body {
     border-radius: 12px !important;
 
     background:
-        rgba(5,8,24,0.90) !important;
+        rgba(4,7,22,0.92) !important;
 
     border:
-        1px solid rgba(110,115,165,0.35) !important;
+        1px solid rgba(105,105,170,0.35) !important;
 
     color: white !important;
 
     transition:
-        border-color 0.25s ease,
-        box-shadow 0.25s ease,
-        background 0.25s ease !important;
+        all 0.3s ease !important;
+
 }
 
 
 [data-testid="stTextInput"] input:focus {
 
     border-color:
-        #7165ff !important;
+        #7867ff !important;
 
     box-shadow:
-        0 0 0 3px rgba(100,85,255,0.15),
-        0 0 25px rgba(90,75,255,0.10) !important;
+
+        0 0 0 3px rgba(105,85,255,0.13),
+
+        0 0 25px rgba(90,70,255,0.18) !important;
+
 }
 
 
 /* ============================================================
-   LOGIN BUTTON
+   BUTTONS
    ============================================================ */
-
-.login-button-space {
-
-    margin-top: 8px;
-}
-
 
 .stButton > button {
 
@@ -987,23 +1212,26 @@ html, body {
     border-radius: 12px;
 
     background:
+
         linear-gradient(
             100deg,
-            #5748d9,
-            #386fe0
+            #5847dc,
+            #386fe1
         );
 
     border:
-        1px solid rgba(140,125,255,0.55);
+        1px solid rgba(145,125,255,0.55);
 
     color: white;
 
     font-weight: 700;
 
     transition:
+
         transform 0.25s ease,
         box-shadow 0.25s ease,
         filter 0.25s ease;
+
 }
 
 
@@ -1013,10 +1241,14 @@ html, body {
         translateY(-2px);
 
     filter:
-        brightness(1.08);
+        brightness(1.10);
 
     box-shadow:
-        0 12px 32px rgba(65,75,220,0.40);
+
+        0 12px 35px rgba(70,75,225,0.42),
+
+        0 0 20px rgba(100,80,255,0.18);
+
 }
 
 
@@ -1025,11 +1257,89 @@ html, body {
     transform:
         translateY(1px)
         scale(0.98);
+
 }
 
 
 /* ============================================================
-   MOBILE
+   CHAT
+   ============================================================ */
+
+[data-testid="stChatMessage"] {
+
+    border-radius: 15px;
+
+    transition:
+        all 0.25s ease;
+
+}
+
+
+[data-testid="stChatMessage"]:hover {
+
+    transform:
+        translateY(-1px);
+
+    box-shadow:
+        0 8px 25px rgba(0,0,0,0.15);
+
+}
+
+
+/* ============================================================
+   CHAT INPUT
+   ============================================================ */
+
+[data-testid="stChatInput"] textarea {
+
+    border-radius: 15px !important;
+
+    background:
+        rgba(6,9,27,0.94) !important;
+
+    border:
+        1px solid rgba(105,105,175,0.38) !important;
+
+    color: white !important;
+
+    transition:
+        all 0.3s ease !important;
+
+}
+
+
+[data-testid="stChatInput"] textarea:focus {
+
+    border-color:
+        rgba(120,105,255,0.8) !important;
+
+    box-shadow:
+
+        0 0 20px rgba(90,75,255,0.15) !important;
+
+}
+
+
+/* ============================================================
+   INFO BOX
+   ============================================================ */
+
+[data-testid="stSidebar"] .stAlert {
+
+    background:
+        rgba(20,40,78,0.72) !important;
+
+    border:
+        1px solid rgba(80,145,255,0.30) !important;
+
+    border-radius:
+        14px !important;
+
+}
+
+
+/* ============================================================
+   RESPONSIVE
    ============================================================ */
 
 @media (max-width: 768px) {
@@ -1038,27 +1348,38 @@ html, body {
 
         width: 88vw;
 
-        margin-top: 5vh;
+        padding:
+            30px 24px;
 
-        padding: 30px 24px;
+        margin-top:
+            5vh;
+
     }
+
 
     .login-title {
 
-        font-size: 27px;
+        font-size: 26px;
+
     }
+
 
     .hero-box {
 
         width: 92%;
 
-        padding: 30px 20px;
+        padding:
+            32px 20px;
+
     }
+
 
     .hero-title {
 
-        font-size: 30px;
+        font-size: 28px;
+
     }
+
 }
 
 </style>
@@ -1073,21 +1394,19 @@ html, body {
 
 def ai_response(chat_history):
 
-    # Get Groq API key
     api_key = os.environ.get("GROQ_API_KEY")
 
     if not api_key:
+
         return (
             "⚠️ **Groq API key is missing.**\n\n"
             "Please set your `GROQ_API_KEY` environment variable."
         )
 
-    # Create Groq client
     client = Groq(
         api_key=api_key
     )
 
-    # System instructions
     system_message = {
         "role": "system",
         "content": """
@@ -1109,7 +1428,6 @@ If the question is unclear, ask a useful clarification.
 """
     }
 
-    # Combine system message and conversation history
     full_messages = [system_message] + chat_history
 
     try:
@@ -1130,6 +1448,7 @@ If the question is unclear, ask a useful clarification.
 
 
 def answer_question(question, chat_history):
+
     return ai_response(chat_history)
 
 
@@ -1138,10 +1457,6 @@ def answer_question(question, chat_history):
 # ============================================================
 
 if not st.session_state.logged_in:
-
-    # --------------------------------------------------------
-    # LOGIN CARD
-    # --------------------------------------------------------
 
     st.markdown(
         """
@@ -1152,7 +1467,7 @@ if not st.session_state.logged_in:
             </div>
 
             <div class="login-title">
-                Quantum Lab
+                QUANTUM LAB
             </div>
 
             <div class="login-subtitle">
@@ -1165,9 +1480,8 @@ if not st.session_state.logged_in:
     )
 
 
-    # --------------------------------------------------------
-    # LOGIN FORM
-    # --------------------------------------------------------
+    st.subheader("🔐 Login")
+
 
     email = st.text_input(
         "Email address",
@@ -1176,7 +1490,7 @@ if not st.session_state.logged_in:
 
 
     if st.button(
-        "🚀  Login",
+        "🚀 Login",
         use_container_width=True
     ):
 
@@ -1247,6 +1561,7 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
+
     st.markdown(
         """
         <div class="section-label">
@@ -1255,6 +1570,7 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
+
 
     st.markdown(
         f"""
@@ -1274,6 +1590,7 @@ with st.sidebar:
         '<div class="side-divider"></div>',
         unsafe_allow_html=True
     )
+
 
     if st.button(
         "✚  New Chat",
@@ -1310,6 +1627,7 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
+
     st.markdown(
         """
         <div class="section-title">
@@ -1335,13 +1653,13 @@ with st.sidebar:
 
         button_text = (
 
-            f"🟣  {chat_name}"
+            f"🟣 {chat_name}"
 
             if is_current
 
             else
 
-            f"◉  {chat_name}"
+            f"💬 {chat_name}"
         )
 
 
@@ -1367,7 +1685,7 @@ with st.sidebar:
 
 
     with st.expander(
-        "✏️  Rename Current Chat"
+        "✏️ Rename Current Chat"
     ):
 
         current_name = (
@@ -1439,7 +1757,7 @@ with st.sidebar:
 
 
     if st.button(
-        "🗑️  Delete Current Chat",
+        "🗑️ Delete Current Chat",
         use_container_width=True
     ):
 
@@ -1482,7 +1800,7 @@ with st.sidebar:
     # --------------------------------------------------------
 
     if st.button(
-        "🧹  Clear Conversation",
+        "🧹 Clear Conversation",
         use_container_width=True
     ):
 
@@ -1504,7 +1822,7 @@ with st.sidebar:
     # --------------------------------------------------------
 
     if st.button(
-        "🚪  Logout",
+        "🚪 Logout",
         use_container_width=True
     ):
 
@@ -1536,7 +1854,7 @@ with st.sidebar:
                 <div>
 
                     <div class="learning-title">
-                        Learning Mode
+                        LEARNING MODE
                     </div>
 
                     <div class="learning-status">
@@ -1605,7 +1923,7 @@ st.markdown(
         </div>
 
         <div class="hero-title">
-            Quantum AI Tutor
+            QUANTUM AI TUTOR
         </div>
 
         <div class="hero-subtitle">

@@ -531,7 +531,7 @@ if question:
     })
 
     # AI response
-    answer = quantum_response(question)
+    answer = answer_question(question)
 
     messages.append({
         "role": "assistant",

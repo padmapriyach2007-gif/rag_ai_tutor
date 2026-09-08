@@ -645,4 +645,3 @@ instead of:
 model="qwen-2.5-32b"
 ```
 
-Also, **do not put your actual Groq API key directly into `app.py`**, especially if you plan to upload the project to GitHub.

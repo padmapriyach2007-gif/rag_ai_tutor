@@ -1,70 +1,393 @@
 import os
-import shutil
 from pathlib import Path
-from dotenv import load_dotenv
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import ChatOpenAI
 
-# Load environment variables
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+
+from tavily import TavilyClient
+
+from ingest import build_vector_db
+
+
+# =========================================================
+# LOAD ENVIRONMENT VARIABLES
+# =========================================================
+
 env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
+HF_TOKEN = os.getenv("HF_TOKEN")
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+
+
+# =========================================================
+# STREAMLIT SECRETS FALLBACK
+# =========================================================
+
+try:
+    import streamlit as st
+
+    if not HF_TOKEN:
+        HF_TOKEN = st.secrets.get("HF_TOKEN")
+
+    if not TAVILY_API_KEY:
+        TAVILY_API_KEY = st.secrets.get("TAVILY_API_KEY")
+
+    if not SUPABASE_URL:
+        SUPABASE_URL = st.secrets.get("SUPABASE_URL")
+
+    if not SUPABASE_SERVICE_KEY:
+        SUPABASE_SERVICE_KEY = st.secrets.get("SUPABASE_SERVICE_KEY")
+
+except Exception:
+    pass
+
+
+# =========================================================
+# VALIDATE API KEYS
+# =========================================================
+
+if not HF_TOKEN:
+    raise ValueError(
+        "HF_TOKEN is missing. Add it to .env or Streamlit Secrets."
+    )
+
+if not TAVILY_API_KEY:
+    raise ValueError(
+        "TAVILY_API_KEY is missing. Add it to .env or Streamlit Secrets."
+    )
+
+if not SUPABASE_URL:
+    raise ValueError(
+        "SUPABASE_URL is missing. Add it to .env or Streamlit Secrets."
+    )
+
+if not SUPABASE_SERVICE_KEY:
+    raise ValueError(
+        "SUPABASE_SERVICE_KEY is missing. Add it to .env or Streamlit Secrets."
+    )
+
+
+# =========================================================
+# SUPABASE & TAVILY CONNECTIONS
+# =========================================================
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
+
+
+# =========================================================
+# LLM & EMBEDDINGS
+# =========================================================
+
+def get_llm():
+    return ChatOpenAI(
+        model="openai/gpt-oss-120b",
+        temperature=0.4,
+        api_key=HF_TOKEN,
+        base_url="https://router.huggingface.co/v1"
+    )
+
 
 def get_embeddings():
-    """Returns the standardized embedding model matching rag_engine.py."""
     return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 
-def build_vector_db():
-    docs_file = "scraped_docs.txt"
-    chroma_db_dir = "./chroma_db"
+# =========================================================
+# USER & CHAT MANAGEMENT
+# =========================================================
 
-    # Create sample document if it doesn't exist
-    if not os.path.exists(docs_file):
-        print(f"'{docs_file}' not found. Creating sample file...")
-        with open(docs_file, "w", encoding="utf-8") as f:
-            f.write(
-                "IBM Quantum provides access to real quantum hardware "
-                "and software tools like Qiskit."
-            )
+def get_or_create_user(email: str, role: str = "student") -> str:
+    email = email.strip().lower()
 
-    # Read documents
-    with open(docs_file, "r", encoding="utf-8") as f:
-        data = f.read()
-
-    if not data.strip():
-        print(f"Warning: '{docs_file}' is empty. Skipping DB build.")
-        return
-
-    # Split documents into chunks
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50
+    response = (
+        supabase.table("users")
+        .select("user_id")
+        .eq("email", email)
+        .limit(1)
+        .execute()
     )
-    docs = text_splitter.create_documents([data])
 
-    # Remove old vector store to avoid duplication on rebuilds
-    if os.path.exists(chroma_db_dir):
-        try:
-            shutil.rmtree(chroma_db_dir)
-            print("Cleared existing Chroma DB.")
-        except Exception as e:
-            print(f"Could not clear existing Chroma DB directory: {e}")
+    if response.data:
+        return response.data[0]["user_id"]
 
-    # Initialize local embedding model
+    response = (
+        supabase.table("users")
+        .insert({"email": email, "role": role})
+        .execute()
+    )
+
+    if not response.data:
+        raise RuntimeError("Failed to create user.")
+
+    return response.data[0]["user_id"]
+
+
+def create_chat_session(user_id: str, title: str = "New AI Tutor Chat") -> str:
+    response = (
+        supabase.table("chat_sessions")
+        .insert({"user_id": user_id, "title": title})
+        .execute()
+    )
+
+    if not response.data:
+        raise RuntimeError("Failed to create chat session.")
+
+    return response.data[0]["session_id"]
+
+
+def get_user_sessions(user_id: str):
+    response = (
+        supabase.table("chat_sessions")
+        .select("session_id, title, created_at")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return response.data or []
+
+
+def verify_session_owner(session_id: str, user_id: str) -> bool:
+    response = (
+        supabase.table("chat_sessions")
+        .select("session_id")
+        .eq("session_id", session_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    return bool(response.data)
+
+
+def save_message(session_id: str, sender: str, content: str):
+    if not content:
+        return None
+
+    response = (
+        supabase.table("chat_messages")
+        .insert({
+            "session_id": session_id,
+            "sender": sender,
+            "content": content
+        })
+        .execute()
+    )
+    return response.data
+
+
+def get_chat_history(session_id: str):
+    response = (
+        supabase.table("chat_messages")
+        .select("message_id, sender, content, created_at")
+        .eq("session_id", session_id)
+        .order("created_at", desc=False)
+        .execute()
+    )
+    return response.data or []
+
+
+def restore_chat(session_id: str, user_id: str):
+    if not verify_session_owner(session_id, user_id):
+        raise PermissionError("You cannot access this chat.")
+    return get_chat_history(session_id)
+
+
+def delete_chat(session_id: str, user_id: str):
+    if not verify_session_owner(session_id, user_id):
+        raise PermissionError("You cannot delete this chat.")
+
+    supabase.table("chat_messages").delete().eq("session_id", session_id).execute()
+    supabase.table("chat_sessions").delete().eq("session_id", session_id).execute()
+    return True
+
+
+# =========================================================
+# VECTOR STORE & SEARCH
+# =========================================================
+
+def get_vectorstore():
     embeddings = get_embeddings()
-
-    # Build and persist Chroma Vector DB
-    Chroma.from_documents(
-        documents=docs,
-        embedding=embeddings,
-        persist_directory=chroma_db_dir
+    return Chroma(
+        persist_directory="./chroma_db",
+        embedding_function=embeddings
     )
 
-    print("SUCCESS: Vector DB created successfully at ./chroma_db!")
+
+def web_search(query: str) -> str:
+    try:
+        results = tavily_client.search(
+            query=query,
+            search_depth="advanced",
+            max_results=8
+        )
+    except Exception as e:
+        print("Tavily error:", e)
+        return ""
+
+    web_context = []
+    for result in results.get("results", []):
+        title = result.get("title", "")
+        content = result.get("content", "")
+        url = result.get("url", "")
+
+        if not content:
+            continue
+
+        web_context.append(
+            f"Title: {title}\nSource: {url}\nInformation: {content}"
+        )
+
+    return "\n\n".join(web_context)
 
 
-if __name__ == "__main__":
-    build_vector_db()
+def get_rag_context(query: str) -> str:
+    if not os.path.exists("./chroma_db"):
+        build_vector_db()
+
+    vector_store = get_vectorstore()
+    retriever = vector_store.as_retriever(search_kwargs={"k": 4})
+    docs = retriever.invoke(query)
+
+    if not docs:
+        return "No relevant study material was found."
+
+    return "\n\n".join(doc.page_content for doc in docs)
+
+
+# =========================================================
+# MAIN ANSWER PIPELINE
+# =========================================================
+
+def answer_question(
+    query: str,
+    session_id: str | None = None,
+    user_id: str | None = None
+) -> str:
+    query = query.strip()
+    if not query:
+        return "Please enter a question."
+
+    if session_id and user_id:
+        if not verify_session_owner(session_id, user_id):
+            raise PermissionError("This chat does not belong to this user.")
+
+    if session_id:
+        save_message(session_id, "user", query)
+
+    llm = get_llm()
+
+    # Router logic
+    router_prompt = ChatPromptTemplate.from_messages([
+        (
+            "system",
+            """
+You are a question router for an intelligent AI tutor.
+Classify the user's question into exactly ONE category:
+
+RAG - Questions about Quantum Computing, Qiskit, quantum algorithms, qubits, study material.
+WEB - Current events, latest facts, companies, places, live web info.
+HYBRID - Questions requiring both study material and web verification.
+GENERAL - Normal programming, physics, math, writing, or general explanations.
+
+Return ONLY one word: RAG, WEB, HYBRID, or GENERAL.
+"""
+        ),
+        ("human", "{input}")
+    ])
+
+    router_chain = router_prompt | llm | StrOutputParser()
+
+    try:
+        route = router_chain.invoke(query).strip().upper()
+    except Exception:
+        route = "GENERAL"
+
+    if route not in {"RAG", "WEB", "HYBRID", "GENERAL"}:
+        route = "GENERAL"
+
+    rag_context = ""
+    if route in {"RAG", "HYBRID"}:
+        try:
+            rag_context = get_rag_context(query)
+        except Exception as e:
+            print("RAG error:", e)
+            rag_context = "No relevant study material could be retrieved."
+
+    web_context = ""
+    if route in {"WEB", "HYBRID"}:
+        web_context = web_search(query)
+        if not web_context:
+            web_context = "No relevant web information was found."
+
+    history_str = ""
+    if session_id:
+        try:
+            history = get_chat_history(session_id)
+            recent_history = history[-7:-1]
+            history_str = "\n".join(
+                f"{message['sender']}: {message['content']}"
+                for message in recent_history
+            )
+        except Exception as e:
+            print("Chat history error:", e)
+
+    prompt = ChatPromptTemplate.from_messages([
+        (
+            "system",
+            """
+You are an intelligent and friendly AI Tutor.
+Help students understand concepts clearly. Give accurate answers and explain step-by-step.
+Do not mention internal mechanics (RAG, Chroma, Supabase, embeddings, vector databases).
+
+STUDY MATERIAL:
+-------------------------
+{rag_context}
+-------------------------
+
+WEB INFORMATION:
+-------------------------
+{web_context}
+-------------------------
+
+PREVIOUS CHAT:
+-------------------------
+{history}
+-------------------------
+"""
+        ),
+        ("human", "{input}")
+    ])
+
+    chain = (
+        {
+            "rag_context": lambda _: rag_context,
+            "web_context": lambda _: web_context,
+            "history": lambda _: history_str,
+            "input": RunnablePassthrough()
+        }
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+
+    try:
+        answer = chain.invoke(query)
+    except Exception as e:
+        print("\nAI Error:", str(e))
+        answer = "Sorry, I could not generate a response right now. Please try again."
+
+    if session_id:
+        save_message(session_id, "assistant", answer)
+
+    return answer

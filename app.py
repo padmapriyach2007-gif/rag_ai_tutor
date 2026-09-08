@@ -1,7 +1,7 @@
 import streamlit as st
 
 # =========================================================
-# PAGE CONFIGURATION
+# PAGE CONFIG
 # =========================================================
 
 st.set_page_config(
@@ -12,36 +12,50 @@ st.set_page_config(
 )
 
 # =========================================================
-# CUSTOM CSS
+# SESSION STATE
+# =========================================================
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = True
+
+if "chats" not in st.session_state:
+    st.session_state.chats = {
+        "Quantum Learning": []
+    }
+
+if "current_chat" not in st.session_state:
+    st.session_state.current_chat = "Quantum Learning"
+
+
+# =========================================================
+# CSS
 # =========================================================
 
 st.markdown("""
 <style>
 
-    /* ---------- Main App ---------- */
+    /* ================= MAIN BACKGROUND ================= */
 
     .stApp {
         background: #07091a;
-        color: white;
     }
 
-    /* ---------- Sidebar ---------- */
+    [data-testid="stMain"] {
+        background: #07091a;
+    }
 
-    section[data-testid="stSidebar"] {
+    /* ================= SIDEBAR ================= */
+
+    [data-testid="stSidebar"] {
         background: #08091b;
-        border-right: 1px solid #202238;
     }
 
-    section[data-testid="stSidebar"] > div {
-        padding: 20px 18px;
-    }
-
-    .brand {
-        margin-bottom: 28px;
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 25px;
     }
 
     .brand-title {
-        font-size: 24px;
+        font-size: 25px;
         font-weight: 700;
         color: white;
         margin-bottom: 4px;
@@ -52,36 +66,33 @@ st.markdown("""
         color: #a7aac4;
     }
 
-    .logged-in {
-        margin-top: 25px;
-        padding: 12px 0;
+    .user-box {
+        margin-top: 28px;
+        margin-bottom: 20px;
         color: white;
         font-size: 15px;
     }
 
     .email {
-        color: #8d91ad;
+        color: #8c90a8;
         font-size: 13px;
         margin-top: 5px;
     }
 
-    .section-title {
+    .sidebar-heading {
         color: white;
         font-size: 17px;
         font-weight: 600;
-        margin-top: 25px;
-        margin-bottom: 14px;
+        margin-top: 22px;
+        margin-bottom: 10px;
     }
 
-    .chat-item {
-        padding: 10px 8px;
-        color: #d8d9e8;
-        font-size: 15px;
-        border-radius: 8px;
-    }
-
-    .chat-item:hover {
+    .chat-active {
         background: #17192b;
+        border-radius: 8px;
+        padding: 10px;
+        color: #ffffff;
+        margin-bottom: 5px;
     }
 
     .divider {
@@ -90,114 +101,108 @@ st.markdown("""
         margin: 20px 0;
     }
 
-    /* ---------- Sidebar Buttons ---------- */
+    /* ================= BUTTONS ================= */
 
-    section[data-testid="stSidebar"] .stButton > button {
+    [data-testid="stSidebar"] .stButton button {
         width: 100%;
+        min-height: 42px;
         border-radius: 8px;
-        border: 1px solid #3b3d50;
+        border: 1px solid #3c3e50;
         background: #292b37;
         color: white;
-        height: 42px;
         font-size: 14px;
-        margin-bottom: 8px;
     }
 
-    section[data-testid="stSidebar"] .stButton > button:hover {
-        border-color: #6366f1;
+    [data-testid="stSidebar"] .stButton button:hover {
+        border-color: #4da3ff;
+        background: #353746;
         color: white;
-        background: #333546;
     }
 
-    /* ---------- Learning Mode ---------- */
+    /* ================= LEARNING BOX ================= */
 
     .learning-box {
-        margin-top: 22px;
-        padding: 18px;
         background: #10294e;
-        border-radius: 10px;
         border: 1px solid #193d70;
+        border-radius: 10px;
+        padding: 17px;
+        margin-top: 20px;
     }
 
     .learning-title {
         color: #4da3ff;
         font-size: 16px;
         font-weight: 600;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
 
     .learning-text {
-        color: #b8c0d8;
+        color: #c0c8dd;
         font-size: 14px;
         line-height: 1.8;
     }
 
-    /* ---------- Main Content ---------- */
-
-    .main-container {
-        max-width: 1000px;
-        margin: auto;
-        padding-top: 50px;
-    }
+    /* ================= HERO ================= */
 
     .hero {
         background: #191b25;
-        border: 1px solid #252837;
+        border: 1px solid #292c3a;
         border-radius: 15px;
-        padding: 65px 30px;
         text-align: center;
+        padding: 55px 25px;
+        margin-top: 45px;
         margin-bottom: 25px;
     }
 
     .quantum-symbol {
-        font-size: 42px;
-        margin-bottom: 15px;
+        font-size: 45px;
+        margin-bottom: 10px;
     }
 
     .hero-title {
         color: white;
         font-size: 42px;
         font-weight: 700;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
 
     .hero-subtitle {
         color: #aeb1c5;
         font-size: 17px;
-        margin-bottom: 20px;
+        margin-bottom: 18px;
     }
 
-    .status {
+    .online {
+        color: #42e88b;
+    }
+
+    .status-text {
         color: #b9bbc9;
         font-size: 14px;
     }
 
-    .status-dot {
-        color: #42e88b;
-    }
+    /* ================= CHAT ================= */
 
-    /* ---------- Chat Messages ---------- */
-
-    .user-message {
+    .chat-user {
         background: #252735;
-        padding: 14px 18px;
-        border-radius: 12px;
-        margin: 10px 0;
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin: 8px 0;
         color: white;
     }
 
-    .ai-message {
+    .chat-ai {
         background: #11131d;
-        border: 1px solid #252837;
-        padding: 14px 18px;
-        border-radius: 12px;
-        margin: 10px 0;
-        color: #e7e8f0;
+        border: 1px solid #292c3a;
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin: 8px 0;
+        color: #e6e7ef;
     }
 
-    .message-label {
+    .chat-label {
         font-size: 12px;
-        color: #8f94ae;
+        color: #8e93aa;
         margin-bottom: 5px;
     }
 
@@ -206,14 +211,160 @@ st.markdown("""
 
 
 # =========================================================
-# SESSION STATE
+# AI RESPONSE
 # =========================================================
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+def quantum_response(question):
 
-if "chat_name" not in st.session_state:
-    st.session_state.chat_name = "Quantum Learning"
+    q = question.lower().strip()
+
+    if "qubit" in q:
+        return """
+**A qubit** is the basic unit of quantum information.
+
+A classical bit can be either **0 or 1**.
+
+A qubit can exist in a combination of both states:
+
+**|ψ⟩ = α|0⟩ + β|1⟩**
+
+This is called **superposition**.
+"""
+
+    elif "superposition" in q:
+        return """
+**Superposition** means that a quantum system can exist in a
+combination of multiple possible states.
+
+For a qubit:
+
+**|ψ⟩ = α|0⟩ + β|1⟩**
+
+When we measure it, we obtain either 0 or 1.
+"""
+
+    elif "entanglement" in q:
+        return """
+**Quantum entanglement** is a phenomenon where two or more
+qubits become strongly correlated.
+
+The state of one qubit is connected to the state of another,
+even when they are separated.
+"""
+
+    elif "hadamard" in q:
+        return """
+The **Hadamard (H) gate** is used to create superposition.
+
+For example:
+
+**H|0⟩ = (|0⟩ + |1⟩) / √2**
+
+It is one of the most important quantum gates.
+"""
+
+    elif "cnot" in q:
+        return """
+**CNOT** stands for Controlled-NOT.
+
+It uses:
+
+• One control qubit
+• One target qubit
+
+The target qubit is flipped when the control qubit is **1**.
+"""
+
+    elif "qiskit" in q:
+        return """
+**Qiskit** is a Python-based framework for working with quantum
+computing.
+
+You can use it to:
+
+• Create quantum circuits
+• Apply quantum gates
+• Simulate circuits
+• Run quantum programs
+"""
+
+    elif "gate" in q:
+        return """
+Common **quantum gates** include:
+
+• X gate — quantum NOT
+• Y gate
+• Z gate
+• H gate — creates superposition
+• S gate
+• T gate
+• CNOT — controlled operation
+"""
+
+    elif q in ["hi", "hello", "hey"]:
+        return """
+Hello! 👋
+
+I'm your **Quantum AI Tutor**.
+
+You can ask me about:
+
+• Qubits
+• Superposition
+• Entanglement
+• Quantum gates
+• Quantum circuits
+• Qiskit
+"""
+
+    else:
+        return f"""
+You asked:
+
+**{question}**
+
+I can help you learn quantum computing.
+
+Try asking:
+
+**What is a qubit?**
+
+or
+
+**What is superposition?**
+"""
+
+
+# =========================================================
+# LOGIN SCREEN
+# =========================================================
+
+if not st.session_state.logged_in:
+
+    st.markdown("""
+    <div class="hero">
+
+        <div class="quantum-symbol">⚛️</div>
+
+        <div class="hero-title">
+            Quantum Lab
+        </div>
+
+        <div class="hero-subtitle">
+            AI-Powered Learning Space
+        </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.info("You are logged out.")
+
+    if st.button("🔐 Login", use_container_width=True):
+        st.session_state.logged_in = True
+        st.toast("Logged in successfully!")
+        st.rerun()
+
+    st.stop()
 
 
 # =========================================================
@@ -224,64 +375,134 @@ with st.sidebar:
 
     # Brand
     st.markdown("""
-    <div class="brand">
-        <div class="brand-title">⚛️ QUANTUM LAB</div>
-        <div class="brand-subtitle">AI-Powered Learning Space</div>
+    <div class="brand-title">
+        ⚛️ QUANTUM LAB
+    </div>
+
+    <div class="brand-subtitle">
+        AI-Powered Learning Space
     </div>
     """, unsafe_allow_html=True)
 
-    # Logged in
+
+    # User
     st.markdown("""
-    <div class="logged-in">
+    <div class="user-box">
         👤 <b>Logged In</b>
-        <div class="email">your@email.com</div>
+        <div class="email">
+            your@email.com
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # New Chat
+
+    # NEW CHAT
     if st.button("➕  New Chat", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.chat_name = "New Quantum Chat"
+
+        number = len(st.session_state.chats) + 1
+
+        new_name = f"New Quantum Chat {number}"
+
+        st.session_state.chats[new_name] = []
+
+        st.session_state.current_chat = new_name
+
+        st.toast("New chat created!")
+
         st.rerun()
 
-    # Your Chats
-    st.markdown('<div class="section-title">💬 Your Chats</div>',
-                unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="chat-item">💬 Quantum Learning</div>
-    <div class="chat-item">💬 New Quantum Chat</div>
-    """, unsafe_allow_html=True)
+    # CHAT LIST
+    st.markdown(
+        '<div class="sidebar-heading">💬 Your Chats</div>',
+        unsafe_allow_html=True
+    )
 
-    # Divider
+
+    for chat_name in st.session_state.chats:
+
+        if st.button(
+            f"💬 {chat_name}",
+            key=f"chat_{chat_name}",
+            use_container_width=True
+        ):
+
+            st.session_state.current_chat = chat_name
+
+            st.rerun()
+
+
     st.markdown('<div class="divider"></div>',
                 unsafe_allow_html=True)
 
-    # Delete Current Chat
-    if st.button("🗑️  Delete Current Chat", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.chat_name = "Quantum Learning"
+
+    # DELETE CURRENT CHAT
+    if st.button(
+        "🗑️  Delete Current Chat",
+        use_container_width=True
+    ):
+
+        current = st.session_state.current_chat
+
+        if len(st.session_state.chats) > 1:
+
+            del st.session_state.chats[current]
+
+            st.session_state.current_chat = list(
+                st.session_state.chats.keys()
+            )[0]
+
+            st.toast("Chat deleted!")
+
+        else:
+
+            st.session_state.chats[current] = []
+
+            st.toast("Current chat cleared!")
+
+
         st.rerun()
 
-    # Clear Conversation
-    if st.button("🧹  Clear Conversation", use_container_width=True):
-        st.session_state.messages = []
+
+    # CLEAR CONVERSATION
+    if st.button(
+        "🧹  Clear Conversation",
+        use_container_width=True
+    ):
+
+        current = st.session_state.current_chat
+
+        st.session_state.chats[current] = []
+
+        st.toast("Conversation cleared!")
+
         st.rerun()
 
-    # Logout
-    if st.button("🚪  Logout", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.chat_name = "Quantum Learning"
+
+    # LOGOUT
+    if st.button(
+        "🚪  Logout",
+        use_container_width=True
+    ):
+
+        st.session_state.logged_in = False
+
+        st.toast("Logged out!")
+
         st.rerun()
 
-    # Divider
+
     st.markdown('<div class="divider"></div>',
                 unsafe_allow_html=True)
 
-    # Learning Mode
+
+    # LEARNING MODE
     st.markdown("""
     <div class="learning-box">
-        <div class="learning-title">🧠 Learning Mode</div>
+
+        <div class="learning-title">
+            🧠 Learning Mode
+        </div>
 
         <div class="learning-text">
             Ask questions about:<br><br>
@@ -290,17 +511,15 @@ with st.sidebar:
             • Quantum Gates<br>
             • Qiskit
         </div>
+
     </div>
     """, unsafe_allow_html=True)
 
 
 # =========================================================
-# MAIN AREA
+# MAIN CONTENT
 # =========================================================
 
-st.markdown('<div class="main-container">', unsafe_allow_html=True)
-
-# Hero section
 st.markdown("""
 <div class="hero">
 
@@ -316,8 +535,8 @@ st.markdown("""
         Explore quantum computing through conversation
     </div>
 
-    <div class="status">
-        <span class="status-dot">●</span>
+    <div class="status-text">
+        <span class="online">●</span>
         &nbsp; AI TUTOR ONLINE
     </div>
 
@@ -326,158 +545,29 @@ st.markdown("""
 
 
 # =========================================================
-# AI RESPONSE FUNCTION
+# CURRENT CHAT
 # =========================================================
 
-def quantum_response(question):
+current_chat = st.session_state.current_chat
 
-    q = question.lower().strip()
-
-    if "qubit" in q:
-        return """
-        A **qubit** is the basic unit of quantum information.
-
-        Unlike a classical bit, which can be either 0 or 1,
-        a qubit can exist in a **superposition of |0⟩ and |1⟩**.
-
-        Example:
-
-        |ψ⟩ = α|0⟩ + β|1⟩
-
-        where α and β are probability amplitudes.
-        """
-
-    elif "superposition" in q:
-        return """
-        **Superposition** means that a quantum system can exist
-        in a combination of multiple states at the same time.
-
-        For a qubit:
-
-        |ψ⟩ = α|0⟩ + β|1⟩
-
-        When measured, the qubit gives either 0 or 1.
-        """
-
-    elif "entanglement" in q:
-        return """
-        **Quantum entanglement** is a phenomenon where two or more
-        qubits become correlated so strongly that their quantum
-        states cannot be described independently.
-
-        Measuring one entangled qubit gives information about the
-        other qubit.
-        """
-
-    elif "hadamard" in q:
-        return """
-        The **Hadamard gate (H)** creates superposition.
-
-        For example:
-
-        |0⟩ → (|0⟩ + |1⟩) / √2
-
-        It is one of the most commonly used quantum gates.
-        """
-
-    elif "cnot" in q:
-        return """
-        **CNOT (Controlled-NOT)** is a two-qubit quantum gate.
-
-        It has:
-        • Control qubit
-        • Target qubit
-
-        The target qubit is flipped only when the control qubit
-        is in state |1⟩.
-        """
-
-    elif "qiskit" in q:
-        return """
-        **Qiskit** is an open-source framework used for programming
-        and experimenting with quantum computers.
-
-        You can use Python with Qiskit to create quantum circuits,
-        apply quantum gates, and run simulations.
-        """
-
-    elif "quantum gate" in q or "quantum gates" in q:
-        return """
-        Quantum gates manipulate qubits.
-
-        Common quantum gates include:
-
-        • X gate – quantum NOT
-        • Y gate
-        • Z gate
-        • H gate – creates superposition
-        • S gate
-        • T gate
-        • CNOT – controlled operation
-        """
-
-    elif "hello" in q or "hi" in q or "hey" in q:
-        return """
-        Hello! 👋
-
-        I'm your **Quantum AI Tutor**.
-
-        Ask me anything about:
-        • Qubits
-        • Superposition
-        • Entanglement
-        • Quantum gates
-        • Quantum circuits
-        • Qiskit
-        """
-
-    else:
-        return f"""
-        That's an interesting question about quantum computing! ⚛️
-
-        You asked:
-
-        **{question}**
-
-        I can help you learn topics such as **qubits,
-        superposition, entanglement, quantum gates,
-        quantum circuits, and Qiskit**.
-
-        Try asking something like:
-
-        **"What is a qubit?"**
-        """
+messages = st.session_state.chats[current_chat]
 
 
 # =========================================================
-# DISPLAY PREVIOUS MESSAGES
+# DISPLAY MESSAGES
 # =========================================================
 
-for message in st.session_state.messages:
+for message in messages:
 
     if message["role"] == "user":
 
-        st.markdown(
-            f"""
-            <div class="user-message">
-                <div class="message-label">You</div>
-                {message["content"]}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        with st.chat_message("user"):
+            st.markdown(message["content"])
 
     else:
 
-        st.markdown(
-            f"""
-            <div class="ai-message">
-                <div class="message-label">⚛️ Quantum AI Tutor</div>
-                {message["content"]}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        with st.chat_message("assistant"):
+            st.markdown(message["content"])
 
 
 # =========================================================
@@ -488,24 +578,25 @@ question = st.chat_input(
     "Ask anything about quantum computing..."
 )
 
+
 if question:
 
-    # Store user message
-    st.session_state.messages.append({
+    # Add user message
+    messages.append({
         "role": "user",
         "content": question
     })
 
-    # Generate response
+    # Generate answer
     answer = quantum_response(question)
 
-    # Store AI response
-    st.session_state.messages.append({
+    # Add AI message
+    messages.append({
         "role": "assistant",
         "content": answer
     })
 
+    # Save messages
+    st.session_state.chats[current_chat] = messages
+
     st.rerun()
-
-
-st.markdown('</div>', unsafe_allow_html=True)

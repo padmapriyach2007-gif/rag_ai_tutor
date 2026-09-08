@@ -1,5 +1,4 @@
 import streamlit as st
-import textwrap
 
 from rag_engine import (
     answer_question,
@@ -28,7 +27,7 @@ st.set_page_config(
 # =========================================================
 
 st.markdown(
-    textwrap.dedent("""
+    """
     <style>
 
     /* =====================================================
@@ -326,7 +325,7 @@ st.markdown(
     }
 
     </style>
-    """),
+    """,
     unsafe_allow_html=True,
 )
 
@@ -345,6 +344,7 @@ defaults = {
 }
 
 for key, value in defaults.items():
+
     if key not in st.session_state:
         st.session_state[key] = value
 
@@ -356,7 +356,7 @@ for key, value in defaults.items():
 if not st.session_state.logged_in:
 
     st.markdown(
-        textwrap.dedent("""
+        """
         <div class="hero">
 
             <div class="quantum-symbol">
@@ -372,7 +372,7 @@ if not st.session_state.logged_in:
             </div>
 
         </div>
-        """),
+        """,
         unsafe_allow_html=True,
     )
 
@@ -386,7 +386,7 @@ if not st.session_state.logged_in:
     with col2:
 
         st.markdown(
-            textwrap.dedent("""
+            """
             <div class="welcome-card">
 
                 <div class="welcome-title">
@@ -399,7 +399,7 @@ if not st.session_state.logged_in:
                 </div>
 
             </div>
-            """),
+            """,
             unsafe_allow_html=True,
         )
 
@@ -452,14 +452,18 @@ if not st.session_state.logged_in:
 
                         latest_session = sessions[0]
 
-                        latest_session_id = latest_session["session_id"]
+                        latest_session_id = latest_session[
+                            "session_id"
+                        ]
 
                         history = restore_chat(
                             latest_session_id,
                             user_id,
                         )
 
-                        st.session_state.session_id = latest_session_id
+                        st.session_state.session_id = (
+                            latest_session_id
+                        )
 
                         st.session_state.messages = [
                             {
@@ -484,17 +488,23 @@ if not st.session_state.logged_in:
                             "Quantum Learning",
                         )
 
-                        st.session_state.session_id = new_session_id
+                        st.session_state.session_id = (
+                            new_session_id
+                        )
 
                         st.session_state.messages = []
 
-                        st.session_state.sessions = get_user_sessions(user_id)
+                        st.session_state.sessions = (
+                            get_user_sessions(user_id)
+                        )
 
                     st.rerun()
 
                 except Exception as e:
 
-                    st.error(f"Login error: {str(e)}")
+                    st.error(
+                        f"Login error: {str(e)}"
+                    )
 
     st.stop()
 
@@ -510,7 +520,7 @@ with st.sidebar:
     # =====================================================
 
     st.markdown(
-        textwrap.dedent("""
+        """
         <div class="sidebar-brand">
 
             <div class="sidebar-logo">
@@ -526,7 +536,7 @@ with st.sidebar:
             </div>
 
         </div>
-        """),
+        """,
         unsafe_allow_html=True,
     )
 
@@ -535,7 +545,7 @@ with st.sidebar:
     # =====================================================
 
     st.markdown(
-        textwrap.dedent(f"""
+        f"""
         <div class="user-card">
 
             <div class="user-title">
@@ -547,7 +557,7 @@ with st.sidebar:
             </div>
 
         </div>
-        """),
+        """,
         unsafe_allow_html=True,
     )
 
@@ -570,15 +580,19 @@ with st.sidebar:
             st.session_state.session_id = new_session_id
             st.session_state.messages = []
 
-            st.session_state.sessions = get_user_sessions(
-                st.session_state.user_id
+            st.session_state.sessions = (
+                get_user_sessions(
+                    st.session_state.user_id
+                )
             )
 
             st.rerun()
 
         except Exception as e:
 
-            st.error(f"Could not create chat: {str(e)}")
+            st.error(
+                f"Could not create chat: {str(e)}"
+            )
 
     # =====================================================
     # PREVIOUS CHATS
@@ -588,7 +602,9 @@ with st.sidebar:
 
     try:
 
-        sessions = get_user_sessions(st.session_state.user_id)
+        sessions = get_user_sessions(
+            st.session_state.user_id
+        )
 
         st.session_state.sessions = sessions
 
@@ -596,7 +612,9 @@ with st.sidebar:
 
         sessions = []
 
-        st.error(f"Could not load chats: {str(e)}")
+        st.error(
+            f"Could not load chats: {str(e)}"
+        )
 
     if sessions:
 
@@ -640,11 +658,15 @@ with st.sidebar:
 
                 except Exception as e:
 
-                    st.error(f"Could not restore chat: {str(e)}")
+                    st.error(
+                        f"Could not restore chat: {str(e)}"
+                    )
 
     else:
 
-        st.caption("No previous chats yet.")
+        st.caption(
+            "No previous chats yet."
+        )
 
     # =====================================================
     # DELETE CURRENT CHAT
@@ -657,7 +679,9 @@ with st.sidebar:
         use_container_width=True,
     ):
 
-        current_session_id = st.session_state.session_id
+        current_session_id = (
+            st.session_state.session_id
+        )
 
         if current_session_id:
 
@@ -668,7 +692,9 @@ with st.sidebar:
                     st.session_state.user_id,
                 )
 
-                sessions = get_user_sessions(st.session_state.user_id)
+                sessions = get_user_sessions(
+                    st.session_state.user_id
+                )
 
                 st.session_state.sessions = sessions
 
@@ -678,14 +704,18 @@ with st.sidebar:
 
                 if sessions:
 
-                    next_session_id = sessions[0]["session_id"]
+                    next_session_id = sessions[0][
+                        "session_id"
+                    ]
 
                     history = restore_chat(
                         next_session_id,
                         st.session_state.user_id,
                     )
 
-                    st.session_state.session_id = next_session_id
+                    st.session_state.session_id = (
+                        next_session_id
+                    )
 
                     st.session_state.messages = [
                         {
@@ -710,7 +740,9 @@ with st.sidebar:
                         "Quantum Learning",
                     )
 
-                    st.session_state.session_id = new_session_id
+                    st.session_state.session_id = (
+                        new_session_id
+                    )
 
                     st.session_state.messages = []
 
@@ -718,7 +750,9 @@ with st.sidebar:
 
             except Exception as e:
 
-                st.error(f"Delete error: {str(e)}")
+                st.error(
+                    f"Delete error: {str(e)}"
+                )
 
     # =====================================================
     # CLEAR DISPLAYED CONVERSATION
@@ -728,6 +762,9 @@ with st.sidebar:
         "🧹 Clear Conversation",
         use_container_width=True,
     ):
+
+        # Only clears Streamlit display.
+        # Database messages remain saved.
 
         st.session_state.messages = []
 
@@ -756,7 +793,7 @@ with st.sidebar:
     # =====================================================
 
     st.markdown(
-        textwrap.dedent("""
+        """
         <div class="side-card">
 
             <div class="side-card-title">
@@ -809,7 +846,7 @@ with st.sidebar:
             </div>
 
         </div>
-        """),
+        """,
         unsafe_allow_html=True,
     )
 
@@ -819,7 +856,7 @@ with st.sidebar:
 # =========================================================
 
 st.markdown(
-    textwrap.dedent("""
+    """
     <div class="hero">
 
         <div class="quantum-symbol">
@@ -841,7 +878,7 @@ st.markdown(
     </div>
 
     <div class="glow-line"></div>
-    """),
+    """,
     unsafe_allow_html=True,
 )
 
@@ -853,7 +890,7 @@ st.markdown(
 if not st.session_state.messages:
 
     st.markdown(
-        textwrap.dedent("""
+        """
         <div class="welcome-card">
 
             <div class="welcome-title">
@@ -868,7 +905,7 @@ if not st.session_state.messages:
             </div>
 
         </div>
-        """),
+        """,
         unsafe_allow_html=True,
     )
 
@@ -883,7 +920,9 @@ if not st.session_state.messages:
             use_container_width=True,
         ):
 
-            st.session_state.pending_question = "What is a qubit?"
+            st.session_state.pending_question = (
+                "What is a qubit?"
+            )
 
             st.rerun()
 
@@ -931,12 +970,15 @@ for message in st.session_state.messages:
 
     with st.chat_message(
         message["role"],
-        avatar=("👩‍💻" if message["role"] == "user" else "⚛️"),
+        avatar=(
+            "👩‍💻"
+            if message["role"] == "user"
+            else "⚛️"
+        ),
     ):
 
         st.markdown(
-            message["content"],
-            unsafe_allow_html=True,
+            message["content"]
         )
 
 
@@ -944,7 +986,9 @@ for message in st.session_state.messages:
 # CHAT INPUT
 # =========================================================
 
-prompt = st.chat_input("Ask anything...")
+prompt = st.chat_input(
+    "Ask anything..."
+)
 
 
 # =========================================================
@@ -972,14 +1016,18 @@ if prompt:
 
         try:
 
-            st.session_state.session_id = create_chat_session(
-                st.session_state.user_id,
-                "Quantum Learning",
+            st.session_state.session_id = (
+                create_chat_session(
+                    st.session_state.user_id,
+                    "Quantum Learning",
+                )
             )
 
         except Exception as e:
 
-            st.error(f"Could not create chat session: {str(e)}")
+            st.error(
+                f"Could not create chat session: {str(e)}"
+            )
 
             st.stop()
 
@@ -999,7 +1047,7 @@ if prompt:
         avatar="👩‍💻",
     ):
 
-        st.markdown(prompt, unsafe_allow_html=True)
+        st.markdown(prompt)
 
     # =====================================================
     # GENERATE AI RESPONSE
@@ -1016,8 +1064,12 @@ if prompt:
 
                 response = answer_question(
                     query=prompt,
-                    session_id=(st.session_state.session_id),
-                    user_id=(st.session_state.user_id),
+                    session_id=(
+                        st.session_state.session_id
+                    ),
+                    user_id=(
+                        st.session_state.user_id
+                    ),
                 )
 
             except Exception as e:
@@ -1027,7 +1079,7 @@ if prompt:
                     f"**Error:** `{str(e)}`"
                 )
 
-        st.markdown(response, unsafe_allow_html=True)
+        st.markdown(response)
 
     # =====================================================
     # SAVE RESPONSE IN LOCAL SESSION
@@ -1046,8 +1098,10 @@ if prompt:
 
     try:
 
-        st.session_state.sessions = get_user_sessions(
-            st.session_state.user_id
+        st.session_state.sessions = (
+            get_user_sessions(
+                st.session_state.user_id
+            )
         )
 
     except Exception:
@@ -1059,7 +1113,7 @@ if prompt:
 # =========================================================
 
 st.markdown(
-    textwrap.dedent("""
+    """
     <div class="footer">
 
         ⚛️ Powered by AI + RAG + Supabase
@@ -1067,6 +1121,6 @@ st.markdown(
         Built for interactive learning
 
     </div>
-    """),
+    """,
     unsafe_allow_html=True,
 )

@@ -22,7 +22,6 @@ from ingest import build_vector_db
 # =========================================================
 
 env_path = Path(__file__).resolve().parent / ".env"
-
 load_dotenv(dotenv_path=env_path)
 
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -49,39 +48,45 @@ try:
         SUPABASE_URL = st.secrets.get("SUPABASE_URL")
 
     if not SUPABASE_SERVICE_KEY:
-        SUPABASE_SERVICE_KEY = st.secrets.get("SUPABASE_SERVICE_KEY")
+        SUPABASE_SERVICE_KEY = st.secrets.get(
+            "SUPABASE_SERVICE_KEY"
+        )
 
 except Exception:
     pass
 
 
 # =========================================================
-# VALIDATE ENVIRONMENT VARIABLES
+# VALIDATE API KEYS
 # =========================================================
 
 if not HF_TOKEN:
     raise ValueError(
-        "HF_TOKEN is missing. Add it to .env or Streamlit Secrets."
-    )
-
-if not SUPABASE_URL:
-    raise ValueError(
-        "SUPABASE_URL is missing. Add it to .env or Streamlit Secrets."
-    )
-
-if not SUPABASE_SERVICE_KEY:
-    raise ValueError(
-        "SUPABASE_SERVICE_KEY is missing. Add it to .env or Streamlit Secrets."
+        "HF_TOKEN is missing. "
+        "Add it to .env or Streamlit Secrets."
     )
 
 if not TAVILY_API_KEY:
     raise ValueError(
-        "TAVILY_API_KEY is missing. Add it to .env or Streamlit Secrets."
+        "TAVILY_API_KEY is missing. "
+        "Add it to .env or Streamlit Secrets."
+    )
+
+if not SUPABASE_URL:
+    raise ValueError(
+        "SUPABASE_URL is missing. "
+        "Add it to .env or Streamlit Secrets."
+    )
+
+if not SUPABASE_SERVICE_KEY:
+    raise ValueError(
+        "SUPABASE_SERVICE_KEY is missing. "
+        "Add it to .env or Streamlit Secrets."
     )
 
 
 # =========================================================
-# CONNECT TO SUPABASE
+# SUPABASE CONNECTION
 # =========================================================
 
 supabase: Client = create_client(
@@ -89,11 +94,9 @@ supabase: Client = create_client(
     SUPABASE_SERVICE_KEY
 )
 
-print("Supabase connected successfully.")
-
 
 # =========================================================
-# TAVILY
+# TAVILY CONNECTION
 # =========================================================
 
 tavily_client = TavilyClient(
@@ -102,7 +105,7 @@ tavily_client = TavilyClient(
 
 
 # =========================================================
-# AI MODEL
+# LLM
 # =========================================================
 
 def get_llm():
@@ -135,13 +138,9 @@ def get_or_create_user(
     role: str = "student"
 ) -> str:
 
-    """
-    Find an existing user using email.
-    Create the user if it doesn't exist.
-    """
-
     email = email.strip().lower()
 
+    # Check existing user
     response = (
         supabase
         .table("users")
@@ -154,6 +153,7 @@ def get_or_create_user(
     if response.data:
         return response.data[0]["user_id"]
 
+    # Create new user
     response = (
         supabase
         .table("users")
@@ -173,7 +173,7 @@ def get_or_create_user(
 
 
 # =========================================================
-# CHAT SESSION
+# CREATE CHAT SESSION
 # =========================================================
 
 def create_chat_session(
@@ -205,21 +205,16 @@ def create_chat_session(
 
 def get_user_sessions(user_id: str):
 
-    """
-    Get all chats belonging to the current user.
-
-    IMPORTANT:
-    Only existing database columns are selected.
-    updated_at is intentionally NOT used.
-    """
-
     response = (
         supabase
         .table("chat_sessions")
         .select(
             "session_id, title, created_at"
         )
-        .eq("user_id", user_id)
+        .eq(
+            "user_id",
+            user_id
+        )
         .order(
             "created_at",
             desc=True
@@ -243,8 +238,14 @@ def verify_session_owner(
         supabase
         .table("chat_sessions")
         .select("session_id")
-        .eq("session_id", session_id)
-        .eq("user_id", user_id)
+        .eq(
+            "session_id",
+            session_id
+        )
+        .eq(
+            "user_id",
+            user_id
+        )
         .limit(1)
         .execute()
     )
@@ -263,7 +264,7 @@ def save_message(
 ):
 
     if not content:
-        return
+        return None
 
     response = (
         supabase
@@ -316,6 +317,7 @@ def restore_chat(
     user_id: str
 ):
 
+    # Security check
     if not verify_session_owner(
         session_id,
         user_id
@@ -338,6 +340,7 @@ def delete_chat(
     user_id: str
 ):
 
+    # Security check
     if not verify_session_owner(
         session_id,
         user_id
@@ -346,7 +349,7 @@ def delete_chat(
             "You cannot delete this chat."
         )
 
-    # Delete messages first
+    # Delete messages
     (
         supabase
         .table("chat_messages")
@@ -358,7 +361,7 @@ def delete_chat(
         .execute()
     )
 
-    # Delete session
+    # Delete chat session
     (
         supabase
         .table("chat_sessions")
@@ -395,11 +398,19 @@ def web_search(
     query: str
 ) -> str:
 
-    results = tavily_client.search(
-        query=query,
-        search_depth="advanced",
-        max_results=8
-    )
+    try:
+
+        results = tavily_client.search(
+            query=query,
+            search_depth="advanced",
+            max_results=8
+        )
+
+    except Exception as e:
+
+        print("Tavily error:", e)
+
+        return ""
 
     web_context = []
 
@@ -438,58 +449,38 @@ def web_search(
 
 
 # =========================================================
-# EXTRACT RESPONSE
+# GET RAG CONTEXT
 # =========================================================
 
-def extract_response_text(
-    response
+def get_rag_context(
+    query: str
 ) -> str:
 
-    content = response.content
-
-    if isinstance(
-        content,
-        str
+    # Build vector database if it does not exist
+    if not os.path.exists(
+        "./chroma_db"
     ):
-        return content
+        build_vector_db()
 
-    if isinstance(
-        content,
-        list
-    ):
+    vector_store = get_vectorstore()
 
-        text_parts = []
+    retriever = vector_store.as_retriever(
+        search_kwargs={
+            "k": 4
+        }
+    )
 
-        for item in content:
+    docs = retriever.invoke(
+        query
+    )
 
-            if isinstance(
-                item,
-                dict
-            ):
+    if not docs:
+        return "No relevant study material was found."
 
-                if item.get("type") == "text":
-
-                    text_parts.append(
-                        item.get(
-                            "text",
-                            ""
-                        )
-                    )
-
-            elif isinstance(
-                item,
-                str
-            ):
-
-                text_parts.append(
-                    item
-                )
-
-        return "\n".join(
-            text_parts
-        ).strip()
-
-    return str(content)
+    return "\n\n".join(
+        doc.page_content
+        for doc in docs
+    )
 
 
 # =========================================================
@@ -508,12 +499,18 @@ def answer_question(
     Supports:
 
     - Multiple users
+    - Persistent chat sessions
     - Chat restoration
-    - Persistent messages
     - Quantum RAG
     - Web search
     - General AI
     """
+
+    query = query.strip()
+
+    if not query:
+        return "Please enter a question."
+
 
     # =====================================================
     # SECURITY CHECK
@@ -529,6 +526,7 @@ def answer_question(
                 "This chat does not belong to this user."
             )
 
+
     # =====================================================
     # SAVE USER MESSAGE
     # =====================================================
@@ -541,11 +539,13 @@ def answer_question(
             query
         )
 
+
     # =====================================================
-    # GET LLM
+    # CREATE LLM
     # =====================================================
 
     llm = get_llm()
+
 
     # =====================================================
     # ROUTER
@@ -557,24 +557,41 @@ def answer_question(
             """
 You are a question router for an intelligent AI tutor.
 
-Classify the user's question into exactly ONE category:
+Classify the user's question into exactly ONE category.
 
 RAG
-Questions specifically about Quantum Computing, Qiskit,
-quantum algorithms, quantum circuits, qubits, or study material.
+Questions specifically about:
+- Quantum Computing
+- Qiskit
+- Quantum algorithms
+- Quantum circuits
+- Qubits
+- Quantum study material
 
 WEB
-Questions about people, movies, companies, places, current
-events, latest information, factual verification, or information
-that should be checked using current web sources.
+Questions about:
+- Current events
+- Latest information
+- People
+- Movies
+- Companies
+- Places
+- Current facts
+- Information requiring web verification
 
 HYBRID
-Questions that need both quantum study material and current
-external web information.
+Questions requiring both:
+- Quantum/Qiskit study material
+AND
+- Current external web information
 
 GENERAL
-Normal questions that can be answered using general knowledge,
-such as programming, mathematics, explanations, writing, etc.
+Normal questions such as:
+- Programming
+- Mathematics
+- Physics
+- Writing
+- General explanations
 
 Return ONLY one word:
 
@@ -590,18 +607,27 @@ GENERAL
         )
     ])
 
+
     router_chain = (
         router_prompt
         | llm
         | StrOutputParser()
     )
 
-    route = (
-        router_chain
-        .invoke(query)
-        .strip()
-        .upper()
-    )
+
+    try:
+
+        route = (
+            router_chain
+            .invoke(query)
+            .strip()
+            .upper()
+        )
+
+    except Exception:
+
+        route = "GENERAL"
+
 
     if route not in {
         "RAG",
@@ -609,10 +635,12 @@ GENERAL
         "HYBRID",
         "GENERAL"
     }:
+
         route = "GENERAL"
 
+
     # =====================================================
-    # RAG
+    # RAG CONTEXT
     # =====================================================
 
     rag_context = ""
@@ -622,36 +650,27 @@ GENERAL
         "HYBRID"
     }:
 
-        if not os.path.exists(
-            "./chroma_db"
-        ):
-            build_vector_db()
+        try:
 
-        vector_store = get_vectorstore()
-
-        retriever = vector_store.as_retriever(
-            search_kwargs={
-                "k": 4
-            }
-        )
-
-        docs = retriever.invoke(
-            query
-        )
-
-        rag_context = "\n\n".join(
-            doc.page_content
-            for doc in docs
-        )
-
-        if not rag_context:
-
-            rag_context = (
-                "No relevant study material was found."
+            rag_context = get_rag_context(
+                query
             )
 
+        except Exception as e:
+
+            print(
+                "RAG error:",
+                e
+            )
+
+            rag_context = (
+                "No relevant study material "
+                "could be retrieved."
+            )
+
+
     # =====================================================
-    # WEB
+    # WEB CONTEXT
     # =====================================================
 
     web_context = ""
@@ -668,8 +687,10 @@ GENERAL
         if not web_context:
 
             web_context = (
-                "No relevant web information was found."
+                "No relevant web information "
+                "was found."
             )
+
 
     # =====================================================
     # CHAT HISTORY
@@ -679,21 +700,32 @@ GENERAL
 
     if session_id:
 
-        history = get_chat_history(
-            session_id
-        )
+        try:
 
-        # Remove current question from context if needed
-        recent_history = history[-7:-1]
+            history = get_chat_history(
+                session_id
+            )
 
-        history_str = "\n".join(
-            f"{message['sender']}: "
-            f"{message['content']}"
-            for message in recent_history
-        )
+            # Last saved message is the current question.
+            # Exclude it from previous conversation.
+            recent_history = history[-7:-1]
+
+            history_str = "\n".join(
+                f"{message['sender']}: "
+                f"{message['content']}"
+                for message in recent_history
+            )
+
+        except Exception as e:
+
+            print(
+                "Chat history error:",
+                e
+            )
+
 
     # =====================================================
-    # GENERATE ANSWER
+    # FINAL PROMPT
     # =====================================================
 
     prompt = ChatPromptTemplate.from_messages([
@@ -714,17 +746,17 @@ Rules:
 - Explain difficult concepts step-by-step.
 - Keep explanations student-friendly.
 - Use examples when helpful.
+- If information is unavailable, say so clearly.
 - Do not mention internal implementation details.
 
-Never mention:
+Never mention these internal systems to the student:
+
 - RAG
 - embeddings
 - vector database
 - Supabase
 - routing system
 - internal implementation
-
-to the student.
 
 STUDY MATERIAL:
 -------------------------
@@ -748,6 +780,7 @@ PREVIOUS CHAT:
         )
     ])
 
+
     chain = (
         {
             "rag_context": lambda _: rag_context,
@@ -759,6 +792,11 @@ PREVIOUS CHAT:
         | llm
         | StrOutputParser()
     )
+
+
+    # =====================================================
+    # GENERATE ANSWER
+    # =====================================================
 
     try:
 
@@ -775,8 +813,10 @@ PREVIOUS CHAT:
 
         answer = (
             "Sorry, I could not generate "
-            "a response right now. Please try again."
+            "a response right now. "
+            "Please try again."
         )
+
 
     # =====================================================
     # SAVE AI RESPONSE
@@ -789,5 +829,6 @@ PREVIOUS CHAT:
             "assistant",
             answer
         )
+
 
     return answer

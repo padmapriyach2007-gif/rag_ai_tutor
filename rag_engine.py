@@ -106,14 +106,14 @@ tavily_client = TavilyClient(
 
 def get_llm():
     """
-    Hugging Face Serverless Inference Router.
-    Uses free tier compatible open models.
+    Hugging Face Serverless Inference.
+    Uses open-access endpoints compatible with personal user tokens.
     """
     return ChatOpenAI(
         model="Qwen/Qwen2.5-Coder-32B-Instruct",
         temperature=0.5,
         api_key=HF_TOKEN,
-        base_url="https://router.huggingface.co/v1"
+        base_url="https://api-inference.huggingface.co/v1"
     )
 
 
@@ -372,7 +372,7 @@ def web_search(
         )
 
     except Exception as e:
-        print("Tavily error:", str(e))
+        print("Tavily search error:", str(e))
         return ""
 
     web_context = []
@@ -402,7 +402,7 @@ def needs_web_search(
 
     query_lower = query.lower().strip()
 
-    # Automatically search for brief entity queries (e.g. single names/topics)
+    # Automatically search for brief entity queries (e.g. single names or short topics)
     if len(query_lower.split()) <= 3 and not query_lower.startswith(("what is", "how to", "explain")):
         return True
 
@@ -515,7 +515,7 @@ def answer_question(
                 for message in recent_history
             )
         except Exception as e:
-            print("Chat history error:", str(e))
+            print("Chat history load error:", str(e))
 
     # Web Search Check
     web_context = ""
@@ -531,10 +531,10 @@ def answer_question(
         )
 
     except Exception as e:
-        print("\nAI Error:", str(e))
+        print("\nAI Generation Error:", str(e))
         answer = (
             "Sorry, I could not generate a response right now.\n\n"
-            f"Error: {str(e)}"
+            f"Error details: {str(e)}"
         )
 
     # Save AI Response

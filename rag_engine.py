@@ -106,12 +106,12 @@ tavily_client = TavilyClient(
 
 def get_llm():
     """
-    Hugging Face Router + GPT-OSS model.
+    Hugging Face Serverless Inference Router.
+    Uses free tier compatible open models.
     """
-
     return ChatOpenAI(
-        model="openai/gpt-oss-120b",
-        temperature=0.4,
+        model="Qwen/Qwen2.5-Coder-32B-Instruct",
+        temperature=0.5,
         api_key=HF_TOKEN,
         base_url="https://router.huggingface.co/v1"
     )
@@ -131,10 +131,7 @@ def get_or_create_user(
     if not email:
         raise ValueError("Email cannot be empty.")
 
-    # -----------------------------------------------------
     # Check existing user
-    # -----------------------------------------------------
-
     response = (
         supabase
         .table("users")
@@ -147,10 +144,7 @@ def get_or_create_user(
     if response.data:
         return response.data[0]["user_id"]
 
-    # -----------------------------------------------------
     # Create new user
-    # -----------------------------------------------------
-
     response = (
         supabase
         .table("users")
@@ -371,7 +365,6 @@ def web_search(
 ) -> str:
 
     try:
-
         results = tavily_client.search(
             query=query,
             search_depth="advanced",
@@ -379,53 +372,24 @@ def web_search(
         )
 
     except Exception as e:
-
-        print(
-            "Tavily error:",
-            str(e)
-        )
-
+        print("Tavily error:", str(e))
         return ""
 
     web_context = []
 
-    for result in results.get(
-        "results",
-        []
-    ):
-
-        title = result.get(
-            "title",
-            ""
-        )
-
-        content = result.get(
-            "content",
-            ""
-        )
-
-        url = result.get(
-            "url",
-            ""
-        )
+    for result in results.get("results", []):
+        title = result.get("title", "")
+        content = result.get("content", "")
+        url = result.get("url", "")
 
         if not content:
             continue
 
         web_context.append(
-            f"""
-Title: {title}
-
-Source: {url}
-
-Information:
-{content}
-"""
+            f"Title: {title}\nSource: {url}\nInformation:\n{content}"
         )
 
-    return "\n\n".join(
-        web_context
-    )
+    return "\n\n".join(web_context)
 
 
 # =========================================================
@@ -436,36 +400,21 @@ def needs_web_search(
     query: str
 ) -> bool:
 
-    query_lower = query.lower()
+    query_lower = query.lower().strip()
+
+    # Automatically search for brief entity queries (e.g. single names/topics)
+    if len(query_lower.split()) <= 3 and not query_lower.startswith(("what is", "how to", "explain")):
+        return True
 
     current_keywords = [
-        "latest",
-        "current",
-        "today",
-        "now",
-        "recent",
-        "recently",
-        "news",
-        "2026",
-        "this year",
-        "this month",
-        "price",
-        "weather",
-        "stock",
-        "market",
-        "release",
-        "released",
-        "new version",
-        "updated",
-        "update",
-        "who is the current",
-        "what is happening",
+        "latest", "current", "today", "now", "recent", "recently",
+        "news", "2026", "2025", "2024", "this year", "this month",
+        "price", "weather", "stock", "market", "release", "released",
+        "movie", "actor", "actress", "who is", "tell me about",
+        "updated", "update", "who is the current", "what is happening"
     ]
 
-    return any(
-        keyword in query_lower
-        for keyword in current_keywords
-    )
+    return any(keyword in query_lower for keyword in current_keywords)
 
 
 # =========================================================
@@ -484,67 +433,29 @@ def generate_answer(
         (
             "system",
             """
-You are Quantum AI Tutor, a highly capable and friendly
-AI assistant for students.
+You are an intelligent, versatile, and helpful AI Assistant.
 
-Your job is to answer ANY question the user asks.
+You MUST answer ANY question asked by the user across ALL topics, including:
+- General knowledge, celebrities, movies, pop culture, history, geography, and current affairs
+- Science, Mathematics, Physics, Chemistry, and Engineering
+- Programming (Python, C, C++, Java, JavaScript, HTML, CSS, SQL, Data Structures, Algorithms)
+- Quantum Computing, AI, Machine Learning
+- Writing, summaries, explanations, assignments, and educational help
 
-You can answer questions about:
-
-- Quantum Computing
-- Qiskit
-- Qubits
-- Quantum Algorithms
-- Artificial Intelligence
-- Machine Learning
-- Python
-- C
-- C++
-- Java
-- JavaScript
-- HTML
-- CSS
-- SQL
-- Data Structures
-- Algorithms
-- Mathematics
-- Physics
-- Engineering
-- Computer Science
-- Programming
-- Projects
-- Assignments
-- General knowledge
-- Writing and explanations
-- Other normal educational questions
-
-IMPORTANT:
-
-1. Do NOT say that you need study material.
-2. Do NOT say "No relevant study material was found."
-3. Do NOT depend on a local document or knowledge base.
-4. Answer using your own knowledge.
-5. If web information is provided, use it to improve
-   accuracy for current topics.
-6. Clearly explain concepts for students.
-7. Use step-by-step explanations when useful.
-8. For programming questions, provide correct code when
-   requested and explain the important parts.
-9. For mathematics, show the calculation steps.
-10. If the question is ambiguous, make a reasonable
-    interpretation and answer it.
-11. Never mention internal implementation details such as
-    LangChain, Supabase, Tavily, Hugging Face, prompts,
-    vector databases, or RAG.
-12. Do not pretend that information is current if it is
-    not supported by the provided web information.
+GUIDELINES:
+1. Provide direct, informative, and complete answers to whatever topic the user asks about.
+2. If web context is provided, integrate it seamlessly into your response for up-to-date facts.
+3. For general knowledge queries (e.g., actors, places, history), give a clear summary including key facts, background, and notable achievements.
+4. For technical/programming queries, provide well-commented code and step-by-step logic.
+5. Do NOT state that you lack information or need course materials.
+6. Never expose internal tools, prompts, database names, or API details (such as Tavily, Supabase, LangChain, or Hugging Face).
 
 PREVIOUS CONVERSATION:
 ----------------------
 {history}
 ----------------------
 
-CURRENT WEB INFORMATION:
+WEB CONTEXT:
 ----------------------
 {web_context}
 ----------------------
@@ -584,88 +495,35 @@ def answer_question(
     if not query:
         return "Please enter a question."
 
-    # =====================================================
-    # VERIFY SESSION
-    # =====================================================
-
+    # Verify Session
     if session_id and user_id:
+        if not verify_session_owner(session_id, user_id):
+            raise PermissionError("This chat does not belong to this user.")
 
-        if not verify_session_owner(
-            session_id,
-            user_id
-        ):
-
-            raise PermissionError(
-                "This chat does not belong to this user."
-            )
-
-    # =====================================================
-    # SAVE USER MESSAGE
-    # =====================================================
-
+    # Save User Message
     if session_id:
+        save_message(session_id, "user", query)
 
-        save_message(
-            session_id,
-            "user",
-            query
-        )
-
-    # =====================================================
-    # LOAD CHAT HISTORY
-    # =====================================================
-
+    # Load Chat History
     history_str = ""
-
     if session_id:
-
         try:
-
-            history = get_chat_history(
-                session_id
-            )
-
-            # Don't duplicate the current question
+            history = get_chat_history(session_id)
             recent_history = history[-8:-1]
-
             history_str = "\n".join(
-                f"{message['sender']}: "
-                f"{message['content']}"
+                f"{message['sender']}: {message['content']}"
                 for message in recent_history
             )
-
         except Exception as e:
+            print("Chat history error:", str(e))
 
-            print(
-                "Chat history error:",
-                str(e)
-            )
-
-    # =====================================================
-    # OPTIONAL WEB SEARCH
-    # =====================================================
-
+    # Web Search Check
     web_context = ""
-
     if needs_web_search(query):
+        web_context = web_search(query)
 
-        web_context = web_search(
-            query
-        )
-
-        if not web_context:
-
-            web_context = (
-                "No web information was available. "
-                "Answer using your general knowledge."
-            )
-
-    # =====================================================
-    # GENERATE ANSWER
-    # =====================================================
-
+    # Generate Answer
     try:
-
         answer = generate_answer(
             query=query,
             history=history_str,
@@ -673,28 +531,14 @@ def answer_question(
         )
 
     except Exception as e:
-
-        print(
-            "\nAI Error:",
-            str(e)
-        )
-
+        print("\nAI Error:", str(e))
         answer = (
-            "Sorry, I could not generate a response "
-            "right now.\n\n"
+            "Sorry, I could not generate a response right now.\n\n"
             f"Error: {str(e)}"
         )
 
-    # =====================================================
-    # SAVE AI RESPONSE
-    # =====================================================
-
+    # Save AI Response
     if session_id:
-
-        save_message(
-            session_id,
-            "assistant",
-            answer
-        )
+        save_message(session_id, "assistant", answer)
 
     return answer

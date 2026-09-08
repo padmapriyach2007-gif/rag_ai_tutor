@@ -104,18 +104,16 @@ tavily_client = TavilyClient(
 # AI MODEL
 # =========================================================
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
 def get_llm():
-    """
-    Hugging Face Serverless Inference.
-    Configured with extended timeouts and retries to prevent connection drops.
-    """
     return ChatOpenAI(
-        model="Qwen/Qwen2.5-Coder-32B-Instruct",
+        model="llama-3.3-70b-versatile",
         temperature=0.5,
-        api_key=HF_TOKEN,
-        base_url="https://api-inference.huggingface.co/v1",
-        request_timeout=60.0,  # Extends timeout allowance for cold starts
-        max_retries=3          # Automatically retries on temporary drops
+        api_key=GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1",
+        request_timeout=60.0,
+        max_retries=3
     )
 
 

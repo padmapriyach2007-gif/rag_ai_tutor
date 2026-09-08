@@ -1,5 +1,6 @@
+````python
 import streamlit as st
-from openai import OpenAI
+from groq import Groq
 import os
 
 # ============================================================
@@ -163,9 +164,18 @@ st.markdown(
 
 def ai_response(chat_history):
 
-    client = OpenAI(
-        api_key=os.environ.get("DASHSCOPE_API_KEY"),
-        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    # Get Groq API key from environment variable
+    api_key = os.environ.get("GROQ_API_KEY")
+
+    if not api_key:
+        return (
+            "⚠️ **Groq API key is missing.**\n\n"
+            "Please set the `GROQ_API_KEY` environment variable "
+            "and restart the Streamlit application."
+        )
+
+    client = Groq(
+        api_key=api_key
     )
 
     system_message = {
@@ -180,34 +190,55 @@ history, general knowledge, writing, and everyday questions.
 Do not restrict yourself strictly to quantum computing.
 
 Explain things clearly and adapt your answer to the user's level.
+
 If the user asks for code, provide working code and explain it.
+
 If the user asks a conceptual question, explain it with examples.
+
 If the question is unclear, ask a useful clarification.
 """
     }
 
     full_messages = [system_message] + chat_history
 
-    response = client.chat.completions.create(
-        model="qwen-plus",
-        messages=full_messages
-    )
+    try:
 
-    return response.choices[0].message.content
+        response = client.chat.completions.create(
+            # FIXED: qwen-2.5-32b was decommissioned
+            model="llama-3.3-70b-versatile",
+            messages=full_messages
+        )
 
+        return response.choices[0].message.content
+
+    except Exception as e:
+
+        return f"""
+⚠️ **Error while contacting Groq**
+
+```text
+{str(e)}
+````
+
+Please check your Groq API key and model configuration.
+"""
 
 def answer_question(question, chat_history):
-    return ai_response(chat_history)
-
+return ai_response(chat_history)
 
 # ============================================================
+
 # LOGIN SCREEN
+
 # ============================================================
 
 if not st.session_state.logged_in:
 
-    st.markdown(
-        """
+```
+st.markdown(
+    """
+```
+
 <div class="login-box">
     <div class="hero-icon">⚛️</div>
     <h1>Quantum Lab</h1>
@@ -217,235 +248,244 @@ if not st.session_state.logged_in:
         unsafe_allow_html=True
     )
 
-    st.subheader("🔐 Login")
+```
+st.subheader("🔐 Login")
 
-    email = st.text_input(
-        "Email address",
-        placeholder="Enter your email"
-    )
+email = st.text_input(
+    "Email address",
+    placeholder="Enter your email"
+)
 
-    if st.button("🚀 Login", use_container_width=True):
+if st.button(
+    "🚀 Login",
+    use_container_width=True
+):
 
-        if email.strip() == "":
-            st.error("Please enter your email address.")
+    if email.strip() == "":
+        st.error("Please enter your email address.")
 
-        else:
-            st.session_state.user_email = email.strip()
-            st.session_state.logged_in = True
+    else:
+        st.session_state.user_email = email.strip()
+        st.session_state.logged_in = True
 
-            st.success("Login successful!")
+        st.success("Login successful!")
 
-            st.rerun()
+        st.rerun()
 
-    st.stop()
-
+st.stop()
+```
 
 # ============================================================
+
 # SIDEBAR
+
 # ============================================================
 
 with st.sidebar:
 
-    # --------------------------------------------------------
-    # BRAND
-    # --------------------------------------------------------
+```
+# --------------------------------------------------------
+# BRAND
+# --------------------------------------------------------
 
-    st.title("⚛️ QUANTUM LAB")
+st.title("⚛️ QUANTUM LAB")
 
-    st.caption("AI-Powered Learning Space")
-
-
-    # --------------------------------------------------------
-    # USER
-    # --------------------------------------------------------
-
-    st.markdown("---")
-
-    st.write("👤 **Logged In**")
-
-    st.caption(st.session_state.user_email)
+st.caption("AI-Powered Learning Space")
 
 
-    # --------------------------------------------------------
-    # NEW CHAT
-    # --------------------------------------------------------
+# --------------------------------------------------------
+# USER
+# --------------------------------------------------------
 
-    st.markdown("---")
+st.markdown("---")
+
+st.write("👤 **Logged In**")
+
+st.caption(st.session_state.user_email)
+
+
+# --------------------------------------------------------
+# NEW CHAT
+# --------------------------------------------------------
+
+st.markdown("---")
+
+if st.button(
+    "➕ New Chat",
+    use_container_width=True
+):
+
+    chat_number = 1
+
+    while f"New Quantum Chat {chat_number}" in st.session_state.chats:
+        chat_number += 1
+
+    new_chat_name = f"New Quantum Chat {chat_number}"
+
+    st.session_state.chats[new_chat_name] = []
+
+    st.session_state.current_chat = new_chat_name
+
+    st.toast("New chat created!")
+
+    st.rerun()
+
+
+# --------------------------------------------------------
+# YOUR CHATS
+# --------------------------------------------------------
+
+st.markdown("---")
+
+st.subheader("💬 Your Chats")
+
+
+chat_names = list(st.session_state.chats.keys())
+
+for chat_name in chat_names:
+
+    is_current = (
+        chat_name == st.session_state.current_chat
+    )
+
+    button_text = (
+        f"🟣 {chat_name}"
+        if is_current
+        else f"💬 {chat_name}"
+    )
 
     if st.button(
-        "➕ New Chat",
+        button_text,
+        key=f"open_{chat_name}",
         use_container_width=True
     ):
 
-        chat_number = 1
-
-        while f"New Quantum Chat {chat_number}" in st.session_state.chats:
-            chat_number += 1
-
-        new_chat_name = f"New Quantum Chat {chat_number}"
-
-        st.session_state.chats[new_chat_name] = []
-
-        st.session_state.current_chat = new_chat_name
-
-        st.toast("New chat created!")
+        st.session_state.current_chat = chat_name
 
         st.rerun()
 
 
-    # --------------------------------------------------------
-    # YOUR CHATS
-    # --------------------------------------------------------
+# --------------------------------------------------------
+# RENAME CHAT
+# --------------------------------------------------------
 
-    st.markdown("---")
+st.markdown("---")
 
-    st.subheader("💬 Your Chats")
+with st.expander("✏️ Rename Current Chat"):
 
+    current_name = st.session_state.current_chat
 
-    chat_names = list(st.session_state.chats.keys())
+    new_name = st.text_input(
+        "New chat name",
+        value=current_name,
+        key="rename_input"
+    )
 
-    for chat_name in chat_names:
+    if st.button(
+        "Save New Name",
+        use_container_width=True
+    ):
 
-        is_current = (
-            chat_name == st.session_state.current_chat
-        )
+        new_name = new_name.strip()
 
-        button_text = (
-            f"🟣 {chat_name}"
-            if is_current
-            else f"💬 {chat_name}"
-        )
+        if new_name == "":
+            st.error("Chat name cannot be empty.")
 
-        if st.button(
-            button_text,
-            key=f"open_{chat_name}",
-            use_container_width=True
-        ):
+        elif new_name == current_name:
+            st.info("This is already the current name.")
 
-            st.session_state.current_chat = chat_name
+        elif new_name in st.session_state.chats:
+            st.error("A chat with this name already exists.")
+
+        else:
+
+            st.session_state.chats[new_name] = (
+                st.session_state.chats.pop(current_name)
+            )
+
+            st.session_state.current_chat = new_name
+
+            st.success("Chat renamed!")
 
             st.rerun()
 
 
-    # --------------------------------------------------------
-    # RENAME CHAT
-    # --------------------------------------------------------
+# --------------------------------------------------------
+# DELETE CURRENT CHAT
+# --------------------------------------------------------
 
-    st.markdown("---")
+st.markdown("---")
 
-    with st.expander("✏️ Rename Current Chat"):
+if st.button(
+    "🗑️ Delete Current Chat",
+    use_container_width=True
+):
 
-        current_name = st.session_state.current_chat
+    current_name = st.session_state.current_chat
 
-        new_name = st.text_input(
-            "New chat name",
-            value=current_name,
-            key="rename_input"
-        )
-
-        if st.button(
-            "Save New Name",
-            use_container_width=True
-        ):
-
-            new_name = new_name.strip()
-
-            if new_name == "":
-                st.error("Chat name cannot be empty.")
-
-            elif new_name == current_name:
-                st.info("This is already the current name.")
-
-            elif new_name in st.session_state.chats:
-                st.error("A chat with this name already exists.")
-
-            else:
-
-                st.session_state.chats[new_name] = (
-                    st.session_state.chats.pop(current_name)
-                )
-
-                st.session_state.current_chat = new_name
-
-                st.success("Chat renamed!")
-
-                st.rerun()
-
-
-    # --------------------------------------------------------
-    # DELETE CURRENT CHAT
-    # --------------------------------------------------------
-
-    st.markdown("---")
-
-    if st.button(
-        "🗑️ Delete Current Chat",
-        use_container_width=True
-    ):
-
-        current_name = st.session_state.current_chat
-
-        if len(st.session_state.chats) == 1:
-
-            st.session_state.chats[current_name] = []
-
-            st.toast("Chat cleared!")
-
-        else:
-
-            del st.session_state.chats[current_name]
-
-            remaining_chats = list(
-                st.session_state.chats.keys()
-            )
-
-            st.session_state.current_chat = remaining_chats[0]
-
-            st.toast("Chat deleted!")
-
-        st.rerun()
-
-
-    # --------------------------------------------------------
-    # CLEAR CONVERSATION
-    # --------------------------------------------------------
-
-    if st.button(
-        "🧹 Clear Conversation",
-        use_container_width=True
-    ):
-
-        current_name = st.session_state.current_chat
+    if len(st.session_state.chats) == 1:
 
         st.session_state.chats[current_name] = []
 
-        st.toast("Conversation cleared!")
+        st.toast("Chat cleared!")
 
-        st.rerun()
+    else:
 
+        del st.session_state.chats[current_name]
 
-    # --------------------------------------------------------
-    # LOGOUT
-    # --------------------------------------------------------
+        remaining_chats = list(
+            st.session_state.chats.keys()
+        )
 
-    if st.button(
-        "🚪 Logout",
-        use_container_width=True
-    ):
+        st.session_state.current_chat = remaining_chats[0]
 
-        st.session_state.logged_in = False
+        st.toast("Chat deleted!")
 
-        st.rerun()
+    st.rerun()
 
 
-    # --------------------------------------------------------
-    # LEARNING MODE
-    # --------------------------------------------------------
+# --------------------------------------------------------
+# CLEAR CONVERSATION
+# --------------------------------------------------------
 
-    st.markdown("---")
+if st.button(
+    "🧹 Clear Conversation",
+    use_container_width=True
+):
 
-    st.info(
-        """
+    current_name = st.session_state.current_chat
+
+    st.session_state.chats[current_name] = []
+
+    st.toast("Conversation cleared!")
+
+    st.rerun()
+
+
+# --------------------------------------------------------
+# LOGOUT
+# --------------------------------------------------------
+
+if st.button(
+    "🚪 Logout",
+    use_container_width=True
+):
+
+    st.session_state.logged_in = False
+
+    st.rerun()
+
+
+# --------------------------------------------------------
+# LEARNING MODE
+# --------------------------------------------------------
+
+st.markdown("---")
+
+st.info(
+    """
+```
+
 🧠 **Learning Mode**
 
 Ask questions about:
@@ -457,16 +497,18 @@ Ask questions about:
 • Quantum Gates
 
 • Qiskit
-        """
-    )
-
+"""
+)
 
 # ============================================================
+
 # MAIN AREA
+
 # ============================================================
 
 st.markdown(
-    """
+"""
+
 <div class="hero-box">
 
 <div class="hero-icon">
@@ -490,67 +532,117 @@ Explore quantum computing through conversation
     unsafe_allow_html=True
 )
 
-
 # ============================================================
+
 # CURRENT CHAT
+
 # ============================================================
 
 current_chat = st.session_state.current_chat
 
 messages = st.session_state.chats[current_chat]
 
-
 # ============================================================
+
 # DISPLAY CHAT
+
 # ============================================================
 
 for message in messages:
 
-    if message["role"] == "user":
+```
+if message["role"] == "user":
 
-        with st.chat_message("user"):
-            st.markdown(message["content"])
+    with st.chat_message("user"):
+        st.markdown(message["content"])
 
-    else:
+else:
 
-        with st.chat_message("assistant"):
-            st.markdown(message["content"])
-
+    with st.chat_message("assistant"):
+        st.markdown(message["content"])
+```
 
 # ============================================================
-# CHAT INPUT & LOGIC UPDATE
+
+# CHAT INPUT & LOGIC
+
 # ============================================================
 
 question = st.chat_input(
-    "Ask anything about quantum computing..."
+"Ask anything about quantum computing..."
 )
-
 
 if question:
 
-    # 1. Append user message
-    messages.append({
-        "role": "user",
-        "content": question
-    })
+```
+# 1. Append user message
+messages.append({
+    "role": "user",
+    "content": question
+})
 
-    # 2. Render user message in UI immediately
-    with st.chat_message("user"):
-        st.markdown(question)
+# 2. Render user message in UI immediately
+with st.chat_message("user"):
+    st.markdown(question)
 
-    # 3. Generate response with spinner
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            answer = answer_question(question, messages)
-            st.markdown(answer)
+# 3. Generate response with spinner
+with st.chat_message("assistant"):
 
-    # 4. Append AI response
-    messages.append({
-        "role": "assistant",
-        "content": answer
-    })
+    with st.spinner("Thinking..."):
 
-    # 5. Save updated state
-    st.session_state.chats[current_chat] = messages
+        answer = answer_question(
+            question,
+            messages
+        )
 
-    st.rerun()
+        st.markdown(answer)
+
+# 4. Append AI response
+messages.append({
+    "role": "assistant",
+    "content": answer
+})
+
+# 5. Save updated state
+st.session_state.chats[current_chat] = messages
+
+st.rerun()
+```
+
+````
+
+### One important setup step
+
+Because the code now correctly reads the API key from the environment, set your Groq key in PowerShell:
+
+```powershell
+$env:GROQ_API_KEY="YOUR_GROQ_API_KEY"
+````
+
+Then run:
+
+```powershell
+python -m streamlit run app.py
+```
+
+If you want the key to remain available after closing PowerShell, you can set it permanently with:
+
+```powershell
+[Environment]::SetEnvironmentVariable("GROQ_API_KEY","YOUR_GROQ_API_KEY","User")
+```
+
+Then **close and reopen PowerShell** before running Streamlit.
+
+The critical change that fixes your reported error is:
+
+```python
+model="llama-3.3-70b-versatile"
+```
+
+instead of:
+
+```python
+model="qwen-2.5-32b"
+```
+
+Also, **do not put your actual Groq API key directly into `app.py`**, especially if you plan to upload the project to GitHub.

@@ -7,8 +7,8 @@ import os
 # ============================================================
 
 st.set_page_config(
-    page_title="Universal AI Lab",
-    page_icon="🤖",
+    page_title="Quantum Lab",
+    page_icon="⚛️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -26,11 +26,11 @@ if "user_email" not in st.session_state:
 
 if "chats" not in st.session_state:
     st.session_state.chats = {
-        "General Workspace": []
+        "Quantum Learning": []
     }
 
 if "current_chat" not in st.session_state:
-    st.session_state.current_chat = "General Workspace"
+    st.session_state.current_chat = "Quantum Learning"
 
 
 # ============================================================
@@ -94,9 +94,9 @@ st.markdown(
         background-color: #191b25;
         border: 1px solid #292c3a;
         border-radius: 15px;
-        padding: 45px 20px;
+        padding: 55px 20px;
         text-align: center;
-        margin-top: 15px;
+        margin-top: 25px;
         margin-bottom: 25px;
     }
 
@@ -125,6 +125,19 @@ st.markdown(
 
 
     /* =========================
+       LEARNING BOX
+       ========================= */
+
+    .learning-box {
+        background-color: #10294e;
+        border: 1px solid #193d70;
+        border-radius: 10px;
+        padding: 16px;
+        margin-top: 20px;
+    }
+
+
+    /* =========================
        LOGIN
        ========================= */
 
@@ -145,33 +158,35 @@ st.markdown(
 
 
 # ============================================================
-# UNIVERSAL AI RESPONSE FUNCTION
+# QUANTUM AI RESPONSE
 # ============================================================
 
 def ai_response(chat_history):
+
     client = OpenAI(
         api_key=os.environ.get("DASHSCOPE_API_KEY"),
         base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
     )
 
-    system_prompt = {
+    system_message = {
         "role": "system",
         "content": """
-You are a helpful, intelligent, and highly capable AI assistant.
+You are a helpful, intelligent AI assistant.
 
-You accurately answer questions about any subject or domain without limitations, including:
- science, mathematics, programming, technology, general knowledge, 
- history, writing, logic puzzles, and everyday problem-solving.
+You can answer questions about any subject, including:
+science, mathematics, programming, technology, education,
+history, general knowledge, writing, and everyday questions.
 
-Guidelines:
-- Explain things clearly and adapt your detailed tone to the user's level.
-- If the user asks for code, provide clean, working, and well-explained code blocks.
-- If a question is broad or ambiguous, provide a comprehensive core answer along with helpful follow-up options.
+Do not restrict yourself strictly to quantum computing.
+
+Explain things clearly and adapt your answer to the user's level.
+If the user asks for code, provide working code and explain it.
+If the user asks a conceptual question, explain it with examples.
+If the question is unclear, ask a useful clarification.
 """
     }
 
-    # Prepend system instruction to full thread history
-    full_messages = [system_prompt] + chat_history
+    full_messages = [system_message] + chat_history
 
     response = client.chat.completions.create(
         model="qwen-plus",
@@ -179,6 +194,10 @@ Guidelines:
     )
 
     return response.choices[0].message.content
+
+
+def answer_question(question, chat_history):
+    return ai_response(chat_history)
 
 
 # ============================================================
@@ -190,9 +209,9 @@ if not st.session_state.logged_in:
     st.markdown(
         """
 <div class="login-box">
-    <div class="hero-icon">🤖</div>
-    <h1>Universal AI Lab</h1>
-    <p>AI-Powered Workspace for Any Subject</p>
+    <div class="hero-icon">⚛️</div>
+    <h1>Quantum Lab</h1>
+    <p>AI-Powered Learning Space</p>
 </div>
 """,
         unsafe_allow_html=True
@@ -213,7 +232,9 @@ if not st.session_state.logged_in:
         else:
             st.session_state.user_email = email.strip()
             st.session_state.logged_in = True
+
             st.success("Login successful!")
+
             st.rerun()
 
     st.stop()
@@ -229,9 +250,9 @@ with st.sidebar:
     # BRAND
     # --------------------------------------------------------
 
-    st.title("🤖 UNIVERSAL AI")
+    st.title("⚛️ QUANTUM LAB")
 
-    st.caption("All-Subject Intelligence Space")
+    st.caption("AI-Powered Learning Space")
 
 
     # --------------------------------------------------------
@@ -258,16 +279,16 @@ with st.sidebar:
 
         chat_number = 1
 
-        while f"New Chat {chat_number}" in st.session_state.chats:
+        while f"New Quantum Chat {chat_number}" in st.session_state.chats:
             chat_number += 1
 
-        new_chat_name = f"New Chat {chat_number}"
+        new_chat_name = f"New Quantum Chat {chat_number}"
 
         st.session_state.chats[new_chat_name] = []
 
         st.session_state.current_chat = new_chat_name
 
-        st.toast("New workspace created!")
+        st.toast("New chat created!")
 
         st.rerun()
 
@@ -279,6 +300,7 @@ with st.sidebar:
     st.markdown("---")
 
     st.subheader("💬 Your Chats")
+
 
     chat_names = list(st.session_state.chats.keys())
 
@@ -417,30 +439,30 @@ with st.sidebar:
 
 
     # --------------------------------------------------------
-    # CAPABILITIES INFO BOX
+    # LEARNING MODE
     # --------------------------------------------------------
 
     st.markdown("---")
 
     st.info(
         """
-💡 **Capabilities**
+🧠 **Learning Mode**
 
 Ask questions about:
 
-• Programming & Web Development
+• Quantum Computing
 
-• Mathematics & Physics
+• Qubits
 
-• Technical Writing & Editing
+• Quantum Gates
 
-• General Knowledge & History
+• Qiskit
         """
     )
 
 
 # ============================================================
-# MAIN HERO DISPLAY
+# MAIN AREA
 # ============================================================
 
 st.markdown(
@@ -448,19 +470,19 @@ st.markdown(
 <div class="hero-box">
 
 <div class="hero-icon">
-🤖
+⚛️
 </div>
 
 <div class="hero-title">
-Universal AI Assistant
+Quantum AI Tutor
 </div>
 
 <div class="hero-subtitle">
-Ask anything—from math and code to creative writing and science
+Explore quantum computing through conversation
 </div>
 
 <div class="online">
-● AI ASSISTANT ONLINE
+● AI TUTOR ONLINE
 </div>
 
 </div>
@@ -470,7 +492,7 @@ Ask anything—from math and code to creative writing and science
 
 
 # ============================================================
-# CURRENT CHAT MESSAGES SETUP
+# CURRENT CHAT
 # ============================================================
 
 current_chat = st.session_state.current_chat
@@ -479,29 +501,34 @@ messages = st.session_state.chats[current_chat]
 
 
 # ============================================================
-# DISPLAY CHAT HISTORY
+# DISPLAY CHAT
 # ============================================================
 
 for message in messages:
+
     if message["role"] == "user":
+
         with st.chat_message("user"):
             st.markdown(message["content"])
+
     else:
+
         with st.chat_message("assistant"):
             st.markdown(message["content"])
 
 
 # ============================================================
-# CHAT INPUT & EXECUTION
+# CHAT INPUT & LOGIC UPDATE
 # ============================================================
 
 question = st.chat_input(
-    "Ask me anything..."
+    "Ask anything about quantum computing..."
 )
+
 
 if question:
 
-    # 1. Append user message to history
+    # 1. Append user message
     messages.append({
         "role": "user",
         "content": question
@@ -511,19 +538,19 @@ if question:
     with st.chat_message("user"):
         st.markdown(question)
 
-    # 3. Generate response with spinner UI indicator
+    # 3. Generate response with spinner
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            answer = ai_response(messages)
+            answer = answer_question(question, messages)
             st.markdown(answer)
 
-    # 4. Append AI response to message state
+    # 4. Append AI response
     messages.append({
         "role": "assistant",
         "content": answer
     })
 
-    # 5. Save updated state back into dictionary
+    # 5. Save updated state
     st.session_state.chats[current_chat] = messages
 
     st.rerun()

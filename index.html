@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum AI Tutor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <aside class="sidebar">
+        <h2>💬 Your Chats</h2>
+
+        <button class="new-chat">＋ New Chat</button>
+
+        <div class="chat-item">
+            💬 Quantum Learning
+        </div>
+
+        <hr>
+
+        <button>🗑️ Delete Current Chat</button>
+        <button>🧹 Clear Conversation</button>
+        <button>🚪 Logout</button>
+
+        <div class="learning-card">
+            <h3>🧠 Learning Mode</h3>
+            <p>
+                Ask questions about quantum computing,
+                Qiskit, qubits, algorithms and programming.
+            </p>
+        </div>
+    </aside>
+
+
+    <main class="main">
+
+        <header>
+            <button class="deploy">Deploy ⋮</button>
+        </header>
+
+        <section class="hero">
+
+            <div class="quantum-symbol">
+                ⚛
+            </div>
+
+            <div class="hero-title">
+                Quantum AI Tutor
+            </div>
+
+            <div class="hero-subtitle">
+                Explore quantum computing through conversation
+            </div>
+
+            <div class="status-pill">
+                ● &nbsp; AI TUTOR ONLINE
+            </div>
+
+        </section>
+
+
+        <div class="chat-box">
+
+            <input
+                type="text"
+                id="messageInput"
+                placeholder="Ask anything about quantum computing..."
+            >
+
+            <button onclick="sendMessage()">↑</button>
+
+        </div>
+
+    </main>
+
+    <script src="script.js"></script>
+
+</body>
+</html>

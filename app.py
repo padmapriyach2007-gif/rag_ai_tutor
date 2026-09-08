@@ -1,8 +1,9 @@
 import streamlit as st
 
-# =========================================================
+
+# ============================================================
 # PAGE CONFIG
-# =========================================================
+# ============================================================
 
 st.set_page_config(
     page_title="Quantum Lab",
@@ -11,12 +12,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# =========================================================
+
+# ============================================================
 # SESSION STATE
-# =========================================================
+# ============================================================
 
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = True
+    st.session_state.logged_in = False
+
+if "user_email" not in st.session_state:
+    st.session_state.user_email = ""
 
 if "chats" not in st.session_state:
     st.session_state.chats = {
@@ -27,234 +32,189 @@ if "current_chat" not in st.session_state:
     st.session_state.current_chat = "Quantum Learning"
 
 
-# =========================================================
-# CSS
-# =========================================================
+# ============================================================
+# CUSTOM CSS
+# ============================================================
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 
-    /* ================= MAIN BACKGROUND ================= */
+    /* =========================
+       MAIN APP
+       ========================= */
 
     .stApp {
-        background: #07091a;
+        background-color: #07091a;
     }
 
     [data-testid="stMain"] {
-        background: #07091a;
+        background-color: #07091a;
     }
 
-    /* ================= SIDEBAR ================= */
+
+    /* =========================
+       SIDEBAR
+       ========================= */
 
     [data-testid="stSidebar"] {
-        background: #08091b;
+        background-color: #08091b;
     }
 
-    [data-testid="stSidebar"] > div:first-child {
-        padding-top: 25px;
-    }
-
-    .brand-title {
-        font-size: 25px;
-        font-weight: 700;
+    [data-testid="stSidebar"] h1 {
         color: white;
-        margin-bottom: 4px;
     }
 
-    .brand-subtitle {
-        font-size: 14px;
-        color: #a7aac4;
-    }
 
-    .user-box {
-        margin-top: 28px;
-        margin-bottom: 20px;
-        color: white;
-        font-size: 15px;
-    }
+    /* =========================
+       BUTTONS
+       ========================= */
 
-    .email {
-        color: #8c90a8;
-        font-size: 13px;
-        margin-top: 5px;
-    }
-
-    .sidebar-heading {
-        color: white;
-        font-size: 17px;
-        font-weight: 600;
-        margin-top: 22px;
-        margin-bottom: 10px;
-    }
-
-    .chat-active {
-        background: #17192b;
-        border-radius: 8px;
-        padding: 10px;
-        color: #ffffff;
-        margin-bottom: 5px;
-    }
-
-    .divider {
-        height: 1px;
-        background: #292b3d;
-        margin: 20px 0;
-    }
-
-    /* ================= BUTTONS ================= */
-
-    [data-testid="stSidebar"] .stButton button {
+    [data-testid="stSidebar"] .stButton > button {
         width: 100%;
-        min-height: 42px;
         border-radius: 8px;
+        min-height: 42px;
+        background-color: #292b37;
         border: 1px solid #3c3e50;
-        background: #292b37;
-        color: white;
-        font-size: 14px;
-    }
-
-    [data-testid="stSidebar"] .stButton button:hover {
-        border-color: #4da3ff;
-        background: #353746;
         color: white;
     }
 
-    /* ================= LEARNING BOX ================= */
-
-    .learning-box {
-        background: #10294e;
-        border: 1px solid #193d70;
-        border-radius: 10px;
-        padding: 17px;
-        margin-top: 20px;
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background-color: #363847;
+        border-color: #6c63ff;
     }
 
-    .learning-title {
-        color: #4da3ff;
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 10px;
-    }
 
-    .learning-text {
-        color: #c0c8dd;
-        font-size: 14px;
-        line-height: 1.8;
-    }
+    /* =========================
+       HERO
+       ========================= */
 
-    /* ================= HERO ================= */
-
-    .hero {
-        background: #191b25;
+    .hero-box {
+        background-color: #191b25;
         border: 1px solid #292c3a;
         border-radius: 15px;
+        padding: 55px 20px;
         text-align: center;
-        padding: 55px 25px;
-        margin-top: 45px;
+        margin-top: 25px;
         margin-bottom: 25px;
     }
 
-    .quantum-symbol {
-        font-size: 45px;
-        margin-bottom: 10px;
+    .hero-icon {
+        font-size: 48px;
     }
 
     .hero-title {
-        color: white;
         font-size: 42px;
         font-weight: 700;
-        margin-bottom: 10px;
+        color: white;
+        margin-top: 10px;
     }
 
     .hero-subtitle {
-        color: #aeb1c5;
         font-size: 17px;
-        margin-bottom: 18px;
+        color: #aeb1c5;
+        margin-top: 10px;
     }
 
     .online {
         color: #42e88b;
-    }
-
-    .status-text {
-        color: #b9bbc9;
         font-size: 14px;
+        margin-top: 18px;
     }
 
-    /* ================= CHAT ================= */
 
-    .chat-user {
-        background: #252735;
+    /* =========================
+       LEARNING BOX
+       ========================= */
+
+    .learning-box {
+        background-color: #10294e;
+        border: 1px solid #193d70;
         border-radius: 10px;
-        padding: 12px 16px;
-        margin: 8px 0;
-        color: white;
+        padding: 16px;
+        margin-top: 20px;
     }
 
-    .chat-ai {
-        background: #11131d;
+
+    /* =========================
+       LOGIN
+       ========================= */
+
+    .login-box {
+        max-width: 550px;
+        margin: 100px auto;
+        background-color: #191b25;
         border: 1px solid #292c3a;
-        border-radius: 10px;
-        padding: 12px 16px;
-        margin: 8px 0;
-        color: #e6e7ef;
-    }
-
-    .chat-label {
-        font-size: 12px;
-        color: #8e93aa;
-        margin-bottom: 5px;
+        border-radius: 15px;
+        padding: 40px;
+        text-align: center;
     }
 
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True
+)
 
 
-# =========================================================
-# AI RESPONSE
-# =========================================================
+# ============================================================
+# QUANTUM AI RESPONSE
+# ============================================================
 
 def quantum_response(question):
 
     q = question.lower().strip()
 
     if "qubit" in q:
-        return """
-**A qubit** is the basic unit of quantum information.
 
-A classical bit can be either **0 or 1**.
+        return """
+### ⚛️ What is a Qubit?
+
+A **qubit** is the basic unit of quantum information.
+
+A classical bit can have either:
+
+**0 or 1**
 
 A qubit can exist in a combination of both states:
 
 **|ψ⟩ = α|0⟩ + β|1⟩**
 
-This is called **superposition**.
+This property is called **superposition**.
 """
 
     elif "superposition" in q:
-        return """
-**Superposition** means that a quantum system can exist in a
-combination of multiple possible states.
 
-For a qubit:
+        return """
+### 🌌 Superposition
+
+Superposition means a quantum system can exist in a combination
+of multiple possible states.
+
+For example:
 
 **|ψ⟩ = α|0⟩ + β|1⟩**
 
-When we measure it, we obtain either 0 or 1.
+When the qubit is measured, we obtain either **0 or 1**.
 """
 
     elif "entanglement" in q:
-        return """
-**Quantum entanglement** is a phenomenon where two or more
-qubits become strongly correlated.
 
-The state of one qubit is connected to the state of another,
+        return """
+### 🔗 Quantum Entanglement
+
+Quantum entanglement occurs when two or more qubits become
+strongly correlated.
+
+The state of one qubit is related to the state of another,
 even when they are separated.
 """
 
     elif "hadamard" in q:
+
         return """
-The **Hadamard (H) gate** is used to create superposition.
+### H Gate — Hadamard Gate
+
+The **Hadamard gate** is used to create superposition.
 
 For example:
 
@@ -264,23 +224,28 @@ It is one of the most important quantum gates.
 """
 
     elif "cnot" in q:
+
         return """
-**CNOT** stands for Controlled-NOT.
+### CNOT Gate
 
-It uses:
+**CNOT** means Controlled-NOT.
 
-• One control qubit
-• One target qubit
+It contains:
+
+• Control qubit  
+• Target qubit
 
 The target qubit is flipped when the control qubit is **1**.
 """
 
     elif "qiskit" in q:
-        return """
-**Qiskit** is a Python-based framework for working with quantum
-computing.
 
-You can use it to:
+        return """
+### 🐍 Qiskit
+
+**Qiskit** is a Python framework for quantum computing.
+
+It can be used to:
 
 • Create quantum circuits
 • Apply quantum gates
@@ -289,21 +254,25 @@ You can use it to:
 """
 
     elif "gate" in q:
-        return """
-Common **quantum gates** include:
 
-• X gate — quantum NOT
-• Y gate
-• Z gate
-• H gate — creates superposition
-• S gate
-• T gate
-• CNOT — controlled operation
+        return """
+### ⚙️ Quantum Gates
+
+Some common quantum gates are:
+
+• **X gate** — Quantum NOT
+• **Y gate**
+• **Z gate**
+• **H gate** — Creates superposition
+• **S gate**
+• **T gate**
+• **CNOT** — Controlled operation
 """
 
     elif q in ["hi", "hello", "hey"]:
+
         return """
-Hello! 👋
+### 👋 Hello!
 
 I'm your **Quantum AI Tutor**.
 
@@ -312,18 +281,21 @@ You can ask me about:
 • Qubits
 • Superposition
 • Entanglement
-• Quantum gates
-• Quantum circuits
+• Quantum Gates
+• Quantum Circuits
 • Qiskit
 """
 
     else:
+
         return f"""
+### ⚛️ Quantum AI Tutor
+
 You asked:
 
 **{question}**
 
-I can help you learn quantum computing.
+I can help you learn about quantum computing.
 
 Try asking:
 
@@ -335,95 +307,125 @@ or
 """
 
 
-# =========================================================
+# ============================================================
 # LOGIN SCREEN
-# =========================================================
+# ============================================================
 
 if not st.session_state.logged_in:
 
-    st.markdown("""
-    <div class="hero">
+    st.markdown(
+        """
+<div class="login-box">
+    <div class="hero-icon">⚛️</div>
+    <h1>Quantum Lab</h1>
+    <p>AI-Powered Learning Space</p>
+</div>
+""",
+        unsafe_allow_html=True
+    )
 
-        <div class="quantum-symbol">⚛️</div>
+    st.subheader("🔐 Login")
 
-        <div class="hero-title">
-            Quantum Lab
-        </div>
+    email = st.text_input(
+        "Email address",
+        placeholder="Enter your email"
+    )
 
-        <div class="hero-subtitle">
-            AI-Powered Learning Space
-        </div>
+    if st.button("🚀 Login", use_container_width=True):
 
-    </div>
-    """, unsafe_allow_html=True)
+        if email.strip() == "":
+            st.error("Please enter your email address.")
 
-    st.info("You are logged out.")
+        else:
+            st.session_state.user_email = email.strip()
+            st.session_state.logged_in = True
 
-    if st.button("🔐 Login", use_container_width=True):
-        st.session_state.logged_in = True
-        st.toast("Logged in successfully!")
-        st.rerun()
+            st.success("Login successful!")
+
+            st.rerun()
 
     st.stop()
 
 
-# =========================================================
+# ============================================================
 # SIDEBAR
-# =========================================================
+# ============================================================
 
 with st.sidebar:
 
-    # Brand
-    st.markdown("""
-    <div class="brand-title">
-        ⚛️ QUANTUM LAB
-    </div>
+    # --------------------------------------------------------
+    # BRAND
+    # --------------------------------------------------------
 
-    <div class="brand-subtitle">
-        AI-Powered Learning Space
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("⚛️ QUANTUM LAB")
+
+    st.caption("AI-Powered Learning Space")
 
 
-    # User
-    st.markdown("""
-    <div class="user-box">
-        👤 <b>Logged In</b>
-        <div class="email">
-            your@email.com
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # --------------------------------------------------------
+    # USER
+    # --------------------------------------------------------
+
+    st.markdown("---")
+
+    st.write("👤 **Logged In**")
+
+    st.caption(st.session_state.user_email)
 
 
+    # --------------------------------------------------------
     # NEW CHAT
-    if st.button("➕  New Chat", use_container_width=True):
+    # --------------------------------------------------------
 
-        number = len(st.session_state.chats) + 1
+    st.markdown("---")
 
-        new_name = f"New Quantum Chat {number}"
+    if st.button(
+        "➕ New Chat",
+        use_container_width=True
+    ):
 
-        st.session_state.chats[new_name] = []
+        chat_number = 1
 
-        st.session_state.current_chat = new_name
+        while f"New Quantum Chat {chat_number}" in st.session_state.chats:
+            chat_number += 1
+
+        new_chat_name = f"New Quantum Chat {chat_number}"
+
+        st.session_state.chats[new_chat_name] = []
+
+        st.session_state.current_chat = new_chat_name
 
         st.toast("New chat created!")
 
         st.rerun()
 
 
-    # CHAT LIST
-    st.markdown(
-        '<div class="sidebar-heading">💬 Your Chats</div>',
-        unsafe_allow_html=True
-    )
+    # --------------------------------------------------------
+    # YOUR CHATS
+    # --------------------------------------------------------
+
+    st.markdown("---")
+
+    st.subheader("💬 Your Chats")
 
 
-    for chat_name in st.session_state.chats:
+    chat_names = list(st.session_state.chats.keys())
+
+    for chat_name in chat_names:
+
+        is_current = (
+            chat_name == st.session_state.current_chat
+        )
+
+        button_text = (
+            f"🟣 {chat_name}"
+            if is_current
+            else f"💬 {chat_name}"
+        )
 
         if st.button(
-            f"💬 {chat_name}",
-            key=f"chat_{chat_name}",
+            button_text,
+            key=f"open_{chat_name}",
             use_container_width=True
         ):
 
@@ -432,130 +434,182 @@ with st.sidebar:
             st.rerun()
 
 
-    st.markdown('<div class="divider"></div>',
-                unsafe_allow_html=True)
+    # --------------------------------------------------------
+    # RENAME CHAT
+    # --------------------------------------------------------
+
+    st.markdown("---")
+
+    with st.expander("✏️ Rename Current Chat"):
+
+        current_name = st.session_state.current_chat
+
+        new_name = st.text_input(
+            "New chat name",
+            value=current_name,
+            key="rename_input"
+        )
+
+        if st.button(
+            "Save New Name",
+            use_container_width=True
+        ):
+
+            new_name = new_name.strip()
+
+            if new_name == "":
+                st.error("Chat name cannot be empty.")
+
+            elif new_name == current_name:
+                st.info("This is already the current name.")
+
+            elif new_name in st.session_state.chats:
+                st.error("A chat with this name already exists.")
+
+            else:
+
+                st.session_state.chats[new_name] = (
+                    st.session_state.chats.pop(current_name)
+                )
+
+                st.session_state.current_chat = new_name
+
+                st.success("Chat renamed!")
+
+                st.rerun()
 
 
+    # --------------------------------------------------------
     # DELETE CURRENT CHAT
+    # --------------------------------------------------------
+
+    st.markdown("---")
+
     if st.button(
-        "🗑️  Delete Current Chat",
+        "🗑️ Delete Current Chat",
         use_container_width=True
     ):
 
-        current = st.session_state.current_chat
+        current_name = st.session_state.current_chat
 
-        if len(st.session_state.chats) > 1:
+        if len(st.session_state.chats) == 1:
 
-            del st.session_state.chats[current]
+            st.session_state.chats[current_name] = []
 
-            st.session_state.current_chat = list(
-                st.session_state.chats.keys()
-            )[0]
-
-            st.toast("Chat deleted!")
+            st.toast("Chat cleared!")
 
         else:
 
-            st.session_state.chats[current] = []
+            del st.session_state.chats[current_name]
 
-            st.toast("Current chat cleared!")
+            remaining_chats = list(
+                st.session_state.chats.keys()
+            )
 
+            st.session_state.current_chat = remaining_chats[0]
+
+            st.toast("Chat deleted!")
 
         st.rerun()
 
 
+    # --------------------------------------------------------
     # CLEAR CONVERSATION
+    # --------------------------------------------------------
+
     if st.button(
-        "🧹  Clear Conversation",
+        "🧹 Clear Conversation",
         use_container_width=True
     ):
 
-        current = st.session_state.current_chat
+        current_name = st.session_state.current_chat
 
-        st.session_state.chats[current] = []
+        st.session_state.chats[current_name] = []
 
         st.toast("Conversation cleared!")
 
         st.rerun()
 
 
+    # --------------------------------------------------------
     # LOGOUT
+    # --------------------------------------------------------
+
     if st.button(
-        "🚪  Logout",
+        "🚪 Logout",
         use_container_width=True
     ):
 
         st.session_state.logged_in = False
 
-        st.toast("Logged out!")
-
         st.rerun()
 
 
-    st.markdown('<div class="divider"></div>',
-                unsafe_allow_html=True)
-
-
+    # --------------------------------------------------------
     # LEARNING MODE
-    st.markdown("""
-    <div class="learning-box">
+    # --------------------------------------------------------
 
-        <div class="learning-title">
-            🧠 Learning Mode
-        </div>
+    st.markdown("---")
 
-        <div class="learning-text">
-            Ask questions about:<br><br>
-            • Quantum Computing<br>
-            • Qubits<br>
-            • Quantum Gates<br>
-            • Qiskit
-        </div>
+    st.info(
+        """
+🧠 **Learning Mode**
 
-    </div>
-    """, unsafe_allow_html=True)
+Ask questions about:
+
+• Quantum Computing
+
+• Qubits
+
+• Quantum Gates
+
+• Qiskit
+        """
+    )
 
 
-# =========================================================
-# MAIN CONTENT
-# =========================================================
+# ============================================================
+# MAIN AREA
+# ============================================================
 
-st.markdown("""
-<div class="hero">
+st.markdown(
+    """
+<div class="hero-box">
 
-    <div class="quantum-symbol">
-        ⚛️
-    </div>
+<div class="hero-icon">
+⚛️
+</div>
 
-    <div class="hero-title">
-        Quantum AI Tutor
-    </div>
+<div class="hero-title">
+Quantum AI Tutor
+</div>
 
-    <div class="hero-subtitle">
-        Explore quantum computing through conversation
-    </div>
+<div class="hero-subtitle">
+Explore quantum computing through conversation
+</div>
 
-    <div class="status-text">
-        <span class="online">●</span>
-        &nbsp; AI TUTOR ONLINE
-    </div>
+<div class="online">
+● AI TUTOR ONLINE
+</div>
 
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True
+)
 
 
-# =========================================================
+# ============================================================
 # CURRENT CHAT
-# =========================================================
+# ============================================================
 
 current_chat = st.session_state.current_chat
 
 messages = st.session_state.chats[current_chat]
 
 
-# =========================================================
-# DISPLAY MESSAGES
-# =========================================================
+# ============================================================
+# DISPLAY CHAT
+# ============================================================
 
 for message in messages:
 
@@ -570,9 +624,9 @@ for message in messages:
             st.markdown(message["content"])
 
 
-# =========================================================
+# ============================================================
 # CHAT INPUT
-# =========================================================
+# ============================================================
 
 question = st.chat_input(
     "Ask anything about quantum computing..."
@@ -581,22 +635,21 @@ question = st.chat_input(
 
 if question:
 
-    # Add user message
+    # User message
     messages.append({
         "role": "user",
         "content": question
     })
 
-    # Generate answer
+    # AI response
     answer = quantum_response(question)
 
-    # Add AI message
     messages.append({
         "role": "assistant",
         "content": answer
     })
 
-    # Save messages
+    # Save
     st.session_state.chats[current_chat] = messages
 
     st.rerun()

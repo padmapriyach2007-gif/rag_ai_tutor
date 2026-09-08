@@ -106,9 +106,20 @@ tavily_client = TavilyClient(
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
+# Streamlit secrets fallback for Groq
+try:
+    import streamlit as st
+    if not GROQ_API_KEY:
+        GROQ_API_KEY = st.secrets.get("GROQ_API_KEY")
+except Exception:
+    pass
+
 def get_llm():
+    """
+    Groq Inference Engine using supported model strings.
+    """
     return ChatOpenAI(
-        model="llama-3.3-70b-versatile",
+        model="llama-3.1-8b-instant",  # Extremely fast, free, and fully supported
         temperature=0.5,
         api_key=GROQ_API_KEY,
         base_url="https://api.groq.com/openai/v1",

@@ -13,6 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+
 # ============================================================
 # SESSION STATE
 # ============================================================
@@ -33,62 +34,50 @@ if "current_chat" not in st.session_state:
 
 
 # ============================================================
-# GALAXY THEME CSS
+# GALAXY THEME
 # ============================================================
 
 st.markdown(
     """
 <style>
 
-    /* ========================================================
-       GLOBAL GALAXY BACKGROUND
-       ======================================================== */
+    /* ======================================================
+       GLOBAL
+       ====================================================== */
+
+    html, body, [class*="css"] {
+        font-family: "Segoe UI", sans-serif;
+    }
 
     .stApp {
         background:
             radial-gradient(
-                circle at 15% 20%,
-                rgba(93, 53, 255, 0.18),
-                transparent 28%
-            ),
-            radial-gradient(
-                circle at 85% 15%,
-                rgba(0, 183, 255, 0.16),
-                transparent 28%
-            ),
-            radial-gradient(
-                circle at 50% 85%,
-                rgba(160, 45, 255, 0.14),
-                transparent 32%
-            ),
-            linear-gradient(
-                135deg,
-                #030412 0%,
-                #080b24 45%,
-                #020817 100%
-            );
-
-        color: #ffffff;
-    }
-
-    [data-testid="stAppViewContainer"] {
-        background:
-            radial-gradient(
                 circle at 10% 10%,
-                rgba(111, 66, 255, 0.12),
+                rgba(100, 60, 255, 0.18),
                 transparent 25%
             ),
             radial-gradient(
                 circle at 90% 20%,
-                rgba(0, 212, 255, 0.10),
+                rgba(0, 180, 255, 0.13),
                 transparent 25%
+            ),
+            radial-gradient(
+                circle at 50% 90%,
+                rgba(150, 50, 255, 0.12),
+                transparent 30%
             ),
             linear-gradient(
                 135deg,
-                #030412,
-                #080b24,
-                #020817
+                #02030d 0%,
+                #080a24 45%,
+                #020817 100%
             );
+
+        color: white;
+    }
+
+    [data-testid="stAppViewContainer"] {
+        background: transparent;
     }
 
     [data-testid="stMain"] {
@@ -99,9 +88,10 @@ st.markdown(
         background: transparent;
     }
 
-    /* ========================================================
-       GALAXY GRID
-       ======================================================== */
+
+    /* ======================================================
+       STAR EFFECT
+       ====================================================== */
 
     [data-testid="stAppViewContainer"]::before {
         content: "";
@@ -109,96 +99,86 @@ st.markdown(
         inset: 0;
 
         background-image:
+            radial-gradient(
+                1px 1px at 10% 20%,
+                rgba(255,255,255,0.7),
+                transparent
+            ),
+            radial-gradient(
+                1px 1px at 30% 70%,
+                rgba(160,180,255,0.7),
+                transparent
+            ),
+            radial-gradient(
+                1px 1px at 70% 30%,
+                rgba(255,255,255,0.6),
+                transparent
+            ),
+            radial-gradient(
+                1px 1px at 90% 75%,
+                rgba(120,200,255,0.7),
+                transparent
+            ),
             linear-gradient(
-                rgba(120, 110, 255, 0.035) 1px,
+                rgba(100,100,255,0.025) 1px,
                 transparent 1px
             ),
             linear-gradient(
                 90deg,
-                rgba(120, 110, 255, 0.035) 1px,
+                rgba(100,100,255,0.025) 1px,
                 transparent 1px
             );
 
-        background-size: 45px 45px;
+        background-size:
+            auto,
+            auto,
+            auto,
+            auto,
+            45px 45px,
+            45px 45px;
 
         pointer-events: none;
         z-index: 0;
     }
 
-    /* ========================================================
-       STAR FIELD
-       ======================================================== */
 
-    [data-testid="stAppViewContainer"]::after {
-        content: "✦     ·        ✧          ·     ✦             ·      ✧       ·        ✦        ·      ✧";
-
-        position: fixed;
-        inset: 0;
-
-        color: rgba(255,255,255,0.22);
-        font-size: 13px;
-        line-height: 65px;
-        letter-spacing: 18px;
-
-        pointer-events: none;
-        z-index: 0;
-
-        overflow: hidden;
-        white-space: normal;
-    }
-
-
-    /* ========================================================
+    /* ======================================================
        SIDEBAR
-       ======================================================== */
+       ====================================================== */
 
     [data-testid="stSidebar"] {
         background:
             radial-gradient(
                 circle at 20% 10%,
-                rgba(93, 53, 255, 0.20),
+                rgba(100, 60, 255, 0.20),
                 transparent 30%
             ),
             radial-gradient(
-                circle at 80% 80%,
-                rgba(0, 179, 255, 0.10),
+                circle at 90% 80%,
+                rgba(0, 180, 255, 0.10),
                 transparent 30%
             ),
             linear-gradient(
                 180deg,
-                #050619 0%,
-                #07091b 50%,
-                #030514 100%
+                #050618,
+                #07091d,
+                #030411
             );
 
-        border-right: 1px solid rgba(119, 103, 255, 0.25);
+        border-right: 1px solid rgba(115, 100, 255, 0.25);
     }
 
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 1rem;
     }
 
-    [data-testid="stSidebar"] h1 {
-        color: #ffffff;
-        letter-spacing: 1px;
-        font-weight: 800;
-    }
 
-    [data-testid="stSidebar"] p {
-        color: #9298b8;
-    }
-
-    [data-testid="stSidebar"] hr {
-        border-color: rgba(125, 115, 255, 0.18);
-    }
-
-
-    /* ========================================================
+    /* ======================================================
        SIDEBAR BRAND
-       ======================================================== */
+       ====================================================== */
 
     .brand-container {
-        padding: 10px 2px 18px 2px;
+        padding: 8px 0 18px 0;
     }
 
     .brand-row {
@@ -208,6 +188,190 @@ st.markdown(
     }
 
     .brand-icon {
+        width: 43px;
+        height: 43px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 12px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #7548ff,
+                #287cf0
+            );
+
+        border: 1px solid rgba(180,160,255,0.5);
+
+        box-shadow:
+            0 0 20px rgba(105,70,255,0.55),
+            inset 0 0 15px rgba(255,255,255,0.12);
+
+        font-size: 22px;
+    }
+
+    .brand-title {
+        color: white;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 1px;
+    }
+
+    .brand-subtitle {
+        color: #7d84a8;
+        font-size: 11px;
+        margin-top: 4px;
+    }
+
+
+    /* ======================================================
+       SIDEBAR DIVIDERS
+       ====================================================== */
+
+    [data-testid="stSidebar"] hr {
+        border: none;
+        border-top: 1px solid rgba(130,120,255,0.16);
+        margin: 16px 0;
+    }
+
+
+    /* ======================================================
+       USER CARD
+       ====================================================== */
+
+    .user-card {
+        padding: 13px;
+
+        border-radius: 12px;
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(35,35,70,0.65),
+                rgba(10,12,30,0.75)
+            );
+
+        border: 1px solid rgba(120,110,255,0.16);
+    }
+
+    .user-label {
+        color: #d5d8ea;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .user-email {
+        color: #5b9dff;
+        font-size: 12px;
+        margin-top: 5px;
+        word-break: break-word;
+    }
+
+
+    /* ======================================================
+       SIDEBAR BUTTONS
+       ====================================================== */
+
+    [data-testid="stSidebar"] .stButton > button {
+
+        min-height: 44px;
+
+        border-radius: 12px;
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(29,32,66,0.95),
+                rgba(18,21,48,0.95)
+            );
+
+        border: 1px solid rgba(115,105,255,0.24);
+
+        color: #c9cce0;
+
+        font-weight: 600;
+
+        transition:
+            transform 0.2s ease,
+            background 0.25s ease,
+            border-color 0.25s ease,
+            box-shadow 0.25s ease;
+
+        box-shadow:
+            0 4px 15px rgba(0,0,0,0.18);
+    }
+
+    [data-testid="stSidebar"] .stButton > button:hover {
+
+        transform: translateY(-2px);
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(92,65,220,0.9),
+                rgba(38,105,210,0.85)
+            );
+
+        border-color: rgba(145,130,255,0.8);
+
+        color: white;
+
+        box-shadow:
+            0 8px 25px rgba(76,65,255,0.3);
+    }
+
+    [data-testid="stSidebar"] .stButton > button:active {
+        transform: scale(0.97);
+    }
+
+
+    /* ======================================================
+       LEARNING MODE
+       ====================================================== */
+
+    .learning-card {
+
+        margin-top: 8px;
+
+        padding: 18px;
+
+        border-radius: 16px;
+
+        background:
+            radial-gradient(
+                circle at 90% 10%,
+                rgba(70,130,255,0.18),
+                transparent 35%
+            ),
+            linear-gradient(
+                145deg,
+                #12325f,
+                #0a1d3e
+            );
+
+        border: 1px solid rgba(75,145,255,0.45);
+
+        box-shadow:
+            0 0 25px rgba(30,100,255,0.12),
+            inset 0 0 25px rgba(100,100,255,0.04);
+    }
+
+    .learning-header {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 12px;
+
+        margin-bottom: 17px;
+    }
+
+    .learning-icon {
+
         width: 42px;
         height: 42px;
 
@@ -220,189 +384,16 @@ st.markdown(
         background:
             linear-gradient(
                 135deg,
-                #704cff,
-                #3b8dff
+                rgba(255,90,225,0.25),
+                rgba(100,70,255,0.35)
             );
 
-        box-shadow:
-            0 0 18px rgba(112, 76, 255, 0.55),
-            inset 0 0 12px rgba(255,255,255,0.12);
-
-        font-size: 22px;
-    }
-
-    .brand-title {
-        color: #ffffff;
-        font-size: 21px;
-        font-weight: 800;
-        letter-spacing: 0.8px;
-    }
-
-    .brand-subtitle {
-        color: #747b9f;
-        font-size: 12px;
-        margin-top: 5px;
-        letter-spacing: 0.4px;
-    }
-
-
-    /* ========================================================
-       USER INFO
-       ======================================================== */
-
-    .user-card {
-        padding: 13px 14px;
-
-        border-radius: 12px;
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(255,255,255,0.045),
-                rgba(255,255,255,0.018)
-            );
-
-        border: 1px solid rgba(130,120,255,0.16);
-
-        box-shadow:
-            inset 0 0 20px rgba(110,80,255,0.025);
-    }
-
-    .user-label {
-        color: #c9cce0;
-        font-size: 14px;
-        font-weight: 700;
-    }
-
-    .user-email {
-        color: #4e9dff;
-        font-size: 12px;
-        margin-top: 5px;
-        word-break: break-all;
-    }
-
-
-    /* ========================================================
-       SIDEBAR BUTTONS
-       ======================================================== */
-
-    [data-testid="stSidebar"] .stButton > button {
-
-        width: 100%;
-        min-height: 44px;
-
-        border-radius: 12px;
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(36, 38, 72, 0.90),
-                rgba(22, 25, 53, 0.95)
-            );
-
-        border: 1px solid rgba(118, 108, 255, 0.22);
-
-        color: #c5c8dd;
-
-        font-weight: 600;
-
-        transition:
-            all 0.25s ease,
-            transform 0.2s ease;
-
-        box-shadow:
-            0 4px 14px rgba(0,0,0,0.18);
-    }
-
-    [data-testid="stSidebar"] .stButton > button:hover {
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(101, 72, 255, 0.65),
-                rgba(36, 112, 255, 0.55)
-            );
-
-        border-color: #796cff;
-
-        color: white;
-
-        transform: translateY(-2px);
-
-        box-shadow:
-            0 8px 24px rgba(82, 66, 255, 0.28);
-    }
-
-    [data-testid="stSidebar"] .stButton > button:active {
-        transform: scale(0.98);
-    }
-
-
-    /* ========================================================
-       LEARNING MODE
-       ======================================================== */
-
-    .learning-card {
-
-        margin-top: 10px;
-
-        padding: 20px 18px;
-
-        border-radius: 16px;
-
-        background:
-            radial-gradient(
-                circle at 85% 15%,
-                rgba(75, 129, 255, 0.20),
-                transparent 35%
-            ),
-            linear-gradient(
-                145deg,
-                rgba(19, 51, 96, 0.95),
-                rgba(10, 27, 58, 0.98)
-            );
-
-        border: 1px solid rgba(82, 142, 255, 0.38);
-
-        box-shadow:
-            0 0 25px rgba(40, 100, 255, 0.12),
-            inset 0 0 25px rgba(0, 170, 255, 0.035);
-    }
-
-    .learning-header {
-
-        display: flex;
-        align-items: center;
-
-        gap: 12px;
-
-        margin-bottom: 18px;
-    }
-
-    .learning-icon {
-
-        width: 40px;
-        height: 40px;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        border-radius: 11px;
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(255, 100, 230, 0.22),
-                rgba(111, 81, 255, 0.30)
-            );
-
-        border: 1px solid rgba(196, 126, 255, 0.30);
+        border: 1px solid rgba(210,130,255,0.35);
 
         font-size: 21px;
 
         box-shadow:
-            0 0 15px rgba(159, 91, 255, 0.20);
+            0 0 18px rgba(150,80,255,0.25);
     }
 
     .learning-title {
@@ -413,12 +404,12 @@ st.markdown(
 
         font-weight: 800;
 
-        letter-spacing: 0.5px;
+        letter-spacing: 0.6px;
     }
 
     .learning-status {
 
-        color: #79aaff;
+        color: #73a9ff;
 
         font-size: 10px;
 
@@ -429,11 +420,11 @@ st.markdown(
 
     .learning-question {
 
-        color: #b9c3df;
+        color: #b7c3df;
 
         font-size: 13px;
 
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
 
     .learning-topic {
@@ -444,9 +435,9 @@ st.markdown(
 
         gap: 10px;
 
-        padding: 8px 10px;
+        padding: 8px 9px;
 
-        margin: 4px 0;
+        margin: 3px 0;
 
         border-radius: 9px;
 
@@ -454,22 +445,23 @@ st.markdown(
 
         font-size: 13px;
 
-        transition: all 0.2s ease;
+        transition:
+            background 0.2s ease,
+            transform 0.2s ease,
+            color 0.2s ease;
     }
 
     .learning-topic:hover {
 
-        background: rgba(105, 124, 255, 0.12);
+        background: rgba(100,125,255,0.13);
 
-        transform: translateX(4px);
+        transform: translateX(5px);
 
         color: white;
     }
 
-    .learning-topic span {
-
+    .learning-topic span:first-child {
         width: 24px;
-
         text-align: center;
     }
 
@@ -489,16 +481,16 @@ st.markdown(
 
         border-radius: 50%;
 
-        background: #7785ff;
+        background: #8c7cff;
 
         box-shadow:
-            0 0 8px rgba(120,130,255,0.8);
+            0 0 8px rgba(125,110,255,0.9);
     }
 
 
-    /* ========================================================
-       HERO
-       ======================================================== */
+    /* ======================================================
+       MAIN HERO
+       ====================================================== */
 
     .hero-box {
 
@@ -506,37 +498,38 @@ st.markdown(
 
         overflow: hidden;
 
+        margin: 25px auto 28px auto;
+
+        padding: 45px 20px;
+
+        max-width: 1050px;
+
+        text-align: center;
+
+        border-radius: 22px;
+
         background:
             radial-gradient(
                 circle at 20% 20%,
-                rgba(113, 69, 255, 0.16),
+                rgba(120,70,255,0.18),
                 transparent 30%
             ),
             radial-gradient(
                 circle at 80% 30%,
-                rgba(0, 198, 255, 0.12),
+                rgba(0,190,255,0.12),
                 transparent 30%
             ),
             linear-gradient(
                 145deg,
-                rgba(19, 22, 53, 0.96),
-                rgba(8, 12, 33, 0.98)
+                rgba(20,23,57,0.96),
+                rgba(7,10,30,0.98)
             );
 
-        border: 1px solid rgba(112, 101, 255, 0.35);
-
-        border-radius: 22px;
-
-        padding: 48px 20px;
-
-        text-align: center;
-
-        margin-top: 22px;
-        margin-bottom: 28px;
+        border: 1px solid rgba(120,105,255,0.38);
 
         box-shadow:
-            0 0 45px rgba(73, 56, 255, 0.10),
-            inset 0 0 40px rgba(83, 63, 255, 0.035);
+            0 0 55px rgba(70,55,255,0.11),
+            inset 0 0 40px rgba(80,60,255,0.04);
     }
 
     .hero-box::before {
@@ -546,9 +539,9 @@ st.markdown(
         position: absolute;
 
         top: 18px;
-        left: 25px;
+        left: 28px;
 
-        color: rgba(255,255,255,0.40);
+        color: rgba(255,255,255,0.5);
 
         font-size: 12px;
     }
@@ -559,185 +552,131 @@ st.markdown(
 
         position: absolute;
 
-        bottom: 18px;
-        right: 30px;
+        bottom: 20px;
+        right: 32px;
 
-        color: rgba(120,180,255,0.45);
+        color: rgba(100,190,255,0.5);
 
         font-size: 16px;
     }
 
     .hero-icon {
 
-        font-size: 54px;
+        width: 76px;
+        height: 76px;
 
-        display: inline-flex;
+        margin: auto;
 
+        display: flex;
         align-items: center;
         justify-content: center;
-
-        width: 78px;
-        height: 78px;
 
         border-radius: 50%;
 
         background:
             radial-gradient(
                 circle,
-                rgba(132, 93, 255, 0.30),
-                rgba(32, 68, 160, 0.12)
+                rgba(125,90,255,0.32),
+                rgba(40,60,160,0.12)
             );
 
-        border: 1px solid rgba(136, 116, 255, 0.40);
+        border: 1px solid rgba(140,120,255,0.45);
 
         box-shadow:
-            0 0 30px rgba(113, 81, 255, 0.35);
+            0 0 30px rgba(115,80,255,0.35);
+
+        font-size: 48px;
     }
 
     .hero-title {
+
+        color: #ffffff;
 
         font-size: 38px;
 
         font-weight: 850;
 
-        color: #ffffff;
-
-        margin-top: 18px;
-
         letter-spacing: 1px;
 
+        margin-top: 17px;
+
         text-shadow:
-            0 0 18px rgba(126, 98, 255, 0.35);
+            0 0 20px rgba(125,95,255,0.35);
     }
 
     .hero-subtitle {
 
-        font-size: 15px;
+        color: #9da6c9;
 
-        color: #9ca5c8;
+        font-size: 15px;
 
         margin-top: 8px;
     }
 
     .online {
 
-        color: #43e89a;
+        color: #42e99a;
 
         font-size: 12px;
 
         margin-top: 16px;
 
-        letter-spacing: 1.2px;
+        letter-spacing: 1.3px;
 
         text-shadow:
-            0 0 10px rgba(67, 232, 154, 0.35);
+            0 0 10px rgba(65,235,150,0.35);
     }
 
 
-    /* ========================================================
-       CHAT AREA
-       ======================================================== */
-
-    [data-testid="stChatMessage"] {
-
-        border-radius: 16px;
-
-        border: 1px solid rgba(112, 101, 255, 0.10);
-
-        background: rgba(8, 12, 31, 0.35);
-    }
-
-    [data-testid="stChatMessageContent"] {
-
-        color: #e4e7f4;
-
-        line-height: 1.65;
-    }
-
-
-    /* ========================================================
-       CHAT INPUT
-       ======================================================== */
-
-    [data-testid="stChatInput"] {
-
-        border-radius: 16px;
-    }
-
-    [data-testid="stChatInput"] textarea {
-
-        background:
-            rgba(12, 16, 40, 0.95);
-
-        border: 1px solid rgba(110, 101, 255, 0.30);
-
-        color: white;
-
-        border-radius: 14px;
-
-        transition: all 0.25s ease;
-    }
-
-    [data-testid="stChatInput"] textarea:focus {
-
-        border-color: #776aff;
-
-        box-shadow:
-            0 0 18px rgba(101, 81, 255, 0.25);
-    }
-
-
-    /* ========================================================
-       LOGIN BOX
-       ======================================================== */
+    /* ======================================================
+       LOGIN
+       ====================================================== */
 
     .login-wrapper {
 
         max-width: 620px;
 
-        margin: 55px auto 0 auto;
+        margin: 60px auto 20px auto;
     }
 
     .login-box {
 
-        position: relative;
+        padding: 45px;
 
-        overflow: hidden;
+        text-align: center;
+
+        border-radius: 22px;
 
         background:
             radial-gradient(
                 circle at 50% 0%,
-                rgba(113, 74, 255, 0.18),
+                rgba(115,70,255,0.20),
                 transparent 40%
             ),
             linear-gradient(
                 145deg,
-                rgba(18, 21, 52, 0.98),
-                rgba(6, 9, 28, 0.98)
+                rgba(20,23,57,0.97),
+                rgba(7,10,30,0.99)
             );
 
-        border: 1px solid rgba(116, 101, 255, 0.38);
-
-        border-radius: 22px;
-
-        padding: 48px 45px;
-
-        text-align: center;
+        border: 1px solid rgba(120,105,255,0.4);
 
         box-shadow:
-            0 0 60px rgba(78, 58, 255, 0.12),
-            inset 0 0 35px rgba(87, 68, 255, 0.035);
+            0 0 60px rgba(75,55,255,0.13),
+            inset 0 0 40px rgba(80,60,255,0.04);
     }
 
     .login-title {
+
+        margin-top: 16px;
 
         color: white;
 
         font-size: 32px;
 
-        font-weight: 800;
+        font-weight: 850;
 
-        margin-top: 15px;
+        letter-spacing: 1px;
     }
 
     .login-subtitle {
@@ -750,101 +689,154 @@ st.markdown(
     }
 
 
-    /* ========================================================
-       LOGIN INPUT
-       ======================================================== */
+    /* ======================================================
+       INPUT
+       ====================================================== */
 
     .stTextInput input {
 
-        background: rgba(7, 11, 30, 0.85);
-
-        color: white;
-
-        border: 1px solid rgba(112, 101, 255, 0.25);
+        min-height: 45px;
 
         border-radius: 12px;
 
-        min-height: 45px;
+        background:
+            rgba(5,8,25,0.90);
 
-        transition: all 0.25s ease;
+        border: 1px solid rgba(115,105,255,0.25);
+
+        color: white;
+
+        transition:
+            border-color 0.25s ease,
+            box-shadow 0.25s ease;
     }
 
     .stTextInput input:focus {
 
-        border-color: #786aff;
+        border-color: #7c6cff;
 
         box-shadow:
-            0 0 18px rgba(98, 77, 255, 0.20);
+            0 0 18px rgba(100,80,255,0.25);
     }
 
 
-    /* ========================================================
-       LOGIN BUTTON
-       ======================================================== */
+    /* ======================================================
+       ALL MAIN BUTTONS
+       ====================================================== */
 
     .stButton > button {
 
-        border-radius: 12px;
+        min-height: 45px;
 
-        min-height: 46px;
+        border-radius: 12px;
 
         background:
             linear-gradient(
                 135deg,
                 #6548ff,
-                #2879e8
+                #287be8
             );
 
-        border: 1px solid rgba(140, 125, 255, 0.60);
+        border: 1px solid rgba(150,135,255,0.55);
 
         color: white;
 
         font-weight: 700;
 
         transition:
-            all 0.25s ease,
-            transform 0.2s ease;
-
-        box-shadow:
-            0 8px 25px rgba(69, 67, 255, 0.20);
+            transform 0.2s ease,
+            box-shadow 0.25s ease,
+            filter 0.25s ease;
     }
 
     .stButton > button:hover {
 
         transform: translateY(-2px);
 
-        box-shadow:
-            0 12px 32px rgba(69, 67, 255, 0.35);
+        filter: brightness(1.08);
 
-        border-color: #9b8eff;
+        box-shadow:
+            0 10px 30px rgba(70,65,255,0.30);
     }
 
     .stButton > button:active {
-
-        transform: scale(0.98);
+        transform: scale(0.97);
     }
 
 
-    /* ========================================================
-       INFO BOX
-       ======================================================== */
+    /* ======================================================
+       CHAT
+       ====================================================== */
 
-    [data-testid="stAlert"] {
+    [data-testid="stChatMessage"] {
 
-        border-radius: 13px;
+        border-radius: 15px;
+
+        background:
+            rgba(7,10,28,0.38);
+
+        border: 1px solid rgba(115,105,255,0.08);
+    }
+
+    [data-testid="stChatMessageContent"] {
+
+        color: #e4e7f5;
+
+        line-height: 1.65;
     }
 
 
-    /* ========================================================
+    /* ======================================================
+       CHAT INPUT
+       ====================================================== */
+
+    [data-testid="stChatInput"] textarea {
+
+        background:
+            rgba(8,12,32,0.95);
+
+        border: 1px solid rgba(110,100,255,0.30);
+
+        color: white;
+
+        border-radius: 14px;
+
+        transition:
+            border-color 0.25s ease,
+            box-shadow 0.25s ease;
+    }
+
+    [data-testid="stChatInput"] textarea:focus {
+
+        border-color: #796cff;
+
+        box-shadow:
+            0 0 20px rgba(95,75,255,0.25);
+    }
+
+
+    /* ======================================================
+       EXPANDER
+       ====================================================== */
+
+    [data-testid="stSidebar"] details {
+
+        border-color: rgba(120,110,255,0.25);
+        border-radius: 12px;
+        background: rgba(10,12,30,0.45);
+    }
+
+
+    /* ======================================================
        SCROLLBAR
-       ======================================================== */
+       ====================================================== */
 
     ::-webkit-scrollbar {
         width: 7px;
     }
 
     ::-webkit-scrollbar-track {
-        background: #030514;
+        background: #02030d;
     }
 
     ::-webkit-scrollbar-thumb {
@@ -852,15 +844,15 @@ st.markdown(
         background:
             linear-gradient(
                 180deg,
-                #5c4cff,
-                #2879e8
+                #674fff,
+                #287be8
             );
 
         border-radius: 10px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: #796cff;
+        background: #8a7cff;
     }
 
 </style>
@@ -883,7 +875,9 @@ def ai_response(chat_history):
             "Please set your `GROQ_API_KEY` environment variable."
         )
 
-    client = Groq(api_key=api_key)
+    client = Groq(
+        api_key=api_key
+    )
 
     system_message = {
         "role": "system",
@@ -1027,6 +1021,7 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
+
     st.markdown("---")
 
 
@@ -1050,6 +1045,7 @@ with st.sidebar:
 """,
         unsafe_allow_html=True
     )
+
 
     st.markdown("---")
 
@@ -1088,7 +1084,9 @@ with st.sidebar:
 
     st.subheader("💬 Your Chats")
 
-    chat_names = list(st.session_state.chats.keys())
+    chat_names = list(
+        st.session_state.chats.keys()
+    )
 
     for chat_name in chat_names:
 
@@ -1096,11 +1094,10 @@ with st.sidebar:
             chat_name == st.session_state.current_chat
         )
 
-        button_text = (
-            f"🟣  {chat_name}"
-            if is_current
-            else f"💬  {chat_name}"
-        )
+        if is_current:
+            button_text = f"🟣  {chat_name}"
+        else:
+            button_text = f"💬  {chat_name}"
 
         if st.button(
             button_text,
@@ -1287,12 +1284,10 @@ with st.sidebar:
 
 
     <div class="quantum-dots">
-
         <span></span>
         <span></span>
         <span></span>
         <span></span>
-
     </div>
 
 </div>
@@ -1302,7 +1297,7 @@ with st.sidebar:
 
 
 # ============================================================
-# MAIN HERO
+# MAIN AREA
 # ============================================================
 
 st.markdown(
@@ -1372,10 +1367,7 @@ question = st.chat_input(
 
 if question:
 
-    # --------------------------------------------------------
-    # APPEND USER MESSAGE
-    # --------------------------------------------------------
-
+    # User message
     messages.append(
         {
             "role": "user",
@@ -1383,19 +1375,11 @@ if question:
         }
     )
 
-
-    # --------------------------------------------------------
-    # DISPLAY USER MESSAGE
-    # --------------------------------------------------------
-
+    # Display user message
     with st.chat_message("user"):
         st.markdown(question)
 
-
-    # --------------------------------------------------------
-    # GENERATE RESPONSE
-    # --------------------------------------------------------
-
+    # AI response
     with st.chat_message("assistant"):
 
         with st.spinner("🌌 Exploring the quantum universe..."):
@@ -1407,11 +1391,7 @@ if question:
 
             st.markdown(answer)
 
-
-    # --------------------------------------------------------
-    # SAVE AI RESPONSE
-    # --------------------------------------------------------
-
+    # Save AI response
     messages.append(
         {
             "role": "assistant",
@@ -1419,11 +1399,7 @@ if question:
         }
     )
 
-
-    # --------------------------------------------------------
-    # SAVE CHAT STATE
-    # --------------------------------------------------------
-
+    # Save conversation
     st.session_state.chats[current_chat] = messages
 
     st.rerun()

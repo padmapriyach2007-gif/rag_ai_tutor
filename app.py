@@ -180,7 +180,7 @@ html, body {
     box-shadow: 0 0 20px rgba(90, 75, 255, 0.25) !important;
 }
 
-/* Integrated Attachment Button Alignment */
+/* Integrated Attachment & Voice Buttons Alignment */
 .stPopover button {
     border-radius: 12px !important;
     background: rgba(18, 21, 48, 0.9) !important;
@@ -389,16 +389,16 @@ if staged_info:
     st.info(" | ".join(staged_info))
 
 # ============================================================
-# INTEGRATED CHAT INPUT WITH '+' ATTACHMENT MENU
+# INTEGRATED CHAT INPUT (PLUS LEFT, INPUT MIDDLE, VOICE RIGHT)
 # ============================================================
 
-col_plus, col_input = st.columns([0.06, 0.94])
+col_plus, col_input, col_voice = st.columns([0.06, 0.88, 0.06])
 
-# Plus Popover Dropdown (Integrated at bottom left of input)
+# 1. Plus Popover Dropdown (Left side)
 with col_plus:
-    with st.popover("＋", help="Attach images, files, or recorded voice notes"):
+    with st.popover("＋", help="Attach images or files"):
         st.markdown("### Add to your message")
-        tab_photos, tab_cam, tab_files, tab_voice = st.tabs(["🖼️ Photos", "📷 Camera", "📎 Files", "🎤 Voice"])
+        tab_photos, tab_cam, tab_files = st.tabs(["🖼️ Photos", "📷 Camera", "📎 Files"])
 
         with tab_photos:
             photos = st.file_uploader(
@@ -436,18 +436,21 @@ with col_plus:
                         st.session_state.staged_attachments.append(note)
                 st.success(f"{len(files)} file(s) attached.")
 
-        with tab_voice:
-            audio_stream = st.audio_input("Record audio note", key="input_voice")
-            if audio_stream:
-                with st.spinner("Transcribing audio..."):
-                    transcription = transcribe_audio(audio_stream.read())
-                    if transcription:
-                        st.session_state.staged_voice_text = transcription
-                        st.success("Voice transcribed! Text staged for prompt.")
-
-# Text Input Bar
+# 2. Main Chat Input Box (Middle)
 with col_input:
     prompt = st.chat_input("Ask anything...", key="main_chat_input")
+
+# 3. Dedicated Voice Popover Button (Right side, next to up arrow)
+with col_voice:
+    with st.popover("🎤", help="Record audio note"):
+        st.markdown("### Record Voice Note")
+        audio_stream = st.audio_input("Record audio", key="input_voice_standalone")
+        if audio_stream:
+            with st.spinner("Transcribing..."):
+                transcription = transcribe_audio(audio_stream.read())
+                if transcription:
+                    st.session_state.staged_voice_text = transcription
+                    st.success("Voice transcribed! Text staged for prompt.")
 
 # ============================================================
 # PROCESS USER INPUT & GENERATE RESPONSE

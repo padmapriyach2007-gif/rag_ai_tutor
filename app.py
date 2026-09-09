@@ -1,71 +1,49 @@
-import io
 import streamlit as st
+import hashlib
+import io
 
-# =========================================================
-# OPTIONAL SPEECH RECOGNITION
-# =========================================================
+from rag_engine import (
+    answer_question,
+    get_or_create_user,
+    create_chat_session,
+    get_user_sessions,
+    restore_chat,
+    rename_chat,
+    delete_chat,
+)
 
+# Optional speech recognition
 try:
     import speech_recognition as sr
-
     SPEECH_RECOGNITION_AVAILABLE = True
 except ImportError:
     SPEECH_RECOGNITION_AVAILABLE = False
 
 
-# =========================================================
-# EXISTING RAG + DATABASE IMPORTS
-# DO NOT CHANGE
-# =========================================================
-
-from rag_engine import (
-    answer_question,
-    create_chat_session,
-    delete_chat,
-    get_or_create_user,
-    get_user_sessions,
-    rename_chat,
-    restore_chat,
-)
-
-
-# =========================================================
+# ============================================================
 # PAGE CONFIG
-# =========================================================
+# ============================================================
 
 st.set_page_config(
-    page_title="Quantum Lab | AI Tutor",
+    page_title="Quantum AI Tutor",
     page_icon="⚛️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 
-# =========================================================
+# ============================================================
 # SESSION STATE
-# =========================================================
+# ============================================================
 
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if "user_email" not in st.session_state:
-    st.session_state.user_email = ""
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = None
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-if "sessions" not in st.session_state:
-    st.session_state.sessions = []
-
-# ---------------------------------------------------------
-# FRONTEND-ONLY STATE
-# ---------------------------------------------------------
 
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
@@ -74,956 +52,451 @@ if "processed_audio_hash" not in st.session_state:
     st.session_state.processed_audio_hash = None
 
 
-# =========================================================
-# COMPLETE FRONTEND
-# =========================================================
+# ============================================================
+# CUSTOM CSS
+# ============================================================
 
 st.markdown(
     """
 <style>
 
-@import url(
-'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap'
-);
-
-
-/* =========================================================
-   GLOBAL
-   ========================================================= */
-
 html, body, [class*="css"] {
-    font-family: "Inter", sans-serif;
+    font-family: Arial, sans-serif;
 }
 
+/* Main background */
 .stApp {
-    min-height: 100vh;
-
     background:
-        radial-gradient(
-            circle at 10% 15%,
-            rgba(88, 70, 220, 0.20),
-            transparent 28%
-        ),
-        radial-gradient(
-            circle at 88% 12%,
-            rgba(0, 180, 255, 0.13),
-            transparent 27%
-        ),
-        radial-gradient(
-            circle at 75% 80%,
-            rgba(151, 80, 255, 0.13),
-            transparent 30%
-        ),
-        linear-gradient(
-            135deg,
-            #020617 0%,
-            #080b22 48%,
-            #020617 100%
-        );
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.8) 1px, transparent 1.5px),
+        radial-gradient(circle at 80% 30%, rgba(255,255,255,0.7) 1px, transparent 1.5px),
+        radial-gradient(circle at 40% 70%, rgba(255,255,255,0.8) 1px, transparent 1.5px),
+        radial-gradient(circle at 70% 80%, rgba(255,255,255,0.6) 1px, transparent 1.5px),
+        radial-gradient(circle at 10% 90%, rgba(255,255,255,0.7) 1px, transparent 1.5px),
+        linear-gradient(135deg, #050816 0%, #0b1026 45%, #111936 100%);
+    background-size:
+        160px 160px,
+        220px 220px,
+        180px 180px,
+        260px 260px,
+        200px 200px,
+        cover;
+    background-attachment: fixed;
 }
 
-
-/* =========================================================
-   QUANTUM GRID
-   ========================================================= */
-
-.stApp::before {
-    content: "";
-
-    position: fixed;
-    inset: 0;
-
-    pointer-events: none;
-
-    background-image:
-        linear-gradient(
-            rgba(129,140,248,0.025) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            rgba(129,140,248,0.025) 1px,
-            transparent 1px
-        );
-
-    background-size: 55px 55px;
-
-    z-index: 0;
+/* Make Streamlit main area transparent */
+[data-testid="stAppViewContainer"] {
+    background: transparent;
 }
 
-
-/* =========================================================
-   REALISTIC STAR FIELD
-   NO TEXT / NO STAR CHARACTERS
-   ========================================================= */
-
-.quantum-space {
-    position: fixed;
-    inset: 0;
-
-    pointer-events: none;
-
-    overflow: hidden;
-
-    z-index: 0;
+[data-testid="stHeader"] {
+    background: transparent;
 }
 
-
-/*
-    Different star layers are created entirely
-    with radial gradients.
-*/
-
-.quantum-space::before {
-
-    content: "";
-
-    position: absolute;
-    inset: 0;
-
-    background-image:
-
-        radial-gradient(
-            circle at 4% 12%,
-            rgba(255,255,255,.95) 0px,
-            rgba(255,255,255,.55) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 11% 34%,
-            rgba(180,210,255,.85) 0px,
-            rgba(180,210,255,.35) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 18% 70%,
-            rgba(255,255,255,.9) 0px,
-            rgba(255,255,255,.35) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 26% 18%,
-            rgba(200,180,255,.9) 0px,
-            rgba(200,180,255,.35) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 34% 43%,
-            rgba(255,255,255,.85) 0px,
-            rgba(255,255,255,.35) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 43% 9%,
-            rgba(190,210,255,.9) 0px,
-            rgba(190,210,255,.35) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 50% 72%,
-            rgba(255,255,255,.9) 0px,
-            rgba(255,255,255,.3) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 58% 27%,
-            rgba(200,180,255,.95) 0px,
-            rgba(200,180,255,.35) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 66% 55%,
-            rgba(255,255,255,.85) 0px,
-            rgba(255,255,255,.3) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 73% 14%,
-            rgba(180,220,255,.95) 0px,
-            rgba(180,220,255,.35) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 81% 39%,
-            rgba(255,255,255,.9) 0px,
-            rgba(255,255,255,.3) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 89% 74%,
-            rgba(200,180,255,.9) 0px,
-            rgba(200,180,255,.35) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 95% 22%,
-            rgba(255,255,255,.9) 0px,
-            rgba(255,255,255,.3) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 47% 53%,
-            rgba(190,220,255,.85) 0px,
-            rgba(190,220,255,.3) 1px,
-            transparent 2px
-        ),
-
-        radial-gradient(
-            circle at 7% 84%,
-            rgba(255,255,255,.9) 0px,
-            rgba(255,255,255,.3) 1px,
-            transparent 2px
-        );
-
-    animation:
-        starDrift 18s ease-in-out infinite alternate;
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background: rgba(7, 12, 30, 0.95);
+    border-right: 1px solid rgba(255,255,255,0.08);
 }
 
-
-.quantum-space::after {
-
-    content: "";
-
-    position: absolute;
-    inset: 0;
-
-    background-image:
-
-        radial-gradient(
-            circle at 14% 24%,
-            rgba(255,255,255,.7) 0px,
-            transparent 1.8px
-        ),
-
-        radial-gradient(
-            circle at 22% 55%,
-            rgba(160,190,255,.8) 0px,
-            transparent 1.5px
-        ),
-
-        radial-gradient(
-            circle at 31% 78%,
-            rgba(255,255,255,.7) 0px,
-            transparent 1.5px
-        ),
-
-        radial-gradient(
-            circle at 39% 29%,
-            rgba(190,170,255,.8) 0px,
-            transparent 1.5px
-        ),
-
-        radial-gradient(
-            circle at 55% 17%,
-            rgba(255,255,255,.8) 0px,
-            transparent 1.5px
-        ),
-
-        radial-gradient(
-            circle at 63% 82%,
-            rgba(170,210,255,.7) 0px,
-            transparent 1.5px
-        ),
-
-        radial-gradient(
-            circle at 71% 48%,
-            rgba(255,255,255,.7) 0px,
-            transparent 1.5px
-        ),
-
-        radial-gradient(
-            circle at 78% 68%,
-            rgba(200,180,255,.7) 0px,
-            transparent 1.5px
-        ),
-
-        radial-gradient(
-            circle at 86% 30%,
-            rgba(255,255,255,.75) 0px,
-            transparent 1.5px
-        );
-
-    opacity: .65;
-
-    animation:
-        starTwinkle 4s ease-in-out infinite alternate;
+[data-testid="stSidebar"] * {
+    color: white;
 }
 
-
-@keyframes starDrift {
-
-    0% {
-        transform: translate3d(0,0,0);
-        opacity: .62;
-    }
-
-    50% {
-        transform: translate3d(0,-4px,0);
-        opacity: .88;
-    }
-
-    100% {
-        transform: translate3d(0,3px,0);
-        opacity: .68;
-    }
-}
-
-
-@keyframes starTwinkle {
-
-    0% {
-        opacity: .30;
-        filter: brightness(.7);
-    }
-
-    50% {
-        opacity: .95;
-        filter: brightness(1.4);
-    }
-
-    100% {
-        opacity: .45;
-        filter: brightness(.9);
-    }
-}
-
-
-/* =========================================================
-   MAIN CONTENT
-   ========================================================= */
-
-.main .block-container {
-
-    max-width: 1250px;
-
-    padding-top: 1rem;
-    padding-bottom: 6rem;
-
-    position: relative;
-
-    z-index: 2;
-}
-
-
-/* =========================================================
-   SIDEBAR
-   ========================================================= */
-
-section[data-testid="stSidebar"] {
-
-    background:
-        linear-gradient(
-            180deg,
-            #030611,
-            #070b1d,
-            #02040c
-        );
-
-    border-right:
-        1px solid rgba(139,92,246,.18);
-}
-
-
-section[data-testid="stSidebar"] .stButton button {
-
-    border-radius: 12px;
-
-    border:
-        1px solid rgba(139,92,246,.16);
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(18,25,53,.96),
-            rgba(7,12,29,.96)
-        );
-
-    color: #dbeafe;
-
-    transition: all .2s ease;
-}
-
-
-section[data-testid="stSidebar"] .stButton button:hover {
-
-    border-color:
-        rgba(167,139,250,.60);
-
-    box-shadow:
-        0 0 22px rgba(139,92,246,.16);
-
-    transform:
-        translateY(-1px);
-}
-
-
-/* =========================================================
-   LOGO
-   ========================================================= */
-
-.quantum-logo {
-
+/* Main title */
+.quantum-title {
     text-align: center;
-
-    font-size: 70px;
-
-    line-height: 1;
-
-    margin:
-        10px auto 5px auto;
-
-    text-shadow:
-        0 0 8px #ffffff,
-        0 0 20px rgba(139,92,246,1),
-        0 0 45px rgba(99,102,241,.9);
-
-    animation:
-        quantumPulse 3s ease-in-out infinite;
+    font-size: 42px;
+    font-weight: 800;
+    color: white;
+    margin-top: 10px;
+    margin-bottom: 4px;
 }
 
-
-@keyframes quantumPulse {
-
-    0%,100% {
-        transform: scale(1);
-        filter: brightness(1);
-    }
-
-    50% {
-        transform: scale(1.07);
-        filter: brightness(1.25);
-    }
-}
-
-
-/* =========================================================
-   TITLE
-   ========================================================= */
-
-.main-title {
-
+.quantum-subtitle {
     text-align: center;
-
-    font-family:
-        "Space Grotesk",
-        sans-serif;
-
-    font-size:
-        clamp(34px, 5vw, 58px);
-
-    font-weight: 700;
-
-    letter-spacing: 5px;
-
-    background:
-        linear-gradient(
-            90deg,
-            #ffffff,
-            #c4b5fd,
-            #93c5fd,
-            #ffffff
-        );
-
-    -webkit-background-clip:
-        text;
-
-    -webkit-text-fill-color:
-        transparent;
+    color: rgba(255,255,255,0.65);
+    font-size: 15px;
+    margin-bottom: 25px;
 }
 
-
-.subtitle {
-
-    text-align: center;
-
-    max-width: 780px;
-
-    margin: 10px auto 18px auto;
-
-    color: #94a3b8;
-
-    font-size: 14px;
-
-    line-height: 1.8;
+/* Chat area */
+.chat-container {
+    max-width: 900px;
+    margin: auto;
 }
 
-
-.online {
-
-    width: fit-content;
-
-    margin: 0 auto 18px auto;
-
-    padding: 6px 14px;
-
-    border-radius: 999px;
-
-    color: #86efac;
-
-    background:
-        rgba(34,197,94,.05);
-
-    border:
-        1px solid rgba(34,197,94,.20);
-
-    font-size: 10px;
-
-    font-weight: 700;
-
-    letter-spacing: 1.7px;
-
-    box-shadow:
-        0 0 20px rgba(34,197,94,.08);
-}
-
-
-.quantum-line {
-
-    width: 230px;
-
-    height: 1px;
-
-    margin: 0 auto 18px auto;
-
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            rgba(139,92,246,.9),
-            rgba(59,130,246,.9),
-            transparent
-        );
-
-    box-shadow:
-        0 0 14px rgba(139,92,246,.4);
-}
-
-
-/* =========================================================
-   CHAT MESSAGES
-   ========================================================= */
-
+/* Chat messages */
 [data-testid="stChatMessage"] {
-
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 16px;
-
-    border:
-        1px solid rgba(139,92,246,.11);
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(15,23,42,.82),
-            rgba(7,12,28,.82)
-        );
-
-    margin-bottom: 10px;
-
-    transition: all .2s ease;
+    padding: 10px 14px;
+    margin-bottom: 12px;
 }
-
-
-[data-testid="stChatMessage"]:hover {
-
-    border-color:
-        rgba(139,92,246,.30);
-
-    box-shadow:
-        0 5px 25px rgba(0,0,0,.20);
-}
-
 
 [data-testid="stChatMessage"] p {
-
-    color: #dbe4f0;
-
-    line-height: 1.7;
+    color: white;
 }
 
 </style>
-<div class="quantum-space"></div>
 """,
     unsafe_allow_html=True,
 )
 
 
-# =========================================================
-# HEADER UI
-# =========================================================
-
-st.markdown('<div class="quantum-logo">⚛️</div>', unsafe_allow_html=True)
-st.markdown('<div class="main-title">QUANTUM LAB</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="subtitle">Interactive AI Tutor for Quantum Computing & Advanced Physics</div>',
-    unsafe_allow_html=True,
-)
-st.markdown('<div class="online">● SYSTEM ONLINE</div>', unsafe_allow_html=True)
-st.markdown('<div class="quantum-line"></div>', unsafe_allow_html=True)
-
-
-# =========================================================
-# DISPLAY CHAT MESSAGES
-# =========================================================
-
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-
-# =========================================================
-# INPUT BAR LAYOUT
-# =========================================================
-
-input_left, input_center, input_right = st.columns(
-    [0.09, 0.78, 0.13], vertical_alignment="bottom"
-)
-
-
-# =========================================================
-# LEFT — ATTACHMENTS
-# =========================================================
-
-with input_left:
-
-    st.markdown(
-        """
-        <style>
-
-        /* =====================================================
-           ATTACHMENT POPOVER BUTTON
-           ===================================================== */
-
-        div[data-testid="stPopover"] > button {
-            width: 52px !important;
-            height: 52px !important;
-            border-radius: 50% !important;
-
-            border: 1px solid rgba(120,180,255,0.45) !important;
-
-            background:
-                radial-gradient(
-                    circle at 35% 30%,
-                    rgba(130,220,255,0.30),
-                    rgba(20,30,60,0.95)
-                ) !important;
-
-            box-shadow:
-                0 0 12px rgba(70,170,255,0.35),
-                inset 0 0 12px rgba(100,200,255,0.12) !important;
-
-            font-size: 24px !important;
-
-            transition:
-                all 0.25s ease !important;
-        }
-
-        div[data-testid="stPopover"] > button:hover {
-            transform:
-                translateY(-2px) scale(1.05);
-
-            box-shadow:
-                0 0 20px rgba(80,190,255,0.65),
-                0 0 40px rgba(80,120,255,0.25),
-                inset 0 0 15px rgba(100,220,255,0.18) !important;
-        }
-
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    with st.popover("＋"):
-
-        st.markdown(
-            """
-            <div style="
-                font-size:17px;
-                font-weight:700;
-                margin-bottom:10px;
-            ">
-                Add to your question
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        uploaded = st.file_uploader(
-            "📎 Add photos & files",
-            type=["png", "jpg", "jpeg", "pdf", "txt", "docx", "csv"],
-            accept_multiple_files=True,
-            key="quantum_attachments",
-        )
-
-        if uploaded:
-
-            st.session_state.uploaded_files = uploaded
-
-            st.success(f"{len(uploaded)} file(s) attached")
-
-            for file in uploaded:
-
-                st.caption(f"📄 {file.name}")
-
-
-# =========================================================
-# CENTER — MAIN PROMPT BAR
-# =========================================================
-
-with input_center:
-
-    query = st.chat_input(
-        "Ask anything about quantum computing...", key="quantum_chat_input"
-    )
-
-
-# =========================================================
-# RIGHT — CREATIVE MICROPHONE
-# =========================================================
-
-with input_right:
-
-    st.markdown(
-        """
-        <style>
-
-        /* =====================================================
-           MICROPHONE
-           ===================================================== */
-
-        div[data-testid="stAudioInput"] {
-
-            width: 62px !important;
-            min-width: 62px !important;
-            height: 52px !important;
-
-            border-radius: 26px !important;
-
-            background:
-                radial-gradient(
-                    circle at 30% 25%,
-                    rgba(150,230,255,0.35),
-                    rgba(20,25,55,0.98)
-                ) !important;
-
-            border:
-                1px solid rgba(100,200,255,0.55) !important;
-
-            box-shadow:
-                0 0 12px rgba(70,190,255,0.45),
-                0 0 28px rgba(90,100,255,0.18),
-                inset 0 0 15px rgba(100,220,255,0.12) !important;
-
-            transition:
-                transform 0.25s ease,
-                box-shadow 0.25s ease !important;
-
-            overflow: hidden !important;
-        }
-
-        div[data-testid="stAudioInput"]:hover {
-
-            transform:
-                translateY(-2px) scale(1.04);
-
-            box-shadow:
-                0 0 18px rgba(70,210,255,0.75),
-                0 0 35px rgba(90,110,255,0.35),
-                inset 0 0 18px rgba(120,230,255,0.18) !important;
-        }
-
-        /* Hide unnecessary audio-input text */
-
-        div[data-testid="stAudioInput"] label {
-            display: none !important;
-        }
-
-        div[data-testid="stAudioInput"] button {
-
-            border: none !important;
-
-            background:
-                transparent !important;
-
-            box-shadow:
-                none !important;
-        }
-
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    audio_value = st.audio_input(
-        "Microphone", key="quantum_microphone", label_visibility="collapsed"
-    )
-
-
-# =========================================================
-# SEND BUTTON STYLING
-# =========================================================
+# ============================================================
+# HEADER
+# ============================================================
 
 st.markdown(
     """
-    <style>
+<div class="quantum-title">
+    ⚛️ Quantum AI Tutor
+</div>
 
-    /* =====================================================
-       CHAT INPUT / SEND BUTTON
-       ===================================================== */
-
-    [data-testid="stChatInput"] {
-
-        border-radius: 18px !important;
-
-        border:
-            1px solid rgba(139,92,246,0.30) !important;
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(15,23,42,0.95),
-                rgba(7,12,28,0.95)
-            ) !important;
-
-        box-shadow:
-            0 0 25px rgba(99,102,241,0.12),
-            inset 0 0 15px rgba(99,102,241,0.05) !important;
-    }
-
-    [data-testid="stChatInput"] button {
-
-        border-radius: 11px !important;
-
-        border:
-            1px solid rgba(139,92,246,0.35) !important;
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(99,102,241,0.85),
-                rgba(59,130,246,0.85)
-            ) !important;
-
-        transition:
-            all 0.2s ease !important;
-    }
-
-    [data-testid="stChatInput"] button:hover {
-
-        transform:
-            translateY(-1px) scale(1.04);
-
-        box-shadow:
-            0 0 18px rgba(99,102,241,0.45) !important;
-    }
-
-    </style>
-    """,
+<div class="quantum-subtitle">
+    Your intelligent assistant for Quantum Computing
+</div>
+""",
     unsafe_allow_html=True,
 )
 
 
-# =========================================================
-# MICROPHONE → SPEECH TO TEXT
-# =========================================================
+# ============================================================
+# CHAT HISTORY / SIDEBAR
+# ============================================================
 
-voice_query = ""
+with st.sidebar:
+
+    st.markdown("## 💬 Chat History")
+
+    if st.session_state.user_id:
+
+        try:
+            sessions = get_user_sessions(
+                st.session_state.user_id
+            )
+
+            if sessions:
+                for session in sessions:
+
+                    session_name = (
+                        session.get("title")
+                        or session.get("name")
+                        or "New Chat"
+                    )
+
+                    session_id = session.get("id")
+
+                    if st.button(
+                        session_name,
+                        key=f"session_{session_id}",
+                        use_container_width=True,
+                    ):
+                        restored = restore_chat(session_id)
+
+                        if restored:
+                            st.session_state.session_id = session_id
+
+                            if isinstance(restored, list):
+                                st.session_state.messages = restored
+
+                            st.rerun()
+
+        except Exception:
+            pass
+
+    st.divider()
+
+    if st.button(
+        "➕ New Chat",
+        use_container_width=True
+    ):
+
+        try:
+            new_session = create_chat_session(
+                st.session_state.user_id
+            )
+
+            if new_session:
+                if isinstance(new_session, dict):
+                    st.session_state.session_id = (
+                        new_session.get("id")
+                        or new_session.get("session_id")
+                    )
+                else:
+                    st.session_state.session_id = new_session
+
+        except Exception:
+            pass
+
+        st.session_state.messages = []
+        st.rerun()
+
+
+# ============================================================
+# CREATE USER / SESSION
+# ============================================================
+
+if st.session_state.user_id is None:
+
+    try:
+        user = get_or_create_user()
+
+        if isinstance(user, dict):
+            st.session_state.user_id = (
+                user.get("id")
+                or user.get("user_id")
+            )
+        else:
+            st.session_state.user_id = user
+
+    except Exception:
+        pass
+
+
+if (
+    st.session_state.session_id is None
+    and st.session_state.user_id is not None
+):
+
+    try:
+        new_session = create_chat_session(
+            st.session_state.user_id
+        )
+
+        if isinstance(new_session, dict):
+            st.session_state.session_id = (
+                new_session.get("id")
+                or new_session.get("session_id")
+            )
+        else:
+            st.session_state.session_id = new_session
+
+    except Exception:
+        pass
+
+
+# ============================================================
+# DISPLAY CHAT MESSAGES
+# ============================================================
+
+for message in st.session_state.messages:
+
+    role = message.get("role")
+    content = message.get("content", "")
+
+    if role == "user":
+
+        with st.chat_message("user"):
+            st.markdown(content)
+
+    elif role == "assistant":
+
+        with st.chat_message("assistant"):
+            st.markdown(content)
+
+
+# ============================================================
+# QUANTUM CHAT INPUT BAR
+# ============================================================
+
+st.markdown(
+    """
+<style>
+
+/* Chat input */
+[data-testid="stChatInput"] {
+    border-radius: 18px !important;
+}
+
+[data-testid="stChatInput"] textarea {
+    background: rgba(255,255,255,0.08) !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 16px !important;
+}
+
+[data-testid="stChatInput"] textarea::placeholder {
+    color: rgba(255,255,255,0.5) !important;
+}
+
+/* Attachment button */
+.attachment-label {
+    color: white;
+    font-size: 22px;
+    text-align: center;
+}
+
+/* Microphone */
+.mic-label {
+    color: white;
+    font-size: 22px;
+    text-align: center;
+}
+
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# INPUT LAYOUT
+# ============================================================
+
+left, center, right = st.columns(
+    [0.11, 0.78, 0.11],
+    vertical_alignment="bottom"
+)
+
+
+# ============================================================
+# ATTACHMENT BUTTON
+# ============================================================
+
+with left:
+
+    with st.popover("📎"):
+
+        st.markdown(
+            "### 📎 Attach File"
+        )
+
+        attachments = st.file_uploader(
+            "Choose a file",
+            type=[
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "pdf",
+                "txt",
+                "docx",
+                "csv",
+            ],
+            accept_multiple_files=True,
+            label_visibility="collapsed",
+        )
+
+        if attachments:
+
+            st.session_state.uploaded_files = attachments
+
+            for file in attachments:
+                st.caption(
+                    f"📄 {file.name}"
+                )
+
+
+# ============================================================
+# MAIN PROMPT BAR
+# ============================================================
+
+with center:
+
+    prompt = st.chat_input(
+        "Ask anything about quantum computing...",
+        key="quantum_chat_input",
+    )
+
+
+# ============================================================
+# MICROPHONE
+# ============================================================
+
+with right:
+
+    audio_value = st.audio_input(
+        "Microphone",
+        key="quantum_microphone",
+        label_visibility="collapsed",
+    )
+
+
+# ============================================================
+# MICROPHONE → TEXT
+# ============================================================
 
 if audio_value is not None:
 
     try:
 
-        if SPEECH_RECOGNITION_AVAILABLE:
+        audio_bytes = audio_value.getvalue()
 
-            audio_bytes = audio_value.getvalue()
+        current_audio_hash = hashlib.md5(
+            audio_bytes
+        ).hexdigest()
 
-            # Prevent processing the same recording repeatedly
-            audio_hash = hash(audio_bytes)
+        if (
+            current_audio_hash
+            != st.session_state.processed_audio_hash
+        ):
 
-            if st.session_state.get("processed_audio_hash") != audio_hash:
+            st.session_state.processed_audio_hash = (
+                current_audio_hash
+            )
 
-                st.session_state.processed_audio_hash = audio_hash
+            if SPEECH_RECOGNITION_AVAILABLE:
 
                 recognizer = sr.Recognizer()
 
-                audio_stream = io.BytesIO(audio_bytes)
+                audio_file = io.BytesIO(
+                    audio_bytes
+                )
 
-                with sr.AudioFile(audio_stream) as source:
+                with sr.AudioFile(
+                    audio_file
+                ) as source:
 
-                    recorded_audio = recognizer.record(source)
+                    audio_data = recognizer.record(
+                        source
+                    )
 
-                voice_query = recognizer.recognize_google(recorded_audio)
+                try:
 
-        else:
+                    spoken_text = recognizer.recognize_google(
+                        audio_data
+                    )
 
-            st.warning(
-                "Microphone transcription requires "
-                "the SpeechRecognition package."
-            )
+                    if spoken_text:
 
-    except sr.UnknownValueError:
+                        st.session_state.messages.append(
+                            {
+                                "role": "user",
+                                "content": spoken_text
+                            }
+                        )
 
-        st.warning("I couldn't understand the recording.")
+                        st.rerun()
+
+                except sr.UnknownValueError:
+
+                    st.warning(
+                        "Sorry, I couldn't understand the recording."
+                    )
+
+                except sr.RequestError:
+
+                    st.error(
+                        "Speech recognition service is unavailable."
+                    )
+
+            else:
+
+                st.warning(
+                    "Speech recognition is not installed."
+                )
 
     except Exception as e:
 
-        st.warning(f"Microphone transcription failed: {str(e)}")
+        st.error(
+            f"Microphone error: {e}"
+        )
 
 
-# =========================================================
+# ============================================================
 # FINAL QUERY
-# =========================================================
+# ============================================================
 
-final_query = ""
-
-if query:
-
-    final_query = query.strip()
-
-elif voice_query:
-
-    final_query = voice_query.strip()
-
-
-# =========================================================
-# EXISTING RAG FUNCTIONALITY — DO NOT CHANGE
-# =========================================================
-
-if final_query:
-
-    # Show user message
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": final_query,
-        }
-    )
-
-    # Your EXISTING RAG call
-    answer = answer_question(
-        query=final_query,
-        session_id=st.session_state.session_id,
-        user_id=st.session_state.user_id,
-    )
-
-    # Save assistant response
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": answer,
-        }
-    )
-
-    st.rerun()
+final_query = prompt

@@ -4,7 +4,7 @@ import streamlit as st
 from groq import Groq
 
 # ============================================================
-# PAGE CONFIG
+# PAGE CONFIGURATION
 # ============================================================
 
 st.set_page_config(
@@ -42,18 +42,19 @@ if "staged_voice_text" not in st.session_state:
     st.session_state.staged_voice_text = ""
 
 # ============================================================
-# GALAXY THEME CSS
+# STYLING (FIXED BOTTOM DOCK + INTEGRATED PROMPT PILL)
 # ============================================================
 
 st.markdown(
     """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap');
 
 html, body {
     font-family: 'Inter', sans-serif;
 }
 
+/* Deep Space Theme Background */
 .stApp {
     background:
         radial-gradient(circle at 15% 20%, rgba(108, 63, 255, 0.18), transparent 25%),
@@ -63,35 +64,15 @@ html, body {
     color: #ffffff;
 }
 
-.stApp::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-        radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.8), transparent),
-        radial-gradient(1px 1px at 20% 80%, rgba(160,190,255,0.8), transparent),
-        radial-gradient(1px 1px at 35% 35%, rgba(255,255,255,0.7), transparent),
-        radial-gradient(1px 1px at 50% 15%, rgba(170,120,255,0.8), transparent),
-        radial-gradient(1px 1px at 65% 70%, rgba(255,255,255,0.7), transparent),
-        radial-gradient(1px 1px at 80% 40%, rgba(100,180,255,0.8), transparent),
-        radial-gradient(2px 2px at 90% 85%, rgba(255,255,255,0.9), transparent);
-    background-size: 250px 250px;
-    opacity: 0.7;
-    animation: starsMove 25s linear infinite;
+/* Main chat container padding bottom so messages are not hidden by fixed dock */
+.main .block-container {
+    padding-bottom: 140px !important;
 }
 
-@keyframes starsMove {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-15px); }
-    100% { transform: translateY(0px); }
-}
-
-/* Sidebar Styles */
+/* Sidebar Custom Styling */
 [data-testid="stSidebar"] {
     background:
         radial-gradient(circle at 30% 5%, rgba(105, 65, 255, 0.18), transparent 30%),
-        radial-gradient(circle at 80% 75%, rgba(0, 150, 255, 0.10), transparent 35%),
         linear-gradient(180deg, #03040e, #070a1c, #02030b) !important;
     border-right: 1px solid rgba(120, 105, 255, 0.25);
 }
@@ -100,7 +81,7 @@ html, body {
     background: linear-gradient(135deg, rgba(28, 32, 68, 0.75), rgba(12, 16, 42, 0.85));
     border: 1px solid rgba(130, 115, 255, 0.35);
     border-radius: 16px;
-    padding: 14px;
+    padding: 12px 14px;
     margin-bottom: 18px;
     display: flex;
     align-items: center;
@@ -108,20 +89,15 @@ html, body {
 }
 
 .profile-avatar {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
     background: linear-gradient(135deg, #7c4dff, #1e88e5);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 20px;
     border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 0 15px rgba(124, 77, 255, 0.45);
-}
-
-.profile-info {
-    overflow: hidden;
 }
 
 .profile-name {
@@ -129,112 +105,90 @@ html, body {
     font-size: 13px;
     font-weight: 700;
     color: #ffffff;
-    letter-spacing: 0.5px;
 }
 
 .profile-status {
     font-size: 11px;
     color: #4cf0a0;
-    letter-spacing: 0.5px;
 }
 
-[data-testid="stSidebar"] .stButton > button {
-    width: 100%;
-    min-height: 40px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, rgba(18,21,48,0.90), rgba(8,11,30,0.95));
-    border: 1px solid rgba(105,105,180,0.28);
-    color: #bfc6e5;
-    font-size: 12px;
-    font-weight: 600;
-    transition: all 0.25s ease;
+/* Sticky Fixed Bottom Wrapper */
+div[data-testid="stVerticalBlock"] > div:has(.bottom-dock-wrapper) {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(840px, 92vw);
+    z-index: 9999;
 }
 
-[data-testid="stSidebar"] .stButton > button:hover {
-    transform: translateX(4px);
-    background: linear-gradient(100deg, rgba(77,55,180,0.85), rgba(27,82,160,0.85));
-    border-color: rgba(130,115,255,0.8);
-    color: #ffffff;
-    box-shadow: 0 4px 18px rgba(70,60,200,0.3);
+/* Seamless Rounded Input Pill Box */
+.bottom-dock-wrapper {
+    background: rgba(16, 20, 42, 0.95);
+    border: 1px solid rgba(120, 105, 255, 0.35);
+    border-radius: 30px;
+    padding: 4px 12px;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(14px);
 }
 
-/* Popover Modal Customization */
-[data-testid="stPopoverBody"] {
-    background: #080c24 !important;
-    border: 1px solid rgba(120, 105, 255, 0.45) !important;
-    border-radius: 16px !important;
-    color: #ffffff !important;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.75) !important;
-}
-
-/* UNIFIED INNER BAR STYLING */
-div[data-testid="column"] {
+/* Column vertical alignment */
+.bottom-dock-wrapper div[data-testid="column"] {
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
-/* Custom Input Wrapper Pill */
-.integrated-bar-wrapper {
-    background: rgba(18, 22, 46, 0.85);
-    border: 1px solid rgba(105, 105, 180, 0.35);
-    border-radius: 20px;
-    padding: 4px 10px;
-    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4);
-}
-
-/* Hide chat input inner border so it seamlessly connects with buttons */
-[data-testid="stChatInput"] {
+/* Customizing chat input inside the pill */
+.bottom-dock-wrapper [data-testid="stChatInput"] {
     padding: 0 !important;
 }
 
-[data-testid="stChatInput"] > div {
+.bottom-dock-wrapper [data-testid="stChatInput"] > div {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
 }
 
-[data-testid="stChatInput"] textarea {
+.bottom-dock-wrapper [data-testid="stChatInput"] textarea {
     background: transparent !important;
     border: none !important;
-    color: white !important;
+    color: #ffffff !important;
+    font-size: 15px !important;
 }
 
-[data-testid="stChatInput"] textarea:focus {
-    box-shadow: none !important;
-}
-
-/* Subdued Popover Buttons for Integrated look */
-.stPopover button {
-    border-radius: 12px !important;
-    background: rgba(30, 35, 70, 0.6) !important;
-    border: 1px solid rgba(120, 105, 255, 0.3) !important;
+/* Subdued popover buttons matching Gemini interface */
+.bottom-dock-wrapper .stPopover button {
+    border-radius: 50% !important;
+    background: transparent !important;
+    border: none !important;
     color: #bfc6e5 !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    padding: 0 10px !important;
+    height: 38px !important;
+    width: 38px !important;
+    padding: 0 !important;
+    transition: all 0.2s ease;
 }
 
-.stPopover button:hover {
-    background: rgba(120, 105, 255, 0.35) !important;
-    border-color: rgba(140, 125, 255, 0.8) !important;
+.bottom-dock-wrapper .stPopover button:hover {
+    background: rgba(120, 105, 255, 0.25) !important;
     color: #ffffff !important;
 }
 
-/* Login Screen */
+/* Login Card */
 .login-container {
-    width: min(460px, 90vw);
-    margin: 10vh auto 22px auto;
-    padding: 38px 40px;
+    width: min(440px, 90vw);
+    margin: 12vh auto 20px auto;
+    padding: 36px;
     text-align: center;
-    border-radius: 25px;
+    border-radius: 24px;
     background: linear-gradient(145deg, rgba(22,26,60,0.96), rgba(6,9,26,0.98));
-    border: 1px solid rgba(120,105,255,0.50);
-    box-shadow: 0 25px 80px rgba(0,0,0,0.50);
+    border: 1px solid rgba(120,105,255,0.45);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
 }
 
 .login-title {
     font-family: 'Orbitron', sans-serif;
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 900;
     background: linear-gradient(90deg, #ffffff, #b59cff, #67bfff);
     -webkit-background-clip: text;
@@ -246,7 +200,7 @@ div[data-testid="column"] {
 )
 
 # ============================================================
-# BACKEND API UTILS
+# API HELPERS
 # ============================================================
 
 def get_groq_client():
@@ -255,47 +209,38 @@ def get_groq_client():
         return None
     return Groq(api_key=api_key)
 
-def ai_response(chat_history):
+def fetch_ai_response(messages):
     client = get_groq_client()
     if not client:
-        return "⚠️ **Groq API key missing.** Please set your `GROQ_API_KEY` in your environment."
+        return "⚠️ **Groq API Key Missing.** Please set `GROQ_API_KEY` in your environment variables."
 
-    system_message = {
+    system_msg = {
         "role": "system",
-        "content": (
-            "You are Quantum Lab AI, an intelligent, helpful, and adaptive assistant. "
-            "You answer questions clearly across technical, scientific, and everyday domains. "
-            "When analyzing attached files or transcripts, integrate your reasoning seamlessly."
-        )
+        "content": "You are Quantum AI, an advanced intelligent system providing concise, accurate, and helpful answers."
     }
-
-    full_messages = [system_message] + chat_history
+    
     try:
-        response = client.chat.completions.create(
+        res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=full_messages
+            messages=[system_msg] + messages
         )
-        return response.choices[0].message.content
+        return res.choices[0].message.content
     except Exception as e:
-        return f"⚠️ **Inference error:** `{str(e)}`"
+        return f"⚠️ **API Error:** `{str(e)}`"
 
-def transcribe_audio(audio_data):
+def transcribe_voice(audio_bytes):
     client = get_groq_client()
     if not client:
         return ""
     try:
-        if isinstance(audio_data, bytes):
-            audio_file = io.BytesIO(audio_data)
-        else:
-            audio_file = audio_data
-        audio_file.name = "audio.wav"
-        transcription = client.audio.transcriptions.create(
-            file=audio_file,
+        f = io.BytesIO(audio_bytes)
+        f.name = "recording.wav"
+        res = client.audio.transcriptions.create(
+            file=f,
             model="whisper-large-v3"
         )
-        return transcription.text
-    except Exception as e:
-        st.error(f"Voice transcription failed: {e}")
+        return res.text
+    except Exception:
         return ""
 
 # ============================================================
@@ -306,9 +251,9 @@ if not st.session_state.logged_in:
     st.markdown(
         """
         <div class="login-container">
-            <div style="font-size: 44px; margin-bottom: 10px;">⚛️</div>
+            <div style="font-size: 42px; margin-bottom: 8px;">⚛️</div>
             <div class="login-title">QUANTUM LAB</div>
-            <p style="color: #8c98ba; font-size: 13px; margin-top: 6px;">Sign in to your Quantum Workspace</p>
+            <p style="color: #8c98ba; font-size: 13px; margin-top: 4px;">Sign in to access your workspace</p>
         </div>
         """,
         unsafe_allow_html=True
@@ -316,20 +261,19 @@ if not st.session_state.logged_in:
 
     _, col2, _ = st.columns([1, 1.2, 1])
     with col2:
-        email = st.text_input("Email", placeholder="researcher@quantum.lab")
-        password = st.text_input("Password", type="password", placeholder="••••••••")
-
-        if st.button("Initialize Terminal", use_container_width=True):
+        email = st.text_input("Email", placeholder="user@quantum.lab")
+        pwd = st.text_input("Password", type="password", placeholder="••••••••")
+        if st.button("Enter Terminal", use_container_width=True):
             if email:
                 st.session_state.logged_in = True
                 st.session_state.user_email = email
                 st.rerun()
             else:
-                st.warning("Please provide a valid email.")
+                st.warning("Please provide your email.")
     st.stop()
 
 # ============================================================
-# SIDEBAR
+# SIDEBAR NAVIGATION
 # ============================================================
 
 with st.sidebar:
@@ -338,177 +282,140 @@ with st.sidebar:
         f"""
         <div class="user-profile-card">
             <div class="profile-avatar">👨‍🚀</div>
-            <div class="profile-info">
+            <div style="overflow:hidden;">
                 <div class="profile-name">{username}</div>
-                <div class="profile-status">● Quantum Node Online</div>
+                <div class="profile-status">● Workspace Active</div>
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    if st.button("➕ New Chat", use_container_width=True):
+    if st.button("➕ New Chat Session", use_container_width=True):
         st.session_state.chat_counter += 1
-        new_session = f"Quantum Session {st.session_state.chat_counter}"
-        st.session_state.chats[new_session] = []
-        st.session_state.current_chat = new_session
+        new_name = f"Quantum Session {st.session_state.chat_counter}"
+        st.session_state.chats[new_name] = []
+        st.session_state.current_chat = new_name
         st.rerun()
 
-    st.markdown("<div style='margin: 10px 0; height: 1px; background: rgba(255,255,255,0.08);'></div>", unsafe_allow_html=True)
-    st.caption("**CHAT SESSIONS**")
+    st.markdown("<div style='margin: 10px 0; height: 1px; background: rgba(255,255,255,0.1);'></div>", unsafe_allow_html=True)
+    st.caption("**SESSIONS**")
 
-    for chat_name in list(st.session_state.chats.keys()):
-        is_active = (chat_name == st.session_state.current_chat)
-        label = f"👉 {chat_name}" if is_active else f"💬 {chat_name}"
-        if st.button(label, key=f"session_btn_{chat_name}", use_container_width=True):
-            st.session_state.current_chat = chat_name
+    for chat_title in list(st.session_state.chats.keys()):
+        is_active = (chat_title == st.session_state.current_chat)
+        lbl = f"👉 {chat_title}" if is_active else f"💬 {chat_title}"
+        if st.button(lbl, key=f"sess_{chat_title}", use_container_width=True):
+            st.session_state.current_chat = chat_title
             st.rerun()
 
-    st.markdown("<div style='margin: 14px 0; height: 1px; background: rgba(255,255,255,0.08);'></div>", unsafe_allow_html=True)
-    st.caption("**SESSION TOOLS**")
+    st.markdown("<div style='margin: 10px 0; height: 1px; background: rgba(255,255,255,0.1);'></div>", unsafe_allow_html=True)
 
-    with st.expander("⚙️ Manage Session"):
-        rename_input = st.text_input("Rename Title", value=st.session_state.current_chat)
-        if st.button("Confirm Rename"):
-            if rename_input and rename_input != st.session_state.current_chat:
-                st.session_state.chats[rename_input] = st.session_state.chats.pop(st.session_state.current_chat)
-                st.session_state.current_chat = rename_input
-                st.rerun()
-
-        if st.button("🗑️ Delete Current Chat"):
-            if len(st.session_state.chats) > 1:
-                del st.session_state.chats[st.session_state.current_chat]
-                st.session_state.current_chat = list(st.session_state.chats.keys())[0]
-                st.rerun()
-            else:
-                st.warning("Cannot delete the only remaining session.")
-
-        if st.button("🧹 Clear Messages"):
-            st.session_state.chats[st.session_state.current_chat] = []
-            st.rerun()
-
-    if st.button("🚪 Logout", use_container_width=True):
+    if st.button("🚪 Log Out", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.user_email = ""
         st.rerun()
 
 # ============================================================
-# CHAT CONVERSATION VIEW
+# CONVERSATION VIEW
 # ============================================================
 
-current_messages = st.session_state.chats[st.session_state.current_chat]
+messages = st.session_state.chats[st.session_state.current_chat]
 
-for message in current_messages:
-    role = message["role"]
-    avatar = "👨‍🚀" if role == "user" else "⚛️"
-    with st.chat_message(role, avatar=avatar):
-        st.markdown(message["content"])
+for msg in messages:
+    avatar = "👨‍🚀" if msg["role"] == "user" else "⚛️"
+    with st.chat_message(msg["role"], avatar=avatar):
+        st.markdown(msg["content"])
 
-# Display staged attachments / voice pill notifications above input bar
-staged_info = []
+# Displays active staged items directly above the bottom input bar
+staged_list = []
 if st.session_state.staged_attachments:
-    staged_info.append(f"📎 {len(st.session_state.staged_attachments)} item(s) attached")
+    staged_list.append(f"📎 {len(st.session_state.staged_attachments)} file(s) attached")
 if st.session_state.staged_voice_text:
-    staged_info.append(f"🎙️ Voice text staged: \"{st.session_state.staged_voice_text[:30]}...\"")
+    staged_list.append(f"🎙️ Voice note staged")
 
-if staged_info:
-    st.info(" | ".join(staged_info))
+if staged_list:
+    st.info(" | ".join(staged_list))
 
 # ============================================================
-# SINGLE INTEGRATED CHAT INPUT BAR WITH POPUPS (+ & MIC)
+# FIXED BOTTOM PROMPT BOX (PLUS - CHAT INPUT - MIC)
 # ============================================================
 
-# Wrapper container for unified input bar appearance
-st.markdown('<div class="integrated-bar-wrapper">', unsafe_allow_html=True)
-col_plus, col_input, col_voice = st.columns([0.05, 0.90, 0.05])
+st.markdown('<div class="bottom-dock-wrapper">', unsafe_allow_html=True)
 
-# 1. Plus Popover Dropdown (Photos, Camera, Files inside)
+col_plus, col_input, col_mic = st.columns([0.06, 0.88, 0.06])
+
+# 1. Plus Icon Popover (Photos, Camera, Files)
 with col_plus:
-    with st.popover("＋", help="Add Photos, Camera, or Files"):
-        st.markdown("### Attach Files")
+    with st.popover("＋", help="Attach Photos, Camera, Files"):
+        st.markdown("### Attach Content")
         tab_photos, tab_cam, tab_files = st.tabs(["🖼️ Photos", "📷 Camera", "📎 Files"])
 
         with tab_photos:
-            photos = st.file_uploader(
-                "Upload photos",
-                type=["png", "jpg", "jpeg", "webp"],
-                accept_multiple_files=True,
-                key="input_photos"
-            )
+            photos = st.file_uploader("Upload photos", type=["png", "jpg", "jpeg", "webp"], accept_multiple_files=True, key="photos_up")
             if photos:
-                for photo in photos:
-                    note = f"🖼️ Photo: `{photo.name}` ({round(photo.size / 1024, 1)} KB)"
-                    if note not in st.session_state.staged_attachments:
-                        st.session_state.staged_attachments.append(note)
-                st.success(f"{len(photos)} photo(s) attached.")
+                for p in photos:
+                    st.session_state.staged_attachments.append(f"🖼️ Photo: `{p.name}`")
+                st.success(f"{len(photos)} photo(s) added.")
 
         with tab_cam:
-            camera_photo = st.camera_input("Take a snapshot", key="input_cam")
-            if camera_photo:
-                note = "📷 *Camera Snapshot*"
-                if note not in st.session_state.staged_attachments:
-                    st.session_state.staged_attachments.append(note)
-                st.success("Snapshot attached.")
+            cam_pic = st.camera_input("Take snapshot", key="cam_up")
+            if cam_pic:
+                st.session_state.staged_attachments.append("📷 Camera Snapshot")
+                st.success("Snapshot added.")
 
         with tab_files:
-            files = st.file_uploader(
-                "Upload documents/code",
-                type=["pdf", "txt", "docx", "csv", "xlsx", "py", "json"],
-                accept_multiple_files=True,
-                key="input_files"
-            )
+            files = st.file_uploader("Upload files", type=["pdf", "txt", "docx", "py", "csv"], accept_multiple_files=True, key="files_up")
             if files:
-                for file in files:
-                    note = f"📎 Document: `{file.name}` ({round(file.size / 1024, 1)} KB)"
-                    if note not in st.session_state.staged_attachments:
-                        st.session_state.staged_attachments.append(note)
-                st.success(f"{len(files)} file(s) attached.")
+                for f in files:
+                    st.session_state.staged_attachments.append(f"📎 Document: `{f.name}`")
+                st.success(f"{len(files)} file(s) added.")
 
-# 2. Main Chat Input Text Field
+# 2. Centered Native Prompt Input Box
 with col_input:
-    prompt = st.chat_input("Ask anything...", key="main_chat_input")
+    prompt = st.chat_input("Ask anything...", key="unified_dock_input")
 
-# 3. Dedicated Voice Popover Button (Microphone popup)
-with col_voice:
-    with st.popover("🎤", help="Voice recording"):
+# 3. Microphone Icon Popover
+with col_mic:
+    with st.popover("🎤", help="Record audio note"):
         st.markdown("### Voice Input")
-        audio_stream = st.audio_input("Record audio note", key="input_voice_standalone")
+        audio_stream = st.audio_input("Record message", key="voice_rec")
         if audio_stream:
-            with st.spinner("Transcribing voice..."):
-                transcription = transcribe_audio(audio_stream.read())
-                if transcription:
-                    st.session_state.staged_voice_text = transcription
-                    st.success("Voice transcribed! Text staged for prompt.")
+            txt = transcribe_voice(audio_stream.read())
+            if txt:
+                st.session_state.staged_voice_text = txt
+                st.success("Voice transcribed and staged!")
+            else:
+                st.session_state.staged_voice_text = "[Voice Recording Captured]"
+                st.success("Voice recording captured!")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================
-# PROCESS USER INPUT & GENERATE RESPONSE
+# RESPONSE GENERATION
 # ============================================================
 
 if prompt:
-    user_text = prompt.strip()
-    
-    # Combine user text with staged voice and attachments metadata
-    combined_parts = []
-    if user_text:
-        combined_parts.append(user_text)
+    user_entry = prompt.strip()
+
+    combined_query = []
+    if user_entry:
+        combined_query.append(user_entry)
     if st.session_state.staged_voice_text:
-        combined_parts.append(f"🎙️ Transcribed Voice Note: \"{st.session_state.staged_voice_text}\"")
+        combined_query.append(f"🎙️ Transcribed Voice: \"{st.session_state.staged_voice_text}\"")
     if st.session_state.staged_attachments:
-        combined_parts.append("\n".join(st.session_state.staged_attachments))
+        combined_query.append("\n".join(st.session_state.staged_attachments))
 
-    full_query = "\n\n".join(combined_parts)
+    full_text = "\n\n".join(combined_query)
 
-    # Clear staged data
+    # Reset staged items
     st.session_state.staged_attachments = []
     st.session_state.staged_voice_text = ""
 
-    # Append user input to session history
-    current_messages.append({"role": "user", "content": full_query})
+    # Add user message
+    messages.append({"role": "user", "content": full_text})
 
-    # Generate response
-    response_text = ai_response(current_messages)
-    current_messages.append({"role": "assistant", "content": response_text})
+    # Fetch and store AI response
+    reply = fetch_ai_response(messages)
+    messages.append({"role": "assistant", "content": reply})
 
     st.rerun()

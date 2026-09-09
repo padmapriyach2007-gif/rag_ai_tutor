@@ -1,22 +1,26 @@
-import inspect
+import io
+import hashlib
+
 import streamlit as st
 
-# ============================================================
-# VOICE INPUT
-# ============================================================
+
+# =========================================================
+# OPTIONAL SPEECH RECOGNITION
+# =========================================================
 
 try:
-    from streamlit_mic_recorder import speech_to_text
+    import speech_recognition as sr
 
-    VOICE_AVAILABLE = True
+    SPEECH_RECOGNITION_AVAILABLE = True
 
 except ImportError:
-    VOICE_AVAILABLE = False
+    SPEECH_RECOGNITION_AVAILABLE = False
 
 
-# ============================================================
-# RAG ENGINE
-# ============================================================
+# =========================================================
+# RAG + DATABASE
+# DO NOT CHANGE
+# =========================================================
 
 from rag_engine import (
     answer_question,
@@ -29,9 +33,9 @@ from rag_engine import (
 )
 
 
-# ============================================================
+# =========================================================
 # PAGE CONFIG
-# ============================================================
+# =========================================================
 
 st.set_page_config(
     page_title="Quantum Lab | AI Tutor",
@@ -41,98 +45,117 @@ st.set_page_config(
 )
 
 
-# ============================================================
+# =========================================================
 # SESSION STATE
-# ============================================================
+# =========================================================
 
-defaults = {
+DEFAULTS = {
     "logged_in": False,
     "user_email": "",
     "user_id": None,
 
     "session_id": None,
     "messages": [],
-
     "sessions": [],
-    "sessions_loaded_for_user": None,
 
-    "loaded_session_id": None,
+    "uploaded_files": [],
+    "drive_links": [],
 
-    "prompt_nonce": 0,
-    "prompt_seed": "",
-
-    "voice_text": "",
-    "last_voice_text": "",
+    "processed_audio_hash": None,
+    "audio_version": 0,
+    "voice_error": None,
 
     "rename_session_id": None,
 
     "show_canvas": False,
     "show_calculator": False,
-    "show_learning": False,
     "show_notes": False,
+    "learning_mode": False,
 
-    "notes": "",
+    "canvas_text": "",
+    "notes_text": "",
 
-    "think_mode": False,
+    "prompt_version": 0,
 
-    "pending_question": None,
+    "last_processed_prompt": "",
+
+    "prompt_seed": "",
 }
 
 
-for key, value in defaults.items():
+for key, value in DEFAULTS.items():
 
     if key not in st.session_state:
         st.session_state[key] = value
 
 
-# ============================================================
+# =========================================================
 # CUSTOM CSS
-# ============================================================
+# =========================================================
 
 st.markdown(
     """
 <style>
 
-/* ============================================================
+/* =========================================================
+   GOOGLE FONTS
+   ========================================================= */
+
+@import url(
+'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap'
+);
+
+
+/* =========================================================
    GLOBAL
-   ============================================================ */
+   ========================================================= */
+
+html,
+body,
+[class*="css"] {
+
+    font-family:
+        "Inter",
+        sans-serif;
+}
+
 
 .stApp {
 
+    min-height: 100vh;
+
     background:
+
         radial-gradient(
-            circle at 10% 10%,
-            rgba(105, 75, 255, 0.18),
+            circle at 8% 10%,
+            rgba(99,102,241,.18),
             transparent 28%
         ),
 
         radial-gradient(
-            circle at 90% 15%,
-            rgba(0, 190, 255, 0.12),
-            transparent 30%
+            circle at 92% 8%,
+            rgba(59,130,246,.13),
+            transparent 28%
         ),
 
         radial-gradient(
-            circle at 50% 100%,
-            rgba(150, 60, 255, 0.10),
-            transparent 35%
+            circle at 75% 85%,
+            rgba(168,85,247,.12),
+            transparent 30%
         ),
 
         linear-gradient(
             135deg,
-            #050510 0%,
-            #08091d 48%,
-            #061221 100%
+            #020617 0%,
+            #080b22 48%,
+            #020617 100%
         );
-
-    color: #f5f5ff;
-
 }
 
 
-/* ============================================================
-   STAR / GRID EFFECT
-   ============================================================ */
+/* =========================================================
+   GRID BACKGROUND
+   ========================================================= */
 
 .stApp::before {
 
@@ -144,1081 +167,1603 @@ st.markdown(
 
     pointer-events: none;
 
-    opacity: 0.22;
-
     background-image:
 
         linear-gradient(
-            rgba(120, 100, 255, 0.045) 1px,
+            rgba(129,140,248,.025) 1px,
             transparent 1px
         ),
 
         linear-gradient(
             90deg,
-            rgba(120, 100, 255, 0.045) 1px,
+            rgba(129,140,248,.025) 1px,
             transparent 1px
         );
 
-    background-size: 48px 48px;
+    background-size: 55px 55px;
 
+    z-index: 0;
 }
 
 
-/* ============================================================
-   HEADER
-   ============================================================ */
+/* =========================================================
+   STARS
+   ========================================================= */
 
-[data-testid="stHeader"] {
+.quantum-space {
 
-    background: transparent !important;
+    position: fixed;
 
+    inset: 0;
+
+    pointer-events: none;
+
+    overflow: hidden;
+
+    z-index: 0;
 }
 
 
-/* ============================================================
-   SIDEBAR
-   ============================================================ */
-
-[data-testid="stSidebar"] {
-
-    background:
-        linear-gradient(
-            180deg,
-            rgba(4, 6, 20, 0.98),
-            rgba(4, 5, 16, 0.99)
-        ) !important;
-
-    border-right:
-        1px solid
-        rgba(130, 110, 255, 0.18);
-
-}
-
-
-[data-testid="stSidebar"] > div {
-
-    padding-top: 1rem;
-
-}
-
-
-/* Sidebar buttons */
-
-[data-testid="stSidebar"] .stButton > button {
-
-    width: 100%;
-
-    min-height: 42px;
-
-    border-radius: 12px;
-
-    background:
-        rgba(28, 28, 62, 0.58);
-
-    border:
-        1px solid
-        rgba(135, 115, 255, 0.20);
-
-    color: #f4f2ff;
-
-    transition:
-        all 0.22s ease;
-
-}
-
-
-[data-testid="stSidebar"] .stButton > button:hover {
-
-    background:
-        rgba(65, 55, 120, 0.55);
-
-    border-color:
-        rgba(155, 140, 255, 0.55);
-
-    transform:
-        translateY(-1px);
-
-    box-shadow:
-        0 0 20px
-        rgba(120, 100, 255, 0.18);
-
-}
-
-
-/* ============================================================
-   SIDEBAR BRAND
-   ============================================================ */
-
-.sidebar-brand {
-
-    text-align: center;
-
-    padding:
-        10px 5px 24px;
-
-}
-
-
-.sidebar-logo {
-
-    width: 58px;
-
-    height: 58px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    margin:
-        0 auto 12px;
-
-    border-radius: 14px;
-
-    font-size: 38px;
-
-    background:
-        linear-gradient(
-            145deg,
-            #855cff,
-            #5931ca
-        );
-
-    box-shadow:
-        0 0 30px
-        rgba(115, 80, 255, 0.55);
-
-}
-
-
-.sidebar-title {
-
-    font-size: 20px;
-
-    font-weight: 850;
-
-    letter-spacing: 1px;
-
-}
-
-
-.sidebar-subtitle {
-
-    color: #8889ac;
-
-    font-size: 12px;
-
-    margin-top: 5px;
-
-}
-
-
-/* ============================================================
-   MAIN HERO
-   ============================================================ */
-
-.hero-box {
-
-    position: relative;
-
-    max-width: 1050px;
-
-    margin:
-        28px auto 25px;
-
-    padding:
-        45px 25px;
-
-    text-align: center;
-
-    border-radius: 28px;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(37, 33, 82, 0.68),
-            rgba(9, 13, 32, 0.80)
-        );
-
-    border:
-        1px solid
-        rgba(145, 125, 255, 0.20);
-
-    box-shadow:
-        0 25px 80px
-        rgba(0, 0, 0, 0.35),
-
-        inset 0 0 35px
-        rgba(100, 80, 255, 0.04);
-
-}
-
-
-.hero-icon {
-
-    font-size: 58px;
-
-    line-height: 1;
-
-    filter:
-        drop-shadow(
-            0 0 22px
-            rgba(140, 110, 255, 0.85)
+.quantum-space::before {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background-image:
+
+        radial-gradient(
+            circle at 5% 12%,
+            rgba(255,255,255,.9) 0px,
+            transparent 2px
+        ),
+
+        radial-gradient(
+            circle at 15% 37%,
+            rgba(180,210,255,.8) 0px,
+            transparent 2px
+        ),
+
+        radial-gradient(
+            circle at 48% 22%,
+            rgba(200,180,255,.8) 0px,
+            transparent 2px
+        ),
+
+        radial-gradient(
+            circle at 76% 68%,
+            rgba(180,200,255,.7) 0px,
+            transparent 2px
+        ),
+
+        radial-gradient(
+            circle at 91% 31%,
+            rgba(255,255,255,.7) 0px,
+            transparent 2px
         );
 
     animation:
-        quantumFloat 4s ease-in-out infinite;
-
+        starFloat 15s ease-in-out infinite alternate;
 }
 
 
-@keyframes quantumFloat {
+@keyframes starFloat {
 
-    0%,100% {
+    0% {
 
         transform:
             translateY(0px);
 
+        opacity: .45;
     }
 
     50% {
 
         transform:
-            translateY(-6px);
+            translateY(-5px);
 
+        opacity: .85;
     }
 
+    100% {
+
+        transform:
+            translateY(4px);
+
+        opacity: .55;
+    }
 }
 
 
-.hero-title {
+/* =========================================================
+   MAIN CONTAINER
+   ========================================================= */
 
-    margin-top: 12px;
+.main .block-container {
 
-    font-size:
-        clamp(32px, 5vw, 55px);
+    max-width: 1250px;
 
-    font-weight: 900;
+    padding-top: 1rem;
 
-    letter-spacing: -1.5px;
+    padding-bottom: 10rem;
+
+    position: relative;
+
+    z-index: 2;
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+section[data-testid="stSidebar"] {
 
     background:
+
+        linear-gradient(
+            180deg,
+            #030611,
+            #070b1d,
+            #02040c
+        );
+
+    border-right:
+        1px solid rgba(139,92,246,.20);
+}
+
+
+section[data-testid="stSidebar"] .stButton button {
+
+    border-radius: 12px;
+
+    border:
+        1px solid rgba(139,92,246,.17);
+
+    background:
+
+        linear-gradient(
+            135deg,
+            rgba(18,25,53,.95),
+            rgba(7,12,29,.95)
+        );
+
+    color: #dbeafe;
+
+    transition:
+        all .2s ease;
+}
+
+
+section[data-testid="stSidebar"] .stButton button:hover {
+
+    border-color:
+        rgba(167,139,250,.70);
+
+    box-shadow:
+        0 0 22px rgba(139,92,246,.20);
+
+    transform:
+        translateY(-1px);
+}
+
+
+/* =========================================================
+   SIDEBAR CHAT BUTTONS
+   ========================================================= */
+
+.chat-history-title {
+
+    color: #94a3b8;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    letter-spacing: 1.5px;
+
+    margin:
+        15px 0 8px 0;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.quantum-logo {
+
+    text-align: center;
+
+    font-size: 70px;
+
+    line-height: 1;
+
+    margin:
+        8px auto 5px auto;
+
+    filter:
+        drop-shadow(0 0 8px rgba(167,139,250,.9))
+        drop-shadow(0 0 25px rgba(99,102,241,.65));
+
+    animation:
+        quantumPulse 3s ease-in-out infinite;
+}
+
+
+@keyframes quantumPulse {
+
+    0%,100% {
+
+        transform: scale(1);
+
+        filter:
+            drop-shadow(0 0 8px rgba(167,139,250,.7))
+            drop-shadow(0 0 20px rgba(99,102,241,.5));
+    }
+
+    50% {
+
+        transform: scale(1.07);
+
+        filter:
+            drop-shadow(0 0 12px rgba(255,255,255,.9))
+            drop-shadow(0 0 35px rgba(139,92,246,.9));
+    }
+}
+
+
+.main-title {
+
+    text-align: center;
+
+    font-family:
+        "Space Grotesk",
+        sans-serif;
+
+    font-size:
+        clamp(34px, 5vw, 58px);
+
+    font-weight: 700;
+
+    letter-spacing: 5px;
+
+    background:
+
         linear-gradient(
             90deg,
             #ffffff,
-            #b9adff,
-            #84eaff
+            #c4b5fd,
+            #93c5fd,
+            #ffffff
         );
 
     -webkit-background-clip: text;
 
     -webkit-text-fill-color: transparent;
-
 }
 
 
-.hero-subtitle {
+.subtitle {
 
-    margin-top: 8px;
+    text-align: center;
 
-    color: #a7a8c2;
+    max-width: 780px;
 
-    font-size: 15px;
+    margin:
+        8px auto 15px auto;
 
+    color: #94a3b8;
+
+    font-size: 14px;
+
+    line-height: 1.8;
 }
 
 
 .online {
 
-    display: inline-block;
+    width: fit-content;
 
-    margin-top: 18px;
+    margin:
+        0 auto 18px auto;
 
     padding:
-        7px 16px;
+        6px 14px;
 
-    border-radius: 30px;
+    border-radius: 999px;
 
-    color: #82efb5;
+    color: #86efac;
 
     background:
-        rgba(50, 220, 145, 0.07);
+        rgba(34,197,94,.05);
 
     border:
-        1px solid
-        rgba(70, 220, 155, 0.25);
+        1px solid rgba(34,197,94,.20);
 
-    font-size: 11px;
+    font-size: 10px;
 
     font-weight: 700;
 
+    letter-spacing: 1.7px;
+
+    box-shadow:
+        0 0 20px rgba(34,197,94,.08);
 }
 
 
-/* ============================================================
-   WELCOME CARD
-   ============================================================ */
+.quantum-line {
 
-.welcome-card {
+    width: 230px;
 
-    max-width: 850px;
+    height: 1px;
 
     margin:
-        20px auto;
+        0 auto 22px auto;
 
-    padding: 28px;
+    background:
+
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(139,92,246,.9),
+            rgba(59,130,246,.9),
+            transparent
+        );
+
+    box-shadow:
+        0 0 14px rgba(139,92,246,.4);
+}
+
+
+/* =========================================================
+   CHAT MESSAGES
+   ========================================================= */
+
+[data-testid="stChatMessage"] {
+
+    border-radius: 16px;
+
+    border:
+        1px solid rgba(139,92,246,.12);
+
+    background:
+
+        linear-gradient(
+            135deg,
+            rgba(15,23,42,.82),
+            rgba(7,12,28,.82)
+        );
+
+    margin-bottom: 10px;
+
+    transition: all .2s ease;
+}
+
+
+[data-testid="stChatMessage"]:hover {
+
+    border-color:
+        rgba(139,92,246,.32);
+
+    box-shadow:
+        0 5px 25px rgba(0,0,0,.22);
+}
+
+
+[data-testid="stChatMessage"] p {
+
+    color: #dbe4f0;
+
+    line-height: 1.7;
+}
+
+
+/* =========================================================
+   PROMPT CONTAINER
+   ========================================================= */
+
+.prompt-shell {
+
+    margin-top: 25px;
+
+    padding: 8px;
 
     border-radius: 22px;
+
+    border:
+        1px solid rgba(139,92,246,.30);
+
+    background:
+
+        linear-gradient(
+            135deg,
+            rgba(15,23,42,.96),
+            rgba(7,12,28,.96)
+        );
+
+    box-shadow:
+
+        0 0 30px rgba(99,102,241,.10),
+
+        inset
+        0 0 20px rgba(99,102,241,.035);
+
+    transition:
+        all .3s ease;
+}
+
+
+.prompt-shell:hover {
+
+    border-color:
+        rgba(139,92,246,.52);
+
+    box-shadow:
+
+        0 0 35px rgba(99,102,241,.18),
+
+        inset
+        0 0 25px rgba(99,102,241,.05);
+}
+
+
+.prompt-label {
+
+    color: #64748b;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    letter-spacing: 1.1px;
+
+    padding:
+        2px 8px 4px 8px;
+}
+
+
+/* =========================================================
+   TEXT INPUT
+   ========================================================= */
+
+.prompt-input input {
+
+    background:
+        rgba(15,23,42,.60) !important;
+
+    border:
+        1px solid rgba(71,85,105,.25) !important;
+
+    border-radius:
+        14px !important;
+
+    color:
+        #f8fafc !important;
+
+    min-height:
+        47px !important;
+
+    font-size:
+        14px !important;
+
+    transition:
+        all .2s ease;
+}
+
+
+.prompt-input input:focus {
+
+    border-color:
+        rgba(139,92,246,.55) !important;
+
+    box-shadow:
+        0 0 0 2px rgba(139,92,246,.07),
+        0 0 22px rgba(99,102,241,.12) !important;
+}
+
+
+/* =========================================================
+   TOOL BUTTONS
+   ========================================================= */
+
+.prompt-tool button {
+
+    min-height:
+        47px !important;
+
+    border-radius:
+        14px !important;
+
+    background:
+        rgba(15,23,42,.78) !important;
+
+    border:
+        1px solid rgba(100,116,139,.30) !important;
+
+    color:
+        #e2e8f0 !important;
+
+    transition:
+        all .2s ease !important;
+}
+
+
+.prompt-tool button:hover {
+
+    transform:
+        translateY(-2px);
+
+    border-color:
+        rgba(139,92,246,.65) !important;
+
+    box-shadow:
+        0 0 20px rgba(99,102,241,.22);
+}
+
+
+/* =========================================================
+   THINK BUTTON
+   ========================================================= */
+
+.think-button button {
+
+    min-height:
+        47px !important;
+
+    border-radius:
+        14px !important;
+
+    background:
+
+        linear-gradient(
+            135deg,
+            rgba(99,102,241,.15),
+            rgba(59,130,246,.10)
+        ) !important;
+
+    border:
+        1px solid rgba(139,92,246,.38) !important;
+
+    color:
+        #e0e7ff !important;
+
+    font-weight:
+        600 !important;
+}
+
+
+.think-button button:hover {
+
+    box-shadow:
+        0 0 22px rgba(139,92,246,.30);
+}
+
+
+/* =========================================================
+   SEND BUTTON
+   ========================================================= */
+
+.send-button button {
+
+    min-height:
+        47px !important;
+
+    border-radius:
+        14px !important;
+
+    background:
+
+        linear-gradient(
+            135deg,
+            #6366f1,
+            #4f46e5,
+            #3b82f6
+        ) !important;
+
+    border:
+        1px solid rgba(165,180,252,.55) !important;
+
+    color:
+        white !important;
+
+    font-weight:
+        700 !important;
+
+    box-shadow:
+        0 0 18px rgba(99,102,241,.22);
+
+    transition:
+        all .2s ease !important;
+}
+
+
+.send-button button:hover {
+
+    transform:
+        translateY(-2px);
+
+    box-shadow:
+        0 0 30px rgba(99,102,241,.45);
+}
+
+
+/* =========================================================
+   🎙️ QUANTUM MICROPHONE
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   MICROPHONE COLUMN
+   --------------------------------------------------------- */
+
+[class*="st-key-quantum_microphone_"] {
+
+    width:
+        54px !important;
+
+    min-width:
+        54px !important;
+
+    max-width:
+        54px !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    overflow:
+        visible !important;
+}
+
+
+/* ---------------------------------------------------------
+   AUDIO INPUT
+   --------------------------------------------------------- */
+
+[class*="st-key-quantum_microphone_"]
+[data-testid="stAudioInput"] {
+
+    width:
+        72px !important;
+
+    min-width:
+        72px !important;
+
+    max-width:
+        72px !important;
+
+    height:
+        50px !important;
+
+    min-height:
+        50px !important;
+
+    max-height:
+        50px !important;
+
+    padding:
+        1px !important;
+
+    margin:
+        0 auto !important;
+
+    overflow:
+        visible !important;
+
+    border-radius:
+        50% !important;
+
+    background:
+        transparent !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+}
+
+
+/* ---------------------------------------------------------
+   MAIN MIC BUTTON
+   --------------------------------------------------------- */
+
+[class*="st-key-quantum_microphone_"] button {
+
+    width:
+        46px !important;
+
+    min-width:
+        46px !important;
+
+    max-width:
+        46px !important;
+
+    height:
+        46px !important;
+
+    min-height:
+        46px !important;
+
+    max-height:
+        46px !important;
+
+    padding:
+        0 !important;
+
+    margin:
+        0 auto !important;
+
+    border-radius:
+        50% !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+
+    overflow:
+        hidden !important;
 
     background:
         linear-gradient(
             145deg,
-            rgba(32, 29, 70, 0.68),
-            rgba(10, 12, 29, 0.78)
-        );
+            rgba(30,41,59,.98),
+            rgba(15,23,42,.98)
+        ) !important;
 
     border:
-        1px solid
-        rgba(130, 110, 255, 0.18);
+        1px solid rgba(148,163,184,.38) !important;
 
+    color:
+        #f8fafc !important;
+
+    box-shadow:
+        0 5px 18px rgba(0,0,0,.28),
+        inset 0 1px 0 rgba(255,255,255,.06) !important;
+
+    transition:
+        transform .18s ease,
+        border-color .18s ease,
+        background .18s ease,
+        box-shadow .18s ease !important;
 }
 
 
-.welcome-title {
+/* ---------------------------------------------------------
+   REMOVE OLD ORBIT RINGS
+   --------------------------------------------------------- */
 
-    font-size: 22px;
+[class*="st-key-quantum_microphone_"] button::before,
+[class*="st-key-quantum_microphone_"] button::after {
 
-    font-weight: 800;
-
+    content:
+        none !important;
 }
 
 
-.welcome-text {
+/* ---------------------------------------------------------
+   MICROPHONE ICON
+   --------------------------------------------------------- */
 
-    margin-top: 8px;
+[class*="st-key-quantum_microphone_"] button svg {
 
-    color: #aaaac4;
+    width:
+        20px !important;
 
-    line-height: 1.65;
+    height:
+        20px !important;
 
-    font-size: 14px;
+    color:
+        #f8fafc !important;
 
+    stroke:
+        #f8fafc !important;
+
+    position:
+        relative !important;
+
+    z-index:
+        2 !important;
+
+    filter:
+        none !important;
 }
 
 
-/* ============================================================
-   CHAT MESSAGES
-   ============================================================ */
+/* ---------------------------------------------------------
+   MIC HOVER
+   --------------------------------------------------------- */
 
-[data-testid="stChatMessage"] {
+[class*="st-key-quantum_microphone_"] button:hover {
 
-    border-radius: 18px;
+    transform:
+        translateY(-1px) scale(1.04) !important;
 
-    margin-bottom: 8px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(79,70,229,.92),
+            rgba(37,99,235,.88)
+        ) !important;
 
+    border-color:
+        rgba(165,180,252,.78) !important;
+
+    box-shadow:
+        0 0 0 3px rgba(99,102,241,.10),
+        0 8px 24px rgba(30,64,175,.30) !important;
 }
 
 
-[data-testid="stChatMessageContent"] {
+/* ---------------------------------------------------------
+   MIC ACTIVE
+   --------------------------------------------------------- */
 
-    font-size: 15px;
+[class*="st-key-quantum_microphone_"] button:active {
 
-    line-height: 1.7;
-
+    transform:
+        scale(.94) !important;
 }
 
 
-/* ============================================================
-   LOGIN
-   ============================================================ */
+/* ---------------------------------------------------------
+   HIDE AUDIO PLAYER
+   --------------------------------------------------------- */
+
+[class*="st-key-quantum_microphone_"] audio {
+
+    display:
+        none !important;
+}
+
+
+/* =========================================================
+   CANVAS
+   ========================================================= */
+
+.canvas-box {
+
+    margin-top: 20px;
+
+    padding: 25px;
+
+    border-radius: 20px;
+
+    border:
+        1px solid rgba(99,102,241,.30);
+
+    background:
+
+        linear-gradient(
+            135deg,
+            rgba(15,23,42,.92),
+            rgba(10,15,35,.92)
+        );
+
+    box-shadow:
+        0 0 35px rgba(99,102,241,.10);
+}
+
+
+/* =========================================================
+   LOGIN PAGE
+   ========================================================= */
 
 .login-page {
 
-    min-height: 78vh;
+    min-height:
+        82vh;
 
-    display: flex;
+    display:
+        flex;
 
-    align-items: center;
+    align-items:
+        center;
 
-    justify-content: center;
+    justify-content:
+        center;
 
+    padding:
+        30px 20px;
 }
 
 
 .login-card {
 
-    width: min(470px, 92vw);
+    width:
+        100%;
 
-    padding: 42px;
+    max-width:
+        500px;
 
-    border-radius: 28px;
+    margin:
+        auto;
 
-    text-align: center;
+    padding:
+        40px;
+
+    border-radius:
+        28px;
 
     background:
+
         linear-gradient(
             145deg,
-            rgba(28, 27, 66, 0.88),
-            rgba(8, 12, 29, 0.92)
+            rgba(15,23,42,.97),
+            rgba(7,12,28,.97)
         );
 
     border:
-        1px solid
-        rgba(140, 120, 255, 0.30);
+        1px solid rgba(139,92,246,.36);
 
     box-shadow:
 
-        0 30px 100px
-        rgba(0, 0, 0, 0.55),
+        0 0 30px rgba(99,102,241,.14),
 
-        0 0 55px
-        rgba(100, 75, 255, 0.15);
+        0 0 80px rgba(139,92,246,.08),
 
+        inset
+        0 0 30px rgba(99,102,241,.035);
+
+    animation:
+        loginAppear .6s ease-out;
+}
+
+
+@keyframes loginAppear {
+
+    from {
+
+        opacity: 0;
+
+        transform:
+            translateY(20px)
+            scale(.97);
+    }
+
+    to {
+
+        opacity: 1;
+
+        transform:
+            translateY(0)
+            scale(1);
+    }
 }
 
 
 .login-logo {
 
-    width: 76px;
+    text-align:
+        center;
 
-    height: 76px;
+    font-size:
+        72px;
 
-    margin: 0 auto 20px;
+    line-height:
+        1;
 
-    display: flex;
+    margin-bottom:
+        15px;
 
-    align-items: center;
+    filter:
+        drop-shadow(0 0 8px rgba(167,139,250,.9))
+        drop-shadow(0 0 30px rgba(99,102,241,.7));
 
-    justify-content: center;
+    animation:
+        loginPulse 3s ease-in-out infinite;
+}
 
-    border-radius: 20px;
 
-    font-size: 48px;
+@keyframes loginPulse {
 
-    background:
-        linear-gradient(
-            145deg,
-            #855cff,
-            #4923b9
-        );
+    0%,100% {
 
-    box-shadow:
-        0 0 40px
-        rgba(120, 80, 255, 0.60);
+        transform:
+            scale(1);
+    }
 
+    50% {
+
+        transform:
+            scale(1.08);
+    }
 }
 
 
 .login-title {
 
-    font-size: 34px;
+    text-align:
+        center;
 
-    font-weight: 900;
+    font-family:
+        "Space Grotesk",
+        sans-serif;
 
+    font-size:
+        30px;
+
+    font-weight:
+        700;
+
+    letter-spacing:
+        3px;
+
+    color:
+        #e0e7ff;
 }
 
 
 .login-subtitle {
 
-    color: #999ab8;
+    text-align:
+        center;
 
-    margin:
-        8px 0 28px;
+    color:
+        #94a3b8;
 
-    font-size: 14px;
+    font-size:
+        13px;
 
+    line-height:
+        1.7;
+
+    margin-top:
+        8px;
 }
 
 
-/* ============================================================
-   PROMPT AREA
-   ============================================================ */
+.login-divider {
 
-.prompt-zone {
+    width:
+        100%;
 
-    max-width: 1100px;
+    height:
+        1px;
 
     margin:
-        25px auto 10px;
+        25px 0;
 
+    background:
+
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(139,92,246,.55),
+            transparent
+        );
 }
 
 
-.prompt-row {
+.login-label {
+
+    color:
+        #cbd5e1;
+
+    font-size:
+        13px;
+
+    font-weight:
+        600;
+
+    margin-bottom:
+        7px;
+}
+
+
+/* =========================================================
+   LOGIN INPUT
+   ========================================================= */
+
+.login-input input {
+
+    background:
+        rgba(2,6,23,.75) !important;
+
+    border:
+        1px solid rgba(139,92,246,.28) !important;
+
+    border-radius:
+        14px !important;
+
+    color:
+        #f8fafc !important;
+
+    min-height:
+        49px !important;
+}
+
+
+.login-input input:focus {
+
+    border-color:
+        rgba(139,92,246,.85) !important;
+
+    box-shadow:
+        0 0 0 2px rgba(139,92,246,.08),
+        0 0 25px rgba(99,102,241,.18) !important;
+}
+
+
+.login-button button {
+
+    min-height:
+        49px !important;
+
+    border-radius:
+        14px !important;
+
+    background:
+
+        linear-gradient(
+            135deg,
+            #6366f1,
+            #4f46e5,
+            #3b82f6
+        ) !important;
+
+    border:
+        1px solid rgba(165,180,252,.55) !important;
+
+    color:
+        white !important;
+
+    font-weight:
+        700 !important;
+
+    box-shadow:
+        0 0 22px rgba(99,102,241,.25);
+
+    transition:
+        all .2s ease;
+}
+
+
+.login-button button:hover {
+
+    transform:
+        translateY(-2px);
+
+    box-shadow:
+        0 0 35px rgba(99,102,241,.45);
+}
+
+
+.login-status {
+
+    text-align:
+        center;
+
+    color:
+        #64748b;
+
+    font-size:
+        11px;
+
+    margin-top:
+        16px;
+}
+
+
+/* =========================================================
+   POPUP
+   ========================================================= */
+
+.tool-card {
 
     padding:
-        7px 10px;
+        14px;
 
-    border-radius: 24px;
+    border-radius:
+        14px;
+
+    border:
+        1px solid rgba(139,92,246,.20);
+
+    background:
+        rgba(10,15,35,.85);
+
+    margin-bottom:
+        10px;
+}
+
+
+/* =========================================================
+   HIDE STREAMLIT FOOTER
+   ========================================================= */
+
+footer {
+
+    visibility:
+        hidden;
+}
+
+
+/* =========================================================
+   NATIVE STREAMLIT OVERRIDES
+   ========================================================= */
+
+[data-testid="column"]:has(.st-key-center_login) {
+
+    padding:
+        34px 42px 28px 42px;
+
+    border-radius:
+        28px;
 
     background:
         linear-gradient(
             145deg,
-            rgba(25, 24, 55, 0.94),
-            rgba(10, 13, 30, 0.96)
+            rgba(15,23,42,.97),
+            rgba(7,12,28,.97)
         );
 
     border:
-        1px solid
-        rgba(130, 115, 255, 0.28);
+        1px solid rgba(139,92,246,.36);
 
     box-shadow:
-        0 12px 45px
-        rgba(0, 0, 0, 0.30);
-
-    transition:
-        all 0.25s ease;
-
+        0 0 30px rgba(99,102,241,.14),
+        0 0 80px rgba(139,92,246,.08),
+        inset 0 0 30px rgba(99,102,241,.035);
 }
 
 
-/* Glow while typing */
+.st-key-center_login button {
 
-[data-testid="stTextInput"]:has(input:focus) {
+    min-height:
+        49px !important;
 
-    border-radius: 18px;
-
-    box-shadow:
-        0 0 0 1px
-        rgba(130, 105, 255, 0.55),
-
-        0 0 28px
-        rgba(105, 75, 255, 0.30);
-
-}
-
-
-[data-testid="stTextInput"] input {
-
-    height: 46px;
-
-    border-radius: 16px !important;
-
-    background:
-        rgba(15, 16, 36, 0.92) !important;
-
-    border:
-        1px solid
-        rgba(125, 110, 240, 0.16) !important;
-
-    color: white !important;
-
-    font-size: 15px !important;
-
-    padding-left: 16px !important;
-
-}
-
-
-[data-testid="stTextInput"] input:focus {
-
-    border:
-        1px solid
-        rgba(130, 110, 255, 0.65) !important;
-
-    box-shadow:
-        0 0 20px
-        rgba(110, 80, 255, 0.25) !important;
-
-}
-
-
-/* ============================================================
-   PROMPT BUTTONS
-   ============================================================ */
-
-.prompt-zone .stButton > button {
-
-    min-height: 46px;
-
-    border-radius: 16px;
-
-    transition:
-        all 0.20s ease;
-
-}
-
-
-.prompt-zone .stButton > button:hover {
-
-    transform:
-        translateY(-1px);
-
-}
-
-
-/* Think */
-
-.think-column .stButton > button {
-
-    background:
-        rgba(60, 48, 110, 0.48);
-
-    border:
-        1px solid
-        rgba(135, 110, 255, 0.25);
-
-    color: #d9d2ff;
-
-}
-
-
-.think-active .stButton > button {
+    border-radius:
+        14px !important;
 
     background:
         linear-gradient(
             135deg,
-            rgba(115, 75, 255, 0.55),
-            rgba(55, 135, 255, 0.35)
+            #6366f1,
+            #4f46e5,
+            #3b82f6
         ) !important;
 
-    border-color:
-        rgba(150, 130, 255, 0.75) !important;
+    border:
+        1px solid rgba(165,180,252,.55) !important;
+
+    color:
+        white !important;
+
+    font-weight:
+        700 !important;
 
     box-shadow:
-        0 0 22px
-        rgba(105, 75, 255, 0.30);
-
+        0 0 22px rgba(99,102,241,.25);
 }
 
 
-/* Microphone */
+.st-key-login_email input {
 
-.mic-column {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-}
-
-
-/*
-   The speech_to_text component is intentionally clipped
-   to a compact microphone area.
-*/
-
-[data-testid="stCustomComponentV1"] {
-
-    border: none !important;
-
-}
-
-
-.mic-column iframe {
-
-    border: none !important;
-
-    border-radius: 50% !important;
-
-}
-
-
-/* Send */
-
-.send-column .stButton > button {
-
-    width: 48px !important;
-
-    height: 48px !important;
-
-    min-height: 48px !important;
-
-    padding: 0 !important;
-
-    border-radius: 50% !important;
+    background:
+        rgba(2,6,23,.75) !important;
 
     border:
-        1px solid
-        rgba(130, 175, 255, 0.60) !important;
+        1px solid rgba(139,92,246,.28) !important;
+
+    border-radius:
+        14px !important;
+
+    min-height:
+        49px !important;
+}
+
+
+div[data-testid="stHorizontalBlock"]:has([class*="st-key-custom_prompt_"]) {
+
+    margin-top:
+        6px;
+
+    padding:
+        8px;
+
+    border-radius:
+        22px;
+
+    border:
+        1px solid rgba(139,92,246,.30);
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(15,23,42,.96),
+            rgba(7,12,28,.96)
+        );
+
+    box-shadow:
+        0 0 30px rgba(99,102,241,.10);
+}
+
+
+[class*="st-key-custom_prompt_"] input {
+
+    min-height:
+        47px !important;
+
+    border-radius:
+        14px !important;
+
+    background:
+        rgba(15,23,42,.60) !important;
+}
+
+
+[class*="st-key-custom_prompt_"] input:focus {
+
+    border-color:
+        rgba(139,92,246,.65) !important;
+
+    box-shadow:
+        0 0 0 2px rgba(139,92,246,.07),
+        0 0 22px rgba(99,102,241,.18) !important;
+}
+
+
+/* Hide form submit control used only for keyboard Enter. */
+
+[class*="st-key-enter_submit_"] {
+
+    display:
+        none !important;
+}
+
+
+.st-key-think_button button {
+
+    min-height:
+        47px !important;
+
+    border-radius:
+        14px !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(99,102,241,.15),
+            rgba(59,130,246,.10)
+        ) !important;
+
+    border:
+        1px solid rgba(139,92,246,.38) !important;
+}
+
+
+.st-key-send_button button {
+
+    width:
+        48px !important;
+
+    height:
+        48px !important;
+
+    min-height:
+        48px !important;
+
+    padding:
+        0 !important;
+
+    border-radius:
+        50% !important;
 
     background:
         linear-gradient(
             145deg,
             #4d8dff,
-            #5860ff
+            #575eff
         ) !important;
 
-    color: white !important;
+    border:
+        1px solid rgba(150,190,255,.65) !important;
 
-    font-size: 25px !important;
+    color:
+        white !important;
 
-    font-weight: 800 !important;
+    font-size:
+        25px !important;
+
+    font-weight:
+        900 !important;
 
     box-shadow:
-        0 0 25px
-        rgba(70, 110, 255, 0.40);
-
+        0 0 26px rgba(70,110,255,.40) !important;
 }
 
 
-.send-column .stButton > button:hover {
+.st-key-send_button button:hover {
 
     transform:
         translateY(-2px)
-        scale(1.04);
+        scale(1.05) !important;
 
     box-shadow:
-        0 0 35px
-        rgba(70, 110, 255, 0.65);
-
+        0 0 38px rgba(70,120,255,.68) !important;
 }
 
 
-/* ============================================================
-   PLUS POPUP
-   ============================================================ */
+/* =========================================================
+   RENAME CHAT UI
+   ========================================================= */
 
-[data-testid="stPopover"] button {
+[class*="st-key-save_name_"] button {
 
-    border-radius: 15px;
+    min-height:
+        38px !important;
 
-}
-
-
-/* ============================================================
-   TOOL CARDS
-   ============================================================ */
-
-.tool-card {
-
-    padding: 18px;
-
-    border-radius: 18px;
-
-    margin-top: 10px;
+    border-radius:
+        10px !important;
 
     background:
         linear-gradient(
-            145deg,
-            rgba(34, 31, 75, 0.65),
-            rgba(10, 13, 31, 0.78)
-        );
+            135deg,
+            rgba(99,102,241,.30),
+            rgba(59,130,246,.20)
+        ) !important;
 
     border:
-        1px solid
-        rgba(130, 110, 255, 0.18);
+        1px solid rgba(129,140,248,.50) !important;
 
+    color:
+        #eef2ff !important;
+
+    font-weight:
+        600 !important;
 }
 
 
-.tool-title {
+[class*="st-key-cancel_name_"] button {
 
-    font-size: 17px;
+    min-height:
+        38px !important;
 
-    font-weight: 800;
-
-    margin-bottom: 8px;
-
-}
-
-
-.tool-description {
-
-    color: #9d9eb8;
-
-    font-size: 13px;
-
-}
-
-
-/* ============================================================
-   SIDEBAR CARDS
-   ============================================================ */
-
-.side-card {
-
-    padding: 15px;
-
-    margin: 12px 0;
-
-    border-radius: 16px;
+    border-radius:
+        10px !important;
 
     background:
-        linear-gradient(
-            145deg,
-            rgba(36, 32, 78, 0.60),
-            rgba(12, 14, 32, 0.70)
-        );
+        rgba(15,23,42,.80) !important;
 
     border:
-        1px solid
-        rgba(130, 110, 255, 0.17);
+        1px solid rgba(100,116,139,.35) !important;
 
+    color:
+        #cbd5e1 !important;
 }
 
 
-.side-card-title {
+[class*="st-key-title_input_"] input {
 
-    font-weight: 750;
+    min-height:
+        40px !important;
 
-    margin-bottom: 7px;
+    border-radius:
+        10px !important;
 
+    background:
+        rgba(2,6,23,.75) !important;
+
+    border:
+        1px solid rgba(139,92,246,.35) !important;
+
+    color:
+        #f8fafc !important;
 }
 
 
-.side-card-text {
+[class*="st-key-title_input_"] input:focus {
 
-    color: #999ab4;
+    border-color:
+        rgba(139,92,246,.75) !important;
 
-    font-size: 12px;
-
-    line-height: 1.55;
-
+    box-shadow:
+        0 0 0 2px rgba(139,92,246,.08),
+        0 0 18px rgba(99,102,241,.18) !important;
 }
 
 
-/* ============================================================
-   FOOTER
-   ============================================================ */
+/* =========================================================
+   MICROPHONE COLUMN FINAL OVERRIDE
+   ========================================================= */
 
-.footer {
+[class*="st-key-quantum_microphone_"] {
 
-    text-align: center;
+    width:
+        54px !important;
 
-    color: #666783;
+    min-width:
+        54px !important;
 
-    font-size: 11px;
+    max-width:
+        54px !important;
 
-    margin-top: 35px;
+    overflow:
+        visible !important;
 
-    padding-bottom: 15px;
+    display:
+        flex !important;
 
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
 }
 
-
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
-
-@media (max-width: 800px) {
-
-    .hero-box {
-
-        padding: 32px 18px;
-
-        margin-top: 15px;
-
-    }
-
-    .login-card {
-
-        padding: 30px 22px;
-
-    }
-
-}
 
 </style>
+
+<div class="quantum-space"></div>
 """,
     unsafe_allow_html=True,
 )
 
 
-# ============================================================
+# =========================================================
 # HELPER FUNCTIONS
-# ============================================================
+# =========================================================
 
 def refresh_sessions():
-    """Refresh chat list only when explicitly needed."""
 
-    try:
-
-        sessions = get_user_sessions(
-            st.session_state.user_id
-        )
-
-        st.session_state.sessions = sessions or []
-
-        st.session_state.sessions_loaded_for_user = (
-            st.session_state.user_id
-        )
-
-    except Exception as e:
-
-        st.session_state.sessions = []
-
-        st.error(
-            f"Could not load chats: {e}"
-        )
-
-
-def safe_rename_chat(
-    session_id,
-    new_title
-):
     """
-    Supports both:
-        rename_chat(session_id, user_id, new_title)
-    and:
-        rename_chat(session_id, new_title)
+    Refresh chat sessions only when actually needed.
+    Avoid calling this unnecessarily on every rerun.
     """
 
-    try:
-
-        signature = inspect.signature(rename_chat)
-
-        params = list(
-            signature.parameters.values()
-        )
-
-        names = [
-            p.name
-            for p in params
-        ]
-
-        # Current rag_engine.py:
-        # session_id, user_id, new_title
-
-        if (
-            "user_id" in names
-            and "new_title" in names
-        ):
-
-            return rename_chat(
-                session_id,
-                st.session_state.user_id,
-                new_title
-            )
-
-        # Alternative implementation
-
-        if len(params) >= 3:
-
-            return rename_chat(
-                session_id,
-                st.session_state.user_id,
-                new_title
-            )
-
-        return rename_chat(
-            session_id,
-            new_title
-        )
-
-    except Exception:
-
-        # Final compatibility fallback
+    if st.session_state.user_id:
 
         try:
 
-            return rename_chat(
-                session_id,
-                st.session_state.user_id,
-                new_title
-            )
-
-        except TypeError:
-
-            return rename_chat(
-                session_id,
-                new_title
-            )
-
-
-def safe_delete_chat(session_id):
-
-    try:
-
-        signature = inspect.signature(
-            delete_chat
-        )
-
-        params = list(
-            signature.parameters.values()
-        )
-
-        if len(params) >= 2:
-
-            return delete_chat(
-                session_id,
+            sessions = get_user_sessions(
                 st.session_state.user_id
             )
 
-        return delete_chat(
-            session_id
-        )
+            if sessions is None:
+                sessions = []
 
-    except TypeError:
+            st.session_state.sessions = sessions
 
-        return delete_chat(
-            session_id,
-            st.session_state.user_id
-        )
+        except Exception:
 
-
-def load_current_chat():
-
-    session_id = (
-        st.session_state.session_id
-    )
-
-    if not session_id:
-        return
-
-    if (
-        st.session_state.loaded_session_id
-        == session_id
-    ):
-        return
-
-    try:
-
-        messages = restore_chat(
-            session_id,
-            st.session_state.user_id
-        )
-
-        st.session_state.messages = (
-            messages or []
-        )
-
-        st.session_state.loaded_session_id = (
-            session_id
-        )
-
-    except Exception as e:
-
-        st.error(
-            f"Could not load conversation: {e}"
-        )
-
-        st.session_state.messages = []
-
-        st.session_state.loaded_session_id = (
-            session_id
-        )
+            st.session_state.sessions = []
 
 
 def start_new_chat():
+
+    if not st.session_state.logged_in:
+        return
 
     try:
 
         new_session_id = create_chat_session(
             st.session_state.user_id,
-            "New Quantum Chat"
+            "New Chat"
         )
 
-        st.session_state.session_id = (
-            new_session_id
-        )
+        st.session_state.session_id = new_session_id
 
         st.session_state.messages = []
 
-        st.session_state.loaded_session_id = (
-            new_session_id
-        )
+        st.session_state.rename_session_id = None
 
         refresh_sessions()
-
-        st.toast(
-            "✨ New chat created!"
-        )
-
-        st.rerun()
 
     except Exception as e:
 
@@ -1227,244 +1772,208 @@ def start_new_chat():
         )
 
 
-def make_chat_title(question):
+def clear_current_chat():
 
-    """
-    Creates a short title from the first question.
-    """
+    st.session_state.messages = []
 
-    title = question.strip()
-
-    if len(title) > 35:
-
-        title = (
-            title[:35].rsplit(" ", 1)[0]
-            + "..."
-        )
-
-    return title
+    st.session_state.last_processed_prompt = ""
 
 
-def auto_update_title(question):
+def logout_user():
 
-    """
-    Automatically rename the first/default chat
-    after the first real question.
-    """
+    st.session_state.logged_in = False
+
+    st.session_state.user_email = ""
+
+    st.session_state.user_id = None
+
+    st.session_state.session_id = None
+
+    st.session_state.messages = []
+
+    st.session_state.sessions = []
+
+    st.session_state.uploaded_files = []
+
+    st.session_state.drive_links = []
+
+    st.session_state.rename_session_id = None
+
+    st.session_state.processed_audio_hash = None
+
+    st.session_state.prompt_version += 1
+
+
+def load_chat(session_id):
+
+    if not session_id:
+        return
+
+    st.session_state.session_id = session_id
 
     try:
 
-        sessions = st.session_state.sessions
-
-        current_id = (
-            st.session_state.session_id
+        restored = restore_chat(
+            session_id
         )
 
-        current = None
+        if restored is None:
+            restored = []
 
-        for chat in sessions:
-
-            if chat.get("session_id") == current_id:
-
-                current = chat
-
-                break
-
-        if not current:
-            return
-
-        current_title = current.get(
-            "title",
-            ""
-        )
-
-        default_titles = {
-            "Quantum Learning",
-            "New Quantum Chat",
-            "New Chat",
-            "Untitled Chat",
-        }
-
-        if current_title in default_titles:
-
-            new_title = make_chat_title(
-                question
-            )
-
-            if new_title:
-
-                safe_rename_chat(
-                    current_id,
-                    new_title
-                )
-
-                refresh_sessions()
+        st.session_state.messages = restored
 
     except Exception:
 
-        # Title update must never break chat.
-
-        pass
+        st.session_state.messages = []
 
 
-def process_question(question):
+def process_query(user_query):
 
-    question = question.strip()
+    """
+    Send query to RAG engine.
+    """
 
-    if not question:
+    user_query = user_query.strip()
+
+    if not user_query:
         return
 
-    session_id = (
-        st.session_state.session_id
-    )
+    if not st.session_state.logged_in:
 
-    user_id = (
-        st.session_state.user_id
-    )
-
-    if not session_id:
-
-        st.error(
-            "No active chat session."
+        st.warning(
+            "Please log in first."
         )
 
         return
 
-    # --------------------------------------------------------
-    # USER MESSAGE
-    # --------------------------------------------------------
 
-    user_message = {
-        "sender": "user",
-        "content": question
-    }
+    # -----------------------------------------------------
+    # Create a chat if none exists
+    # -----------------------------------------------------
+
+    if st.session_state.session_id is None:
+
+        start_new_chat()
+
+
+    # -----------------------------------------------------
+    # User message
+    # -----------------------------------------------------
 
     st.session_state.messages.append(
-        user_message
+        {
+            "role": "user",
+            "content": user_query,
+        }
     )
 
-    # --------------------------------------------------------
-    # AUTO TITLE
-    # --------------------------------------------------------
 
-    if len(st.session_state.messages) == 1:
+    # -----------------------------------------------------
+    # RAG RESPONSE
+    # -----------------------------------------------------
 
-        auto_update_title(
-            question
+    try:
+
+        answer = answer_question(
+
+            query=user_query,
+
+            session_id=
+                st.session_state.session_id,
+
+            user_id=
+                st.session_state.user_id,
         )
 
-    # --------------------------------------------------------
-    # AI RESPONSE
-    # --------------------------------------------------------
+    except Exception as e:
 
-    with st.spinner(
-        "🧠 Quantum AI is thinking..."
-    ):
+        answer = (
+            "⚠️ I couldn't generate a response "
+            "right now.\n\n"
+            f"Error: `{str(e)}`"
+        )
 
-        try:
 
-            answer = answer_question(
-                query=question,
-                session_id=session_id,
-                user_id=user_id
-            )
-
-        except Exception as e:
-
-            answer = (
-                "⚠️ I couldn't process "
-                "your question right now.\n\n"
-                f"**Error:** `{str(e)}`"
-            )
-
-    # --------------------------------------------------------
-    # ASSISTANT MESSAGE
-    # --------------------------------------------------------
-
-    assistant_message = {
-        "sender": "assistant",
-        "content": answer
-    }
+    # -----------------------------------------------------
+    # Assistant
+    # -----------------------------------------------------
 
     st.session_state.messages.append(
-        assistant_message
+        {
+            "role": "assistant",
+            "content": answer,
+        }
     )
 
 
-# ============================================================
-# LOGIN SCREEN
-# ============================================================
+# =========================================================
+# CENTERED LOGIN SCREEN
+# =========================================================
 
 if not st.session_state.logged_in:
 
-    # Hide sidebar while logged out
-
     st.markdown(
         """
-<style>
-section[data-testid="stSidebar"] {
-    display: none !important;
-}
-</style>
-""",
-        unsafe_allow_html=True
+        <style>
+
+        section[data-testid="stSidebar"] {
+            display:none !important;
+        }
+
+        [data-testid="collapsedControl"] {
+            display:none !important;
+        }
+
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.markdown(
-        """
-<div class="login-page">
+    st.write("")
+    st.write("")
 
-    <div class="login-card">
-
-        <div class="login-logo">
-            ⚛️
-        </div>
-
-        <div class="login-title">
-            Quantum Lab
-        </div>
-
-        <div class="login-subtitle">
-            AI-Powered Learning Space
-        </div>
-
-    </div>
-
-</div>
-""",
-        unsafe_allow_html=True
+    left_col, center_col, right_col = st.columns(
+        [1,2,1]
     )
 
-    # --------------------------------------------------------
-    # LOGIN FORM
-    # --------------------------------------------------------
+    with center_col:
 
-    login_left, login_center, login_right = (
-        st.columns([1, 2, 1])
-    )
+        st.markdown("## ⚛️")
 
-    with login_center:
+        st.markdown("# QUANTUM LAB")
 
-        st.markdown(
-            "### 🔐 Account"
+        st.caption(
+            "AI-powered learning for Quantum Computing & Advanced Physics"
         )
+
+        st.divider()
+
+        st.markdown("### 🔐 Account Login")
 
         email = st.text_input(
             "Email",
             placeholder="student@example.com",
-            key="login_email"
+            label_visibility="collapsed",
+            key="login_email",
         )
 
-        if st.button(
-            "🔑 Log In",
-            use_container_width=True
-        ):
+        login_clicked = st.button(
+            "🔑  Enter Quantum Lab",
+            use_container_width=True,
+            key="center_login",
+        )
 
-            email = email.strip().lower()
+        st.caption(
+            "✦ Your AI learning workspace awaits ✦"
+        )
 
-            if not email:
+        if login_clicked:
 
-                st.error(
+            clean_email = email.strip()
+
+            if not clean_email:
+
+                st.warning(
                     "Please enter your email address."
                 )
 
@@ -1473,65 +1982,24 @@ section[data-testid="stSidebar"] {
                 try:
 
                     user_id = get_or_create_user(
-                        email
+                        clean_email
                     )
 
-                    sessions = get_user_sessions(
-                        user_id
-                    )
+                    st.session_state.user_email = clean_email
 
-                    if not sessions:
-
-                        session_id = (
-                            create_chat_session(
-                                user_id,
-                                "Quantum Learning"
-                            )
-                        )
-
-                        sessions = get_user_sessions(
-                            user_id
-                        )
-
-                    else:
-
-                        session_id = (
-                            sessions[0][
-                                "session_id"
-                            ]
-                        )
+                    st.session_state.user_id = user_id
 
                     st.session_state.logged_in = True
 
-                    st.session_state.user_email = (
-                        email
-                    )
-
-                    st.session_state.user_id = (
-                        user_id
-                    )
-
-                    st.session_state.session_id = (
-                        session_id
-                    )
-
-                    st.session_state.sessions = (
-                        sessions or []
-                    )
-
-                    st.session_state.sessions_loaded_for_user = (
-                        user_id
-                    )
-
-                    st.session_state.loaded_session_id = (
-                        None
-                    )
+                    st.session_state.session_id = None
 
                     st.session_state.messages = []
 
-                    st.toast(
-                        "✨ Login successful!"
-                    )
+                    st.session_state.sessions = []
+
+                    st.session_state.prompt_version += 1
+
+                    refresh_sessions()
 
                     st.rerun()
 
@@ -1541,645 +2009,629 @@ section[data-testid="stSidebar"] {
                         f"Login failed: {e}"
                     )
 
-    st.markdown(
-        """
-<div class="footer">
-    ⚛️ Quantum Lab • AI Tutor
-</div>
-""",
-        unsafe_allow_html=True
-    )
-
     st.stop()
 
 
-# ============================================================
+# =========================================================
 # SIDEBAR
-# ============================================================
+# =========================================================
 
 with st.sidebar:
 
-    # --------------------------------------------------------
-    # BRAND
-    # --------------------------------------------------------
-
-    st.markdown(
-        """
-<div class="sidebar-brand">
-
-    <div class="sidebar-logo">
-        ⚛️
-    </div>
-
-    <div class="sidebar-title">
-        QUANTUM LAB
-    </div>
-
-    <div class="sidebar-subtitle">
-        AI-Powered Learning Space
-    </div>
-
-</div>
-""",
-        unsafe_allow_html=True
-    )
-
-    # --------------------------------------------------------
-    # ACCOUNT
-    # --------------------------------------------------------
-
-    st.markdown("---")
-
-    st.markdown(
-        "🔐 **Account**"
-    )
+    st.markdown("## ⚛️ QUANTUM LAB")
 
     st.caption(
-        st.session_state.user_email
+        "AI-powered learning workspace"
     )
 
-    # --------------------------------------------------------
-    # NEW CHAT
-    # --------------------------------------------------------
+    st.markdown("---")
+
+    st.subheader("🔐 Account")
+
+    st.info(
+        f"👤 Logged in as\n\n**{st.session_state.user_email}**"
+    )
+
+    if st.button(
+        "🚪 Log Out",
+        use_container_width=True,
+        key="sidebar_logout",
+    ):
+
+        logout_user()
+
+        st.rerun()
+
 
     st.markdown("---")
+
+    st.subheader("💬 Chats")
 
     if st.button(
         "➕ New Chat",
-        use_container_width=True
+        use_container_width=True,
+        key="sidebar_new_chat",
     ):
 
         start_new_chat()
 
-    # --------------------------------------------------------
-    # REFRESH CHAT LIST ONLY WHEN NEEDED
-    # --------------------------------------------------------
-
-    if (
-        st.session_state.sessions_loaded_for_user
-        != st.session_state.user_id
-    ):
-
-        refresh_sessions()
-
-    sessions = st.session_state.sessions
-
-    # --------------------------------------------------------
-    # CHAT HISTORY
-    # --------------------------------------------------------
-
-    st.markdown("---")
-
-    st.markdown(
-        "### 💬 Your Chats"
-    )
-
-    if not sessions:
-
-        st.caption(
-            "No chats available."
-        )
-
-    for chat in sessions:
-
-        session_id = chat.get(
-            "session_id"
-        )
-
-        title = chat.get(
-            "title",
-            "Untitled Chat"
-        )
-
-        is_current = (
-            session_id
-            == st.session_state.session_id
-        )
-
-        if is_current:
-
-            label = (
-                f"🟣 {title}"
-            )
-
-        else:
-
-            label = (
-                f"💬 {title}"
-            )
-
-        if st.button(
-            label,
-            key=f"chat_{session_id}",
-            use_container_width=True
-        ):
-
-            st.session_state.session_id = (
-                session_id
-            )
-
-            st.session_state.loaded_session_id = (
-                None
-            )
-
-            st.rerun()
-
-    # --------------------------------------------------------
-    # RENAME
-    # --------------------------------------------------------
-
-    st.markdown("---")
-
-    with st.expander(
-        "✏️ Rename Current Chat"
-    ):
-
-        current_chat = None
-
-        for chat in sessions:
-
-            if (
-                chat.get("session_id")
-                == st.session_state.session_id
-            ):
-
-                current_chat = chat
-
-                break
-
-        if current_chat:
-
-            current_title = current_chat.get(
-                "title",
-                "Untitled Chat"
-            )
-
-            new_name = st.text_input(
-                "New chat name",
-                value=current_title,
-                key="rename_input"
-            )
-
-            if st.button(
-                "Save New Name",
-                use_container_width=True
-            ):
-
-                new_name = new_name.strip()
-
-                if not new_name:
-
-                    st.error(
-                        "Chat name cannot be empty."
-                    )
-
-                elif new_name == current_title:
-
-                    st.info(
-                        "This is already the current name."
-                    )
-
-                else:
-
-                    try:
-
-                        safe_rename_chat(
-                            st.session_state.session_id,
-                            new_name
-                        )
-
-                        refresh_sessions()
-
-                        st.toast(
-                            "✨ Chat renamed!"
-                        )
-
-                        st.rerun()
-
-                    except Exception as e:
-
-                        st.error(
-                            f"Rename failed: {e}"
-                        )
-
-        else:
-
-            st.info(
-                "Select a chat first."
-            )
-
-    # --------------------------------------------------------
-    # DELETE
-    # --------------------------------------------------------
-
-    st.markdown("---")
-
-    if st.button(
-        "🗑️ Delete Current Chat",
-        use_container_width=True
-    ):
-
-        try:
-
-            current_id = (
-                st.session_state.session_id
-            )
-
-            safe_delete_chat(
-                current_id
-            )
-
-            refresh_sessions()
-
-            if st.session_state.sessions:
-
-                st.session_state.session_id = (
-                    st.session_state.sessions[0][
-                        "session_id"
-                    ]
-                )
-
-            else:
-
-                new_id = create_chat_session(
-                    st.session_state.user_id,
-                    "Quantum Learning"
-                )
-
-                st.session_state.session_id = (
-                    new_id
-                )
-
-                refresh_sessions()
-
-            st.session_state.loaded_session_id = (
-                None
-            )
-
-            st.toast(
-                "🗑️ Chat deleted!"
-            )
-
-            st.rerun()
-
-        except Exception as e:
-
-            st.error(
-                f"Delete failed: {e}"
-            )
-
-    # --------------------------------------------------------
-    # CLEAR
-    # --------------------------------------------------------
-
-    if st.button(
-        "🧹 Clear Conversation",
-        use_container_width=True
-    ):
-
-        try:
-
-            current_id = (
-                st.session_state.session_id
-            )
-
-            safe_delete_chat(
-                current_id
-            )
-
-            new_id = create_chat_session(
-                st.session_state.user_id,
-                "New Quantum Chat"
-            )
-
-            st.session_state.session_id = (
-                new_id
-            )
-
-            st.session_state.messages = []
-
-            st.session_state.loaded_session_id = (
-                new_id
-            )
-
-            refresh_sessions()
-
-            st.toast(
-                "🧹 Conversation cleared!"
-            )
-
-            st.rerun()
-
-        except Exception as e:
-
-            st.error(
-                f"Could not clear conversation: {e}"
-            )
-
-    # --------------------------------------------------------
-    # LOGOUT
-    # --------------------------------------------------------
-
-    if st.button(
-        "🚪 Logout",
-        use_container_width=True
-    ):
-
-        st.session_state.logged_in = False
-
-        st.session_state.user_email = ""
-
-        st.session_state.user_id = None
-
-        st.session_state.session_id = None
-
-        st.session_state.messages = []
-
-        st.session_state.sessions = []
-
-        st.session_state.loaded_session_id = None
-
         st.rerun()
 
-    # --------------------------------------------------------
-    # LEARNING MODE CARD
-    # --------------------------------------------------------
 
-    st.markdown("---")
+    st.caption("CHAT HISTORY")
 
-    st.markdown(
-        """
-<div class="side-card">
 
-    <div class="side-card-title">
-        🧠 Learning Mode
-    </div>
+    if not st.session_state.sessions:
 
-    <div class="side-card-text">
-
-        Ask questions about:
-
-        <br><br>
-
-        ⚛️ Quantum Computing<br>
-        🔬 Physics<br>
-        💻 Programming<br>
-        🧮 Mathematics<br>
-        🧠 Artificial Intelligence<br>
-        📚 Data Structures<br>
-        🌐 General Knowledge
-
-    </div>
-
-</div>
-
-
-<div class="side-card">
-
-    <div class="side-card-title">
-        ✨ AI Tutor
-    </div>
-
-    <div class="side-card-text">
-
-        Ask naturally.
-
-        The tutor can explain concepts,
-        solve problems, analyze code,
-        simplify difficult topics and
-        answer general questions.
-
-    </div>
-
-</div>
-""",
-        unsafe_allow_html=True
-    )
-
-
-# ============================================================
-# LOAD CURRENT CHAT
-# ============================================================
-
-load_current_chat()
-
-
-# ============================================================
-# HERO
-# ============================================================
-
-st.markdown(
-    """
-<div class="hero-box">
-
-    <div class="hero-icon">
-        ⚛️
-    </div>
-
-    <div class="hero-title">
-        Quantum AI Tutor
-    </div>
-
-    <div class="hero-subtitle">
-        Explore ideas, solve problems and learn through conversation
-    </div>
-
-    <div class="online">
-        ● AI TUTOR ONLINE
-    </div>
-
-</div>
-""",
-    unsafe_allow_html=True
-)
-
-
-# ============================================================
-# WELCOME
-# ============================================================
-
-if not st.session_state.messages:
-
-    st.markdown(
-        """
-<div class="welcome-card">
-
-    <div class="welcome-title">
-        👋 Welcome to your Quantum Learning Space
-    </div>
-
-    <div class="welcome-text">
-
-        I'm your AI tutor.
-
-        Ask me to explain a concept,
-        solve a problem, explain code,
-        simplify a difficult topic,
-        or explore quantum computing
-        step by step.
-
-        <br><br>
-
-        🎙️ You can also use the microphone
-        to speak your question.
-
-    </div>
-
-</div>
-""",
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        "### 💡 Try asking"
-    )
-
-    example_col1, example_col2 = st.columns(2)
-
-    with example_col1:
-
-        if st.button(
-            "⚛️ What is a qubit?",
-            use_container_width=True
-        ):
-
-            st.session_state.pending_question = (
-                "What is a qubit?"
-            )
-
-            st.rerun()
-
-        if st.button(
-            "🌌 Explain quantum superposition",
-            use_container_width=True
-        ):
-
-            st.session_state.pending_question = (
-                "Explain quantum superposition"
-            )
-
-            st.rerun()
-
-    with example_col2:
-
-        if st.button(
-            "🔗 What is quantum entanglement?",
-            use_container_width=True
-        ):
-
-            st.session_state.pending_question = (
-                "What is quantum entanglement?"
-            )
-
-            st.rerun()
-
-        if st.button(
-            "🐣 Explain quantum computing like I'm a beginner",
-            use_container_width=True
-        ):
-
-            st.session_state.pending_question = (
-                "Explain quantum computing like I'm a beginner"
-            )
-
-            st.rerun()
-
-
-# ============================================================
-# DISPLAY CHAT
-# ============================================================
-
-for message in st.session_state.messages:
-
-    sender = message.get(
-        "sender",
-        "assistant"
-    )
-
-    content = message.get(
-        "content",
-        ""
-    )
-
-    if not content:
-        continue
-
-    if sender == "user":
-
-        with st.chat_message(
-            "user",
-            avatar="👩‍💻"
-        ):
-
-            st.markdown(
-                content
-            )
+        st.caption(
+            "No conversations yet."
+        )
 
     else:
 
-        with st.chat_message(
-            "assistant",
-            avatar="⚛️"
-        ):
+        for chat in st.session_state.sessions:
 
-            st.markdown(
-                content
+            # =================================================
+            # GET SESSION ID SAFELY
+            # =================================================
+
+            session_id = (
+                chat.get("session_id")
+                or chat.get("id")
+            )
+
+            if not session_id:
+                continue
+
+
+            # =================================================
+            # GET TITLE SAFELY
+            # =================================================
+
+            title = (
+                chat.get(
+                    "title",
+                    "Untitled Chat"
+                )
+                or "Untitled Chat"
+            )
+
+            title = str(title)
+
+
+            selected = (
+                session_id
+                == st.session_state.session_id
+            )
+
+            prefix = (
+                "🟣"
+                if selected
+                else "💬"
             )
 
 
-# ============================================================
-# PLUS POPUP
-# ============================================================
+            # =================================================
+            # CHAT ROW
+            # =================================================
+
+            col1, col2, col3 = st.columns(
+                [0.62,0.19,0.19],
+                gap="small"
+            )
+
+
+            # =================================================
+            # CHAT OPEN
+            # =================================================
+
+            with col1:
+
+                short_title = title
+
+                if len(short_title) > 22:
+
+                    short_title = (
+                        short_title[:22]
+                        + "..."
+                    )
+
+                if st.button(
+                    f"{prefix} {short_title}",
+                    key=f"chat_{session_id}",
+                    use_container_width=True,
+                ):
+
+                    load_chat(
+                        session_id
+                    )
+
+                    st.rerun()
+
+
+            # =================================================
+            # ✏️ RENAME BUTTON
+            # =================================================
+
+            with col2:
+
+                rename_clicked = st.button(
+                    "✏️",
+                    key=f"rename_{session_id}",
+                    help="Rename chat",
+                    use_container_width=True,
+                )
+
+                if rename_clicked:
+
+                    st.session_state.rename_session_id = (
+                        session_id
+                    )
+
+                    st.rerun()
+
+
+            # =================================================
+            # 🗑️ DELETE BUTTON
+            # =================================================
+
+            with col3:
+
+                delete_clicked = st.button(
+                    "🗑️",
+                    key=f"delete_{session_id}",
+                    help="Delete chat",
+                    use_container_width=True,
+                )
+
+                if delete_clicked:
+
+                    # -----------------------------------------
+                    # Validate session ID before deleting
+                    # -----------------------------------------
+
+                    if not session_id:
+
+                        st.error(
+                            "Unable to delete this chat because "
+                            "the chat ID is missing."
+                        )
+
+                    else:
+
+                        try:
+
+                            # ---------------------------------
+                            # Delete from database
+                            # ---------------------------------
+
+                            delete_chat(
+                                user_id=st.session_state.user_id,
+                                session_id=session_id,
+                            )
+
+                            # ---------------------------------
+                            # Only update local state after
+                            # successful database deletion.
+                            # ---------------------------------
+
+                            if (
+                                st.session_state.session_id
+                                == session_id
+                            ):
+
+                                st.session_state.session_id = None
+
+                                st.session_state.messages = []
+
+
+                            if (
+                                st.session_state.rename_session_id
+                                == session_id
+                            ):
+
+                                st.session_state.rename_session_id = None
+
+
+                            # ---------------------------------
+                            # Refresh database sessions
+                            # ---------------------------------
+
+                            refresh_sessions()
+
+                            # ---------------------------------
+                            # Refresh UI
+                            # ---------------------------------
+
+                            st.rerun()
+
+
+                        except Exception as e:
+
+                            st.error(
+                                f"Delete failed: {e}"
+                            )
+
+
+            # =================================================
+            # ✏️ RENAME PANEL
+            # =================================================
+
+            if (
+                st.session_state.rename_session_id
+                == session_id
+            ):
+
+                st.markdown(
+                    "<div style='height:4px'></div>",
+                    unsafe_allow_html=True,
+                )
+
+                new_title = st.text_input(
+                    "New chat name",
+                    value=title,
+                    key=f"title_input_{session_id}",
+                    label_visibility="collapsed",
+                    placeholder="Enter new chat name",
+                )
+
+
+                rename_col1, rename_col2 = st.columns(
+                    [1, 1],
+                    gap="small"
+                )
+
+
+                # =================================================
+                # SAVE RENAME
+                # =================================================
+
+                with rename_col1:
+
+                    if st.button(
+                        "✓ Save",
+                        key=f"save_name_{session_id}",
+                        use_container_width=True,
+                    ):
+
+                        clean_title = (
+                            new_title.strip()
+                        )
+
+
+                        if not clean_title:
+
+                            st.warning(
+                                "Chat name cannot be empty."
+                            )
+
+                        elif len(clean_title) > 80:
+
+                            st.warning(
+                                "Chat name is too long. "
+                                "Please keep it under 80 characters."
+                            )
+
+                        else:
+
+                            try:
+
+                                # -----------------------------
+                                # Rename in database
+                                # -----------------------------
+
+                                rename_chat(
+                                    user_id=st.session_state.user_id,
+                                    session_id=session_id,
+                                    new_title=clean_title,
+                                )
+
+                                # -----------------------------
+                                # Close rename panel only
+                                # after successful rename
+                                # -----------------------------
+
+                                st.session_state.rename_session_id = None
+
+                                # -----------------------------
+                                # Refresh chat list
+                                # -----------------------------
+
+                                refresh_sessions()
+
+                                st.rerun()
+
+
+                            except Exception as e:
+
+                                st.error(
+                                    f"Rename failed: {e}"
+                                )
+
+
+                # =================================================
+                # CANCEL RENAME
+                # =================================================
+
+                with rename_col2:
+
+                    if st.button(
+                        "✕ Cancel",
+                        key=f"cancel_name_{session_id}",
+                        use_container_width=True,
+                    ):
+
+                        st.session_state.rename_session_id = None
+
+                        st.rerun()
+
+
+    st.markdown("---")
+
+
+    if st.button(
+        "🧹 Clear Conversation",
+        use_container_width=True,
+        key="sidebar_clear_chat",
+    ):
+
+        clear_current_chat()
+
+        st.rerun()
+
+
+    if st.session_state.session_id:
+
+        st.markdown("---")
+
+        st.caption(
+            "Current Chat ID:"
+        )
+
+        st.code(
+            str(
+                st.session_state.session_id
+            ),
+            language=None
+        )
+
+
+# =========================================================
+# MAIN HEADER
+# =========================================================
 
 st.markdown(
-    '<div class="prompt-zone">',
-    unsafe_allow_html=True
+    "# ⚛️ QUANTUM LAB"
 )
 
+st.caption(
+    "Interactive AI Tutor for Quantum Computing & Advanced Physics"
+)
 
-# ============================================================
-# PROMPT ROW
-# ============================================================
+st.markdown(
+    "**● AI TUTOR ONLINE**"
+)
 
-plus_col, prompt_col, think_col, mic_col, send_col = (
-    st.columns(
-        [0.075, 0.59, 0.13, 0.095, 0.075],
-        gap="small"
+st.divider()
+
+
+# =========================================================
+# CURRENT CHAT TITLE
+# =========================================================
+
+if st.session_state.session_id:
+
+    current_title = "New Chat"
+
+    for chat in st.session_state.sessions:
+
+        sid = (
+            chat.get("session_id")
+            or chat.get("id")
+        )
+
+        if sid == st.session_state.session_id:
+
+            current_title = (
+                chat.get(
+                    "title",
+                    "New Chat"
+                )
+            )
+
+            break
+
+
+    st.caption(
+        f"💬 {current_title}"
     )
-)
 
 
-# ============================================================
-# PLUS BUTTON / POPUP
-# ============================================================
+# =========================================================
+# DISPLAY CHAT
+# =========================================================
 
-with plus_col:
+for message in st.session_state.messages:
 
-    with st.popover(
-        "＋",
-        use_container_width=True
+    with st.chat_message(
+        message["role"]
     ):
 
         st.markdown(
-            "### Add to your question"
+            message["content"]
         )
+
+
+# =========================================================
+# CANVAS
+# =========================================================
+
+if st.session_state.show_canvas:
+
+    st.subheader(
+        "🎨 Canvas Workbench"
+    )
+
+    st.caption(
+        "Create quantum notes, equations, diagrams and ideas."
+    )
+
+    canvas_text = st.text_area(
+        "Canvas",
+        placeholder=
+            "Write your quantum notes, equations or ideas...",
+        height=220,
+        key="canvas_text",
+    )
+
+    canvas_col1, canvas_col2 = st.columns(2)
+
+
+    with canvas_col1:
+
+        if st.button(
+            "💾 Save Canvas",
+            use_container_width=True,
+            key="save_canvas",
+        ):
+
+            st.success(
+                "Canvas saved for this session."
+            )
+
+
+    with canvas_col2:
+
+        if st.button(
+            "✖ Close Canvas",
+            use_container_width=True,
+            key="close_canvas",
+        ):
+
+            st.session_state.show_canvas = False
+
+            st.rerun()
+
+
+# =========================================================
+# NOTES
+# =========================================================
+
+if st.session_state.show_notes:
+
+    st.subheader(
+        "📝 Quantum Notes"
+    )
+
+    st.text_area(
+        "Notes",
+        placeholder=
+            "Write your important concepts here...",
+        height=200,
+        key="notes_text",
+    )
+
+
+# =========================================================
+# QUANTUM CALCULATOR
+# =========================================================
+
+if st.session_state.show_calculator:
+
+    st.subheader(
+        "🧮 Quantum Calculator"
+    )
+
+    st.caption(
+        "Calculate quantum expressions, probabilities and basic formulas."
+    )
+
+    calc_expression = st.text_input(
+        "Expression",
+        placeholder=
+            "Example: 0.5 + 0.25",
+        key="calculator_expression",
+    )
+
+    if st.button(
+        "Calculate",
+        key="calculate_button",
+    ):
+
+        try:
+
+            result = float(
+                calc_expression
+            )
+
+            st.success(
+                f"Result: {result}"
+            )
+
+        except Exception:
+
+            st.info(
+                "Enter a valid numeric expression."
+            )
+
+
+# =========================================================
+# PROMPT AREA
+# =========================================================
+
+st.caption(
+    "ASK YOUR QUANTUM AI TUTOR"
+)
+
+
+# =========================================================
+# PROMPT ROW
+# =========================================================
+
+prompt_col1, prompt_col2, prompt_col3, prompt_col4, prompt_col5 = st.columns(
+    [0.07, 0.52, 0.14, 0.13, 0.07],
+
+    gap="small",
+
+    vertical_alignment="center",
+)
+
+
+# =========================================================
+# PLUS POPUP
+# =========================================================
+
+with prompt_col1:
+
+    with st.popover(
+        "＋",
+        use_container_width=True,
+    ):
+
+        st.markdown(
+            "### Tools & Attachments"
+        )
+
 
         tab1, tab2, tab3 = st.tabs(
             [
                 "📁 Photos & Files",
-                "☁️ Google Drive",
-                "🛠️ More Tools"
+                "☁️ Drive",
+                "🛠️ More Tools",
             ]
         )
 
-        # ----------------------------------------------------
+
+        # =================================================
         # FILES
-        # ----------------------------------------------------
+        # =================================================
 
         with tab1:
 
-            uploaded_files = st.file_uploader(
-                "Upload files",
+            uploaded = st.file_uploader(
+
+                "Upload photos or files",
+
                 type=[
                     "png",
                     "jpg",
@@ -2192,545 +2644,493 @@ with plus_col:
                     "xlsx",
                     "py",
                     "java",
-                    "c"
+                    "c",
                 ],
+
                 accept_multiple_files=True,
-                key="file_uploader"
+
+                key=
+                    "quantum_attachments",
+
             )
 
-            if uploaded_files:
 
-                st.session_state.uploaded_files = [
-                    file.name
-                    for file in uploaded_files
-                ]
+            if uploaded:
 
-                st.success(
-                    f"{len(uploaded_files)} file(s) attached."
+                st.session_state.uploaded_files = (
+                    uploaded
                 )
 
-        # ----------------------------------------------------
+
+                st.success(
+                    f"{len(uploaded)} file(s) attached"
+                )
+
+
+                for file in uploaded:
+
+                    st.caption(
+                        f"📎 {file.name}"
+                    )
+
+
+        # =================================================
         # GOOGLE DRIVE
-        # ----------------------------------------------------
+        # =================================================
 
         with tab2:
 
-            drive_link = st.text_input(
-                "Google Drive link",
-                placeholder="Paste Drive file link",
-                key="drive_link"
+            st.markdown(
+                "### ☁️ Google Drive"
             )
 
+            st.caption(
+                "Attach a Google Drive file link."
+            )
+
+
+            drive_url = st.text_input(
+
+                "Drive file link",
+
+                placeholder=
+                    "Paste Google Drive link",
+
+                key=
+                    "drive_url",
+
+            )
+
+
             if st.button(
+
                 "Attach Drive File",
-                use_container_width=True
+
+                use_container_width=True,
+
+                key=
+                    "attach_drive",
+
             ):
 
-                if drive_link.strip():
+                clean_drive_url = (
+                    drive_url.strip()
+                )
 
-                    st.session_state.drive_links.append(
-                        drive_link.strip()
-                    )
+
+                if clean_drive_url:
+
+                    if (
+                        clean_drive_url
+                        not in st.session_state.drive_links
+                    ):
+
+                        st.session_state.drive_links.append(
+                            clean_drive_url
+                        )
+
 
                     st.success(
-                        "☁️ Drive link attached."
+                        "Google Drive link attached."
                     )
 
                 else:
 
                     st.warning(
-                        "Please enter a Drive link."
+                        "Please paste a Drive link."
                     )
 
-        # ----------------------------------------------------
+
+        # =================================================
         # MORE TOOLS
-        # ----------------------------------------------------
+        # =================================================
 
         with tab3:
 
             st.markdown(
-                "#### 🛠️ Tools"
+                "### 🛠️ More Tools"
             )
 
-            tool1, tool2 = st.columns(2)
 
-            with tool1:
+            if st.button(
 
-                if st.button(
-                    "🎨 Canvas",
-                    use_container_width=True
-                ):
+                "🎨 Canvas",
 
-                    st.session_state.show_canvas = True
+                use_container_width=True,
 
-                if st.button(
-                    "📚 Learning Mode",
-                    use_container_width=True
-                ):
+                key=
+                    "tool_canvas",
 
-                    st.session_state.show_learning = (
-                        not st.session_state.show_learning
+            ):
+
+                st.session_state.show_canvas = True
+
+                st.rerun()
+
+
+            if st.button(
+
+                "🧮 Quantum Calculator",
+
+                use_container_width=True,
+
+                key=
+                    "tool_calculator",
+
+            ):
+
+                st.session_state.show_calculator = True
+
+                st.rerun()
+
+
+            if st.button(
+
+                "📚 Learning Mode",
+
+                use_container_width=True,
+
+                key=
+                    "tool_learning",
+
+            ):
+
+                st.session_state.learning_mode = True
+
+                st.success(
+                    "Learning Mode activated!"
+                )
+
+
+            if st.button(
+
+                "📝 Notes",
+
+                use_container_width=True,
+
+                key=
+                    "tool_notes",
+
+            ):
+
+                st.session_state.show_notes = True
+
+                st.rerun()
+
+
+# =========================================================
+# MICROPHONE PROCESSING
+# =========================================================
+
+with prompt_col4:
+
+    audio_value = st.audio_input(
+
+        "🎙️",
+
+        key=
+            f"quantum_microphone_{st.session_state.audio_version}",
+
+        label_visibility="collapsed",
+
+    )
+
+
+if audio_value is not None:
+
+    try:
+
+        audio_bytes = (
+            audio_value.getvalue()
+        )
+
+
+        if audio_bytes:
+
+            audio_hash = hashlib.md5(
+                audio_bytes
+            ).hexdigest()
+
+
+            if (
+                st.session_state.processed_audio_hash
+                != audio_hash
+            ):
+
+                st.session_state.processed_audio_hash = (
+                    audio_hash
+                )
+
+
+                if not SPEECH_RECOGNITION_AVAILABLE:
+
+                    st.session_state.voice_error = (
+                        "SpeechRecognition is not installed. "
+                        "Run: python -m pip install SpeechRecognition"
                     )
 
-            with tool2:
+                else:
 
-                if st.button(
-                    "🧮 Quantum Calculator",
-                    use_container_width=True
-                ):
+                    recognizer = sr.Recognizer()
 
-                    st.session_state.show_calculator = True
-
-                if st.button(
-                    "📝 Notes",
-                    use_container_width=True
-                ):
-
-                    st.session_state.show_notes = True
+                    audio_stream = io.BytesIO(
+                        audio_bytes
+                    )
 
 
-# ============================================================
-# VOICE INPUT
-# ============================================================
+                    with sr.AudioFile(
+                        audio_stream
+                    ) as source:
 
-voice_result = None
+                        recorded_audio = (
+                            recognizer.record(
+                                source
+                            )
+                        )
 
-with mic_col:
 
-    if VOICE_AVAILABLE:
+                    try:
 
-        voice_result = speech_to_text(
-            language="en-IN",
-            start_prompt="🎙️",
-            stop_prompt="⏹️",
-            just_once=True,
-            use_container_width=False,
-            key="quantum_voice_input"
+                        voice_query = (
+                            recognizer.recognize_google(
+                                recorded_audio,
+                                language="en-IN",
+                                show_all=False,
+                            )
+                        )
+
+
+                        if (
+                            voice_query
+                            and voice_query.strip()
+                        ):
+
+                            st.session_state.voice_error = None
+
+                            st.session_state.prompt_seed = (
+                                voice_query.strip()
+                            )
+
+                            st.session_state.prompt_version += 1
+
+                            st.session_state.audio_version += 1
+
+                            st.rerun()
+
+
+                    except sr.UnknownValueError:
+
+                        st.session_state.voice_error = (
+                            "I couldn't understand the recording. Please try again."
+                        )
+
+
+                    except sr.RequestError as e:
+
+                        st.session_state.voice_error = (
+                            f"Speech service error: {e}"
+                        )
+
+
+    except Exception as e:
+
+        st.session_state.voice_error = (
+            f"Microphone transcription failed: {e}"
+        )
+
+
+# =========================================================
+# TEXT PROMPT
+# =========================================================
+
+with prompt_col2:
+
+    current_prompt_key = (
+        f"custom_prompt_{st.session_state.prompt_version}"
+    )
+
+
+    with st.form(
+
+        key=
+            f"prompt_form_{st.session_state.prompt_version}",
+
+        clear_on_submit=False,
+
+        border=False,
+
+    ):
+
+        user_prompt = st.text_input(
+
+            "Message",
+
+            value=
+                st.session_state.prompt_seed,
+
+            placeholder=
+                "Ask anything about quantum computing...",
+
+            label_visibility="collapsed",
+
+            key=
+                current_prompt_key,
+
+        )
+
+
+        enter_submitted = st.form_submit_button(
+
+            "Submit",
+
+            key=
+                f"enter_submit_{st.session_state.prompt_version}",
+
+        )
+
+
+        st.session_state.prompt_seed = ""
+
+
+# =========================================================
+# THINK BUTTON
+# =========================================================
+
+with prompt_col3:
+
+    think_clicked = st.button(
+
+        "🧠 Think",
+
+        use_container_width=True,
+
+        key="think_button",
+
+    )
+
+
+# =========================================================
+# SEND BUTTON
+# =========================================================
+
+with prompt_col5:
+
+    send_clicked = st.button(
+
+        "↑",
+
+        use_container_width=True,
+
+        key="send_button",
+
+        help="Send message",
+
+    )
+
+
+# =========================================================
+# VOICE ERROR
+# =========================================================
+
+if st.session_state.voice_error:
+
+    st.warning(
+        st.session_state.voice_error
+    )
+
+    st.session_state.voice_error = None
+
+
+# =========================================================
+# ATTACHMENTS
+# =========================================================
+
+if st.session_state.uploaded_files:
+
+    st.markdown(
+        "### 📎 Attached Files"
+    )
+
+
+    for file in st.session_state.uploaded_files:
+
+        st.caption(
+            f"• {file.name}"
+        )
+
+
+if st.session_state.drive_links:
+
+    st.markdown(
+        "### ☁️ Attached Drive Files"
+    )
+
+
+    for link in st.session_state.drive_links:
+
+        st.caption(
+            f"• {link}"
+        )
+
+
+# =========================================================
+# LEARNING MODE
+# =========================================================
+
+if st.session_state.learning_mode:
+
+    st.info(
+        "📚 Learning Mode is active. "
+        "The AI Tutor will focus on step-by-step explanations."
+    )
+
+
+# =========================================================
+# FINAL QUERY
+# =========================================================
+
+final_query = ""
+
+
+if (
+    enter_submitted
+    or send_clicked
+    or think_clicked
+):
+
+    if user_prompt.strip():
+
+        final_query = (
+            user_prompt.strip()
         )
 
     else:
 
-        st.markdown(
-            "🎙️"
+        st.warning(
+            "Please enter a question or use the microphone."
         )
 
 
-# ============================================================
-# HANDLE VOICE RESULT BEFORE PROMPT WIDGET
-# ============================================================
+# =========================================================
+# EXECUTE RAG
+# =========================================================
 
-if (
-    voice_result
-    and voice_result.strip()
-):
+if final_query:
 
-    voice_result = voice_result.strip()
-
-    # Only process genuinely new recognition result
-
-    if voice_result != st.session_state.last_voice_text:
-
-        st.session_state.last_voice_text = (
-            voice_result
-        )
-
-        st.session_state.voice_text = (
-            voice_result
-        )
-
-        # Important:
-        # create a NEW prompt widget key.
-        #
-        # We do NOT do:
-        #
-        # st.session_state.custom_prompt = ...
-        #
-        # after the widget has been created.
-        #
-        # This completely avoids the
-        # StreamlitWidgetAlreadyInstantiatedError.
-
-        st.session_state.prompt_seed = (
-            voice_result
-        )
-
-        st.session_state.prompt_nonce += 1
-
-        st.rerun()
-
-
-# ============================================================
-# PROMPT INPUT
-# ============================================================
-
-with prompt_col:
-
-    prompt_key = (
-        f"custom_prompt_{st.session_state.prompt_nonce}"
-    )
-
-    prompt_value = (
-        st.session_state.prompt_seed
-    )
-
-    # Consume the seed BEFORE widget creation
-
-    st.session_state.prompt_seed = ""
-
-    user_prompt = st.text_input(
-        "Ask anything",
-        value=prompt_value,
-        placeholder="Ask anything about quantum computing...",
-        label_visibility="collapsed",
-        key=prompt_key
+    process_query(
+        final_query
     )
 
 
-# ============================================================
-# THINK BUTTON
-# ============================================================
+    # -----------------------------------------------------
+    # Create a fresh prompt widget.
+    # -----------------------------------------------------
 
-with think_col:
+    st.session_state.prompt_version += 1
 
-    think_label = (
-        "🧠 Think ON"
-        if st.session_state.think_mode
-        else "🧠 Think"
-    )
 
-    if st.button(
-        think_label,
-        use_container_width=True
-    ):
-
-        st.session_state.think_mode = (
-            not st.session_state.think_mode
-        )
-
-        st.rerun()
-
-
-# ============================================================
-# SEND BUTTON
-# ============================================================
-
-with send_col:
-
-    st.markdown(
-        '<div class="send-column-marker"></div>',
-        unsafe_allow_html=True
-    )
-
-    send_clicked = st.button(
-        "↑",
-        key="send_question",
-        help="Send message"
-    )
-
-
-st.markdown(
-    "</div>",
-    unsafe_allow_html=True
-)
-
-
-# ============================================================
-# VOICE STATUS
-# ============================================================
-
-if (
-    st.session_state.voice_text
-    and not user_prompt.strip()
-):
-
-    st.info(
-        "🎙️ Voice recognized. Your text is ready in the prompt."
-    )
-
-
-# ============================================================
-# CANVAS
-# ============================================================
-
-if st.session_state.show_canvas:
-
-    st.markdown(
-        """
-<div class="tool-card">
-
-    <div class="tool-title">
-        🎨 Quantum Canvas
-    </div>
-
-    <div class="tool-description">
-        Write ideas, formulas, notes or circuit descriptions.
-    </div>
-
-</div>
-""",
-        unsafe_allow_html=True
-    )
-
-    canvas_text = st.text_area(
-        "Canvas",
-        placeholder="Write or sketch your thoughts here...",
-        height=180,
-        key="canvas_text"
-    )
-
-    canvas_col1, canvas_col2 = st.columns(2)
-
-    with canvas_col1:
-
-        if st.button(
-            "💾 Save Canvas",
-            use_container_width=True
-        ):
-
-            st.toast(
-                "Canvas saved for this session."
-            )
-
-    with canvas_col2:
-
-        if st.button(
-            "✕ Close Canvas",
-            use_container_width=True
-        ):
-
-            st.session_state.show_canvas = False
-
-            st.rerun()
-
-
-# ============================================================
-# QUANTUM CALCULATOR
-# ============================================================
-
-if st.session_state.show_calculator:
-
-    st.markdown(
-        """
-<div class="tool-card">
-
-    <div class="tool-title">
-        🧮 Quantum Calculator
-    </div>
-
-    <div class="tool-description">
-        Use the AI tutor for quantum formulas,
-        probabilities, amplitudes and calculations.
-    </div>
-
-</div>
-""",
-        unsafe_allow_html=True
-    )
-
-    calculator_expression = st.text_input(
-        "Expression",
-        placeholder="Example: 2**3 + 5",
-        key="calculator_expression"
-    )
-
-    if st.button(
-        "Calculate",
-        use_container_width=True
-    ):
-
-        try:
-
-            # Simple safe calculator
-
-            allowed = set(
-                "0123456789+-*/().% "
-            )
-
-            if not set(
-                calculator_expression
-            ).issubset(allowed):
-
-                st.error(
-                    "Only basic mathematical operators are allowed."
-                )
-
-            else:
-
-                result = eval(
-                    calculator_expression,
-                    {
-                        "__builtins__": {}
-                    },
-                    {}
-                )
-
-                st.success(
-                    f"Result: {result}"
-                )
-
-        except Exception:
-
-            st.error(
-                "Please enter a valid expression."
-            )
-
-
-# ============================================================
-# LEARNING MODE
-# ============================================================
-
-if st.session_state.show_learning:
-
-    st.markdown(
-        """
-<div class="tool-card">
-
-    <div class="tool-title">
-        📚 Learning Mode
-    </div>
-
-    <div class="tool-description">
-
-        Try asking:
-
-        <br><br>
-
-        • Explain this like I'm a beginner<br>
-        • Give me an example<br>
-        • Quiz me on this topic<br>
-        • Give me viva questions<br>
-        • Explain step by step<br>
-        • Give me exam-important points
-
-    </div>
-
-</div>
-""",
-        unsafe_allow_html=True
-    )
-
-
-# ============================================================
-# NOTES
-# ============================================================
-
-if st.session_state.show_notes:
-
-    st.markdown(
-        """
-<div class="tool-card">
-
-    <div class="tool-title">
-        📝 Quick Notes
-    </div>
-
-</div>
-""",
-        unsafe_allow_html=True
-    )
-
-    st.session_state.notes = st.text_area(
-        "Your notes",
-        value=st.session_state.notes,
-        height=180,
-        placeholder="Write your notes here...",
-        key="notes_area"
-    )
-
-
-# ============================================================
-# EXAMPLE / PENDING QUESTION
-# ============================================================
-
-if st.session_state.pending_question:
-
-    question = (
-        st.session_state.pending_question
-    )
-
-    st.session_state.pending_question = None
-
-    process_question(
-        question
-    )
-
-    st.session_state.prompt_nonce += 1
-
-    st.session_state.voice_text = ""
-
-    st.session_state.last_voice_text = ""
+    # -----------------------------------------------------
+    # Rerun once so the new message appears immediately.
+    # -----------------------------------------------------
 
     st.rerun()
-
-
-# ============================================================
-# SEND QUESTION
-# ============================================================
-
-final_question = ""
-
-if send_clicked:
-
-    final_question = (
-        user_prompt.strip()
-    )
-
-elif user_prompt.strip():
-
-    # Enter can submit the text input
-
-    # Streamlit reruns when Enter is pressed.
-
-    # We intentionally don't automatically submit
-    # on every rerun caused by other controls.
-
-    pass
-
-
-if final_question:
-
-    process_question(
-        final_question
-    )
-
-    # Clear prompt safely by changing widget key
-
-    st.session_state.prompt_nonce += 1
-
-    st.session_state.voice_text = ""
-
-    st.session_state.last_voice_text = ""
-
-    st.session_state.prompt_seed = ""
-
-    st.rerun()
-
-
-# ============================================================
-# VOICE HELP
-# ============================================================
-
-if not VOICE_AVAILABLE:
-
-    st.warning(
-        "🎙️ Voice input requires "
-        "`streamlit-mic-recorder`. "
-        "Run: `python -m pip install streamlit-mic-recorder`"
-    )
-
-
-# ============================================================
-# FOOTER
-# ============================================================
-
-st.markdown(
-    """
-<div class="footer">
-
-    ⚛️ Quantum Lab AI Tutor
-    • Learn • Explore • Solve
-
-</div>
-""",
-    unsafe_allow_html=True
-)

@@ -64,9 +64,9 @@ html, body {
     color: #ffffff;
 }
 
-/* Add bottom spacing to prevent messages from being covered */
+/* Add bottom padding so chat history isn't obscured by the bottom input bar */
 .main .block-container {
-    padding-bottom: 140px !important;
+    padding-bottom: 160px !important;
 }
 
 /* Sidebar Styling */
@@ -136,13 +136,13 @@ html, body {
     color: #ffffff;
 }
 
-/* Target Column Container to Pin Input Bar at Bottom (ChatGPT / Gemini Style) */
+/* FIX: Target Column Container to Pin Prompt Input Bar strictly at Bottom */
 div[data-testid="stHorizontalBlock"]:has(div[key="custom_input_photos"]) {
     position: fixed !important;
     bottom: 24px !important;
-    left: 50% !important;
+    left: calc(50% + 120px) !important;
     transform: translateX(-50%) !important;
-    width: min(850px, 90vw) !important;
+    width: min(850px, 75vw) !important;
     z-index: 999999 !important;
     background: rgba(18, 22, 45, 0.95) !important;
     border: 1px solid rgba(120, 105, 255, 0.45) !important;
@@ -154,9 +154,15 @@ div[data-testid="stHorizontalBlock"]:has(div[key="custom_input_photos"]) {
     align-items: center !important;
 }
 
-/* Vertical Center Column Elements */
+/* Adjust position when sidebar is collapsed */
+[data-testid="stSidebar"][aria-expanded="false"] ~ .main div[data-testid="stHorizontalBlock"]:has(div[key="custom_input_photos"]) {
+    left: 50% !important;
+    width: min(850px, 90vw) !important;
+}
+
+/* Vertical Alignment for Inner Columns */
 div[data-testid="stHorizontalBlock"]:has(div[key="custom_input_photos"]) > div[data-testid="column"] {
-    display: flex !alignment;
+    display: flex !important;
     align-items: center !important;
     justify-content: center !important;
 }
@@ -186,7 +192,7 @@ div[data-testid="stHorizontalBlock"]:has(div[key="custom_input_photos"]) > div[d
     color: #7f89aa !important;
 }
 
-/* Circular Minimalist Buttons for Popovers */
+/* Circular Buttons for Popovers */
 .stPopover button {
     border-radius: 50% !important;
     background: rgba(30, 35, 70, 0.75) !important;

@@ -1,4 +1,21 @@
 import streamlit as st
+import io
+
+# =========================================================
+# OPTIONAL MICROPHONE / SPEECH RECOGNITION
+# =========================================================
+
+try:
+    import speech_recognition as sr
+    SPEECH_RECOGNITION_AVAILABLE = True
+except ImportError:
+    SPEECH_RECOGNITION_AVAILABLE = False
+
+
+# =========================================================
+# YOUR EXISTING RAG + DATABASE IMPORTS
+# DO NOT CHANGE
+# =========================================================
 
 from rag_engine import (
     answer_question,
@@ -45,9 +62,15 @@ if "messages" not in st.session_state:
 if "sessions" not in st.session_state:
     st.session_state.sessions = []
 
-# Frontend-only attachment state
+# ---------------------------------------------------------
+# FRONTEND ONLY
+# ---------------------------------------------------------
+
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
+
+if "last_audio_id" not in st.session_state:
+    st.session_state.last_audio_id = None
 
 
 # =========================================================
@@ -59,40 +82,58 @@ st.markdown(
     <style>
 
     /* =====================================================
-       GLOBAL
+       GOOGLE FONTS
        ===================================================== */
 
     @import url(
         'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap'
     );
 
-    html, body, [class*="css"] {
-        font-family: "Inter", sans-serif;
+
+    /* =====================================================
+       GLOBAL
+       ===================================================== */
+
+    html,
+    body,
+    [class*="css"] {
+
+        font-family:
+            "Inter",
+            sans-serif;
     }
 
+
     .stApp {
+
         background:
             radial-gradient(
-                circle at 8% 12%,
+                circle at 10% 10%,
                 rgba(99,102,241,0.20),
-                transparent 26%
+                transparent 27%
             ),
+
             radial-gradient(
-                circle at 92% 10%,
+                circle at 90% 12%,
                 rgba(6,182,212,0.14),
-                transparent 24%
+                transparent 25%
             ),
+
             radial-gradient(
-                circle at 78% 80%,
-                rgba(139,92,246,0.15),
-                transparent 28%
+                circle at 78% 82%,
+                rgba(139,92,246,0.18),
+                transparent 30%
             ),
+
             linear-gradient(
                 135deg,
                 #020617 0%,
-                #070b20 48%,
+                #080b24 48%,
                 #020617 100%
             );
+
+        min-height:
+            100vh;
     }
 
 
@@ -101,82 +142,120 @@ st.markdown(
        ===================================================== */
 
     .stApp::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
+
+        content:
+            "";
+
+        position:
+            fixed;
+
+        inset:
+            0;
+
+        pointer-events:
+            none;
 
         background-image:
+
             linear-gradient(
-                rgba(148,163,184,0.025) 1px,
+                rgba(129,140,248,0.025) 1px,
                 transparent 1px
             ),
+
             linear-gradient(
                 90deg,
-                rgba(148,163,184,0.025) 1px,
+                rgba(129,140,248,0.025) 1px,
                 transparent 1px
             );
 
-        background-size: 55px 55px;
+        background-size:
+            55px 55px;
 
-        z-index: 0;
+        z-index:
+            0;
     }
 
 
     /* =====================================================
-       GLOWING STARS
+       STAR FIELD
        ===================================================== */
 
-    .stApp::after {
-        content:
-            "✦     ·       ✧          ·     ✦       ·        ✧"
-            "       ·      ✦         ·          ✧      ·"
-            "   ✧        ·       ✦       ·       ✧        ·"
-            "       ·          ✦       ·       ✧       ·";
+    .quantum-stars {
 
-        position: fixed;
+        position:
+            fixed;
 
-        top: 0;
-        left: 0;
+        inset:
+            0;
 
-        width: 100%;
-        height: 100%;
+        pointer-events:
+            none;
 
-        pointer-events: none;
+        overflow:
+            hidden;
 
-        color: rgba(196,181,253,0.35);
-
-        font-size: 15px;
-
-        line-height: 85px;
-
-        letter-spacing: 45px;
-
-        overflow: hidden;
-
-        opacity: 0.45;
-
-        text-shadow:
-            0 0 8px rgba(167,139,250,0.8),
-            0 0 18px rgba(99,102,241,0.4);
-
-        z-index: 0;
-
-        animation: starsMove 12s linear infinite;
+        z-index:
+            0;
     }
 
-    @keyframes starsMove {
 
-        0% {
-            transform: translateY(0);
+    .star {
+
+        position:
+            absolute;
+
+        color:
+            #ddd6fe;
+
+        font-size:
+            9px;
+
+        opacity:
+            0.45;
+
+        text-shadow:
+            0 0 6px rgba(196,181,253,0.9),
+            0 0 15px rgba(99,102,241,0.8);
+
+        animation:
+            twinkle 3s ease-in-out infinite;
+    }
+
+
+    .star:nth-child(1)  { left: 4%;  top: 12%; animation-delay: .2s; }
+    .star:nth-child(2)  { left: 11%; top: 30%; animation-delay: 1.4s; }
+    .star:nth-child(3)  { left: 18%; top: 68%; animation-delay: .8s; }
+    .star:nth-child(4)  { left: 27%; top: 18%; animation-delay: 2s; }
+    .star:nth-child(5)  { left: 35%; top: 42%; animation-delay: .5s; }
+    .star:nth-child(6)  { left: 43%; top: 10%; animation-delay: 1.7s; }
+    .star:nth-child(7)  { left: 51%; top: 72%; animation-delay: .9s; }
+    .star:nth-child(8)  { left: 59%; top: 28%; animation-delay: 2.3s; }
+    .star:nth-child(9)  { left: 66%; top: 55%; animation-delay: .4s; }
+    .star:nth-child(10) { left: 73%; top: 15%; animation-delay: 1.2s; }
+    .star:nth-child(11) { left: 81%; top: 39%; animation-delay: 2.1s; }
+    .star:nth-child(12) { left: 88%; top: 74%; animation-delay: .7s; }
+    .star:nth-child(13) { left: 94%; top: 22%; animation-delay: 1.8s; }
+    .star:nth-child(14) { left: 47%; top: 52%; animation-delay: 1s; }
+    .star:nth-child(15) { left: 7%;  top: 82%; animation-delay: 2.5s; }
+
+    @keyframes twinkle {
+
+        0%, 100% {
+
+            opacity:
+                0.18;
+
+            transform:
+                scale(0.8);
         }
 
         50% {
-            transform: translateY(-18px);
-        }
 
-        100% {
-            transform: translateY(0);
+            opacity:
+                0.85;
+
+            transform:
+                scale(1.5);
         }
     }
 
@@ -186,15 +265,21 @@ st.markdown(
        ===================================================== */
 
     .main .block-container {
-        max-width: 1250px;
 
-        padding-top: 1.5rem;
+        max-width:
+            1250px;
 
-        padding-bottom: 7rem;
+        padding-top:
+            1.2rem;
 
-        position: relative;
+        padding-bottom:
+            7rem;
 
-        z-index: 1;
+        position:
+            relative;
+
+        z-index:
+            1;
     }
 
 
@@ -207,29 +292,23 @@ st.markdown(
         background:
             linear-gradient(
                 180deg,
-                #030611 0%,
-                #070b1d 55%,
-                #02040c 100%
+                #030611,
+                #070b1d,
+                #02040c
             );
 
         border-right:
             1px solid rgba(139,92,246,0.20);
     }
 
-    section[data-testid="stSidebar"] > div {
-        padding-top: 1rem;
-    }
-
-
-    /* =====================================================
-       SIDEBAR BUTTONS
-       ===================================================== */
 
     section[data-testid="stSidebar"] .stButton button {
 
-        min-height: 42px;
+        min-height:
+            42px;
 
-        border-radius: 12px;
+        border-radius:
+            12px;
 
         border:
             1px solid rgba(139,92,246,0.18);
@@ -241,67 +320,49 @@ st.markdown(
                 rgba(7,12,29,0.96)
             );
 
-        color: #dbeafe;
-
-        font-weight: 500;
+        color:
+            #dbeafe;
 
         transition:
-            all 0.2s ease;
+            all .2s ease;
     }
+
 
     section[data-testid="stSidebar"] .stButton button:hover {
 
         border-color:
-            rgba(139,92,246,0.60);
+            rgba(139,92,246,0.65);
 
-        background:
-            linear-gradient(
-                135deg,
-                rgba(38,30,82,0.98),
-                rgba(12,20,46,0.98)
-            );
+        box-shadow:
+            0 0 22px rgba(139,92,246,0.15);
 
         transform:
             translateY(-1px);
-
-        box-shadow:
-            0 8px 25px rgba(0,0,0,0.3),
-            0 0 20px rgba(139,92,246,0.12);
     }
 
 
     /* =====================================================
-       SIDEBAR BRAND
+       SIDEBAR LOGO
        ===================================================== */
 
     .sidebar-logo {
 
-        text-align: center;
+        text-align:
+            center;
 
-        font-size: 50px;
+        font-size:
+            52px;
 
-        line-height: 1;
-
-        margin-bottom: 5px;
+        margin-bottom:
+            3px;
 
         text-shadow:
-            0 0 10px rgba(255,255,255,0.8),
-            0 0 22px rgba(139,92,246,0.9),
-            0 0 45px rgba(99,102,241,0.7);
+            0 0 10px rgba(255,255,255,.9),
+            0 0 25px rgba(139,92,246,.95),
+            0 0 50px rgba(99,102,241,.8);
 
         animation:
-            logoPulse 3s ease-in-out infinite;
-    }
-
-    @keyframes logoPulse {
-
-        0%, 100% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.07);
-        }
+            quantumPulse 3s ease-in-out infinite;
     }
 
 
@@ -311,36 +372,49 @@ st.markdown(
 
     .quantum-logo {
 
-        text-align: center;
+        text-align:
+            center;
 
-        font-size: 78px;
+        font-size:
+            75px;
 
-        line-height: 1;
+        line-height:
+            1;
 
-        margin-top: 8px;
+        margin-top:
+            8px;
 
-        margin-bottom: 8px;
+        margin-bottom:
+            8px;
 
         text-shadow:
-            0 0 10px rgba(255,255,255,0.9),
-            0 0 22px rgba(139,92,246,0.95),
-            0 0 45px rgba(99,102,241,0.8),
-            0 0 80px rgba(59,130,246,0.45);
+            0 0 10px white,
+            0 0 24px rgba(139,92,246,1),
+            0 0 50px rgba(99,102,241,.85);
 
         animation:
             quantumPulse 3s ease-in-out infinite;
     }
 
+
     @keyframes quantumPulse {
 
         0%, 100% {
-            transform: scale(1);
-            filter: brightness(1);
+
+            transform:
+                scale(1);
+
+            filter:
+                brightness(1);
         }
 
         50% {
-            transform: scale(1.08);
-            filter: brightness(1.25);
+
+            transform:
+                scale(1.08);
+
+            filter:
+                brightness(1.25);
         }
     }
 
@@ -351,29 +425,38 @@ st.markdown(
 
     .online {
 
-        width: fit-content;
+        width:
+            fit-content;
 
-        margin: 0 auto 20px auto;
+        margin:
+            0 auto 18px auto;
 
         padding:
             6px 14px;
 
-        border-radius: 999px;
+        border-radius:
+            999px;
 
         background:
-            rgba(34,197,94,0.06);
+            rgba(34,197,94,.06);
 
         border:
-            1px solid rgba(34,197,94,0.20);
+            1px solid rgba(34,197,94,.22);
 
         color:
             #86efac;
 
-        font-size: 10px;
+        font-size:
+            10px;
 
-        font-weight: 700;
+        font-weight:
+            700;
 
-        letter-spacing: 1.8px;
+        letter-spacing:
+            1.8px;
+
+        box-shadow:
+            0 0 18px rgba(34,197,94,.06);
     }
 
 
@@ -383,18 +466,21 @@ st.markdown(
 
     .main-title {
 
-        text-align: center;
+        text-align:
+            center;
 
         font-family:
             "Space Grotesk",
             sans-serif;
 
         font-size:
-            clamp(34px,5vw,58px);
+            clamp(34px, 5vw, 58px);
 
-        font-weight: 700;
+        font-weight:
+            700;
 
-        letter-spacing: 5px;
+        letter-spacing:
+            5px;
 
         background:
             linear-gradient(
@@ -405,11 +491,11 @@ st.markdown(
                 #ffffff
             );
 
-        -webkit-background-clip: text;
+        -webkit-background-clip:
+            text;
 
-        -webkit-text-fill-color: transparent;
-
-        margin-top: 5px;
+        -webkit-text-fill-color:
+            transparent;
     }
 
 
@@ -419,46 +505,48 @@ st.markdown(
 
     .subtitle {
 
-        text-align: center;
+        text-align:
+            center;
 
-        max-width: 760px;
+        max-width:
+            780px;
 
         margin:
-            14px auto 24px auto;
+            12px auto 20px auto;
 
         color:
             #94a3b8;
 
-        font-size: 14px;
+        font-size:
+            14px;
 
-        line-height: 1.8;
+        line-height:
+            1.8;
     }
 
 
-    /* =====================================================
-       QUANTUM LINE
-       ===================================================== */
-
     .quantum-line {
 
-        width: 220px;
+        width:
+            230px;
 
-        height: 1px;
+        height:
+            1px;
 
         margin:
-            0 auto 24px auto;
+            0 auto 20px auto;
 
         background:
             linear-gradient(
                 90deg,
                 transparent,
-                rgba(139,92,246,0.8),
-                rgba(59,130,246,0.8),
+                rgba(139,92,246,.85),
+                rgba(59,130,246,.85),
                 transparent
             );
 
         box-shadow:
-            0 0 12px rgba(139,92,246,0.35);
+            0 0 14px rgba(139,92,246,.4);
     }
 
 
@@ -468,32 +556,36 @@ st.markdown(
 
     [data-testid="stChatMessage"] {
 
-        border-radius: 16px;
+        border-radius:
+            16px;
 
         border:
-            1px solid rgba(139,92,246,0.10);
+            1px solid rgba(139,92,246,.10);
 
         background:
             linear-gradient(
                 135deg,
-                rgba(15,23,42,0.82),
-                rgba(7,12,28,0.82)
+                rgba(15,23,42,.82),
+                rgba(7,12,28,.82)
             );
 
-        margin-bottom: 10px;
+        margin-bottom:
+            10px;
 
         transition:
-            all 0.2s ease;
+            all .2s ease;
     }
+
 
     [data-testid="stChatMessage"]:hover {
 
         border-color:
-            rgba(139,92,246,0.28);
+            rgba(139,92,246,.28);
 
         box-shadow:
-            0 5px 25px rgba(0,0,0,0.18);
+            0 5px 25px rgba(0,0,0,.18);
     }
+
 
     [data-testid="stChatMessage"] p {
 
@@ -506,30 +598,36 @@ st.markdown(
 
 
     /* =====================================================
-       PROMPT AREA
+       PROMPT ROW
        ===================================================== */
 
-    .prompt-shell {
+    .prompt-wrapper {
+
+        position:
+            relative;
+
+        margin-top:
+            18px;
+
+        padding:
+            5px;
+
+        border-radius:
+            20px;
 
         background:
             linear-gradient(
                 135deg,
-                rgba(12,18,40,0.97),
-                rgba(5,10,25,0.97)
+                rgba(17,24,50,.98),
+                rgba(4,9,25,.98)
             );
 
         border:
-            1px solid rgba(139,92,246,0.25);
-
-        border-radius:
-            18px;
-
-        padding:
-            7px;
+            1px solid rgba(139,92,246,.30);
 
         box-shadow:
-            0 15px 50px rgba(0,0,0,0.35),
-            0 0 25px rgba(99,102,241,0.08);
+            0 15px 55px rgba(0,0,0,.40),
+            0 0 30px rgba(99,102,241,.08);
     }
 
 
@@ -537,34 +635,25 @@ st.markdown(
        CHAT INPUT
        ===================================================== */
 
+    [data-testid="stChatInput"] {
+
+        margin:
+            0 !important;
+    }
+
+
     [data-testid="stChatInput"] > div {
 
         background:
-            linear-gradient(
-                135deg,
-                rgba(12,18,38,0.98),
-                rgba(5,10,25,0.98)
-            );
+            transparent !important;
 
         border:
-            1px solid rgba(139,92,246,0.25);
-
-        border-radius:
-            16px;
+            none !important;
 
         box-shadow:
-            none;
+            none !important;
     }
 
-    [data-testid="stChatInput"] > div:focus-within {
-
-        border-color:
-            rgba(139,92,246,0.70);
-
-        box-shadow:
-            0 0 0 1px rgba(139,92,246,0.18),
-            0 0 25px rgba(99,102,241,0.10);
-    }
 
     [data-testid="stChatInput"] textarea {
 
@@ -575,6 +664,7 @@ st.markdown(
             14px !important;
     }
 
+
     [data-testid="stChatInput"] textarea::placeholder {
 
         color:
@@ -583,45 +673,122 @@ st.markdown(
 
 
     /* =====================================================
-       ATTACHMENT POPOVER
+       PLUS BUTTON
        ===================================================== */
 
-    [data-testid="stPopover"] button {
+    .plus-button button {
+
+        height:
+            46px !important;
+
+        min-height:
+            46px !important;
+
+        width:
+            46px !important;
 
         border-radius:
-            12px;
+            50% !important;
 
         border:
-            1px solid rgba(139,92,246,0.22);
+            1px solid rgba(139,92,246,.35) !important;
 
         background:
-            rgba(12,18,40,0.92);
+            radial-gradient(
+                circle,
+                rgba(139,92,246,.22),
+                rgba(15,23,42,.95)
+            ) !important;
 
         color:
-            #e2e8f0;
+            #ddd6fe !important;
 
         font-size:
-            18px;
-
-        transition:
-            all 0.2s ease;
-    }
-
-    [data-testid="stPopover"] button:hover {
-
-        border-color:
-            rgba(139,92,246,0.65);
-
-        background:
-            rgba(30,27,75,0.95);
+            22px !important;
 
         box-shadow:
-            0 0 18px rgba(139,92,246,0.18);
+            0 0 15px rgba(139,92,246,.10);
+
+        transition:
+            all .25s ease !important;
+    }
+
+
+    .plus-button button:hover {
+
+        transform:
+            rotate(90deg)
+            scale(1.08);
+
+        border-color:
+            rgba(167,139,250,.85) !important;
+
+        box-shadow:
+            0 0 25px rgba(139,92,246,.35) !important;
     }
 
 
     /* =====================================================
-       POPOVER CONTENT
+       MICROPHONE
+       ===================================================== */
+
+    .mic-container {
+
+        display:
+            flex;
+
+        justify-content:
+            center;
+
+        align-items:
+            center;
+
+        height:
+            46px;
+    }
+
+
+    .mic-container button {
+
+        border-radius:
+            50% !important;
+
+        border:
+            1px solid rgba(59,130,246,.35) !important;
+
+        background:
+            radial-gradient(
+                circle,
+                rgba(59,130,246,.20),
+                rgba(15,23,42,.96)
+            ) !important;
+
+        color:
+            #bfdbfe !important;
+
+        box-shadow:
+            0 0 15px rgba(59,130,246,.10);
+
+        transition:
+            all .25s ease;
+    }
+
+
+    .mic-container button:hover {
+
+        border-color:
+            rgba(96,165,250,.9) !important;
+
+        box-shadow:
+            0 0 28px rgba(59,130,246,.35);
+
+        transform:
+            scale(1.08);
+    }
+
+
+    /* =====================================================
+       POPOVER
        ===================================================== */
 
     div[data-baseweb="popover"] {
@@ -630,25 +797,28 @@ st.markdown(
             #080d20 !important;
 
         border:
-            1px solid rgba(139,92,246,0.25) !important;
+            1px solid rgba(139,92,246,.28) !important;
 
         border-radius:
-            16px !important;
+            18px !important;
 
         box-shadow:
-            0 20px 60px rgba(0,0,0,0.55) !important;
+            0 25px 70px rgba(0,0,0,.60) !important;
     }
 
 
     /* =====================================================
-       ATTACHMENT OPTIONS
+       ATTACHMENT MENU
        ===================================================== */
 
-    .attach-title {
+    .attach-heading {
 
         font-family:
             "Space Grotesk",
             sans-serif;
+
+        color:
+            #f8fafc;
 
         font-size:
             17px;
@@ -656,14 +826,12 @@ st.markdown(
         font-weight:
             600;
 
-        color:
-            #f8fafc;
-
         margin-bottom:
-            5px;
+            3px;
     }
 
-    .attach-description {
+
+    .attach-subheading {
 
         color:
             #64748b;
@@ -676,72 +844,96 @@ st.markdown(
     }
 
 
-    /* =====================================================
-       ATTACHMENT CARD
-       ===================================================== */
-
-    .attachment-card {
+    .attach-option {
 
         padding:
-            10px 12px;
-
-        border-radius:
             11px;
-
-        border:
-            1px solid rgba(139,92,246,0.12);
-
-        background:
-            rgba(15,23,42,0.55);
 
         margin:
             5px 0;
 
-        color:
-            #cbd5e1;
-
-        font-size:
-            12px;
-    }
-
-
-    /* =====================================================
-       MICROPHONE
-       ===================================================== */
-
-    .mic-label {
-
-        text-align:
-            center;
-
-        color:
-            #94a3b8;
-
-        font-size:
-            11px;
-
-        margin-top:
-            5px;
-    }
-
-
-    /* =====================================================
-       NORMAL BUTTONS
-       ===================================================== */
-
-    .stButton button {
-
         border-radius:
-            11px;
+            12px;
+
+        background:
+            rgba(15,23,42,.65);
+
+        border:
+            1px solid rgba(139,92,246,.12);
 
         transition:
-            all 0.2s ease;
+            all .2s ease;
     }
 
-    .stButton button:hover {
 
-        transform:
-            translateY(-1px);
+    .attach-option:hover {
+
+        background:
+            rgba(30,27,75,.8);
+
+        border-color:
+            rgba(139,92,246,.35);
+    }
+
+
+    .attach-icon {
+
+        font-size:
+            20px;
+
+        margin-right:
+            8px;
+    }
+
+
+    .attach-name {
+
+        color:
+            #e2e8f0;
+
+        font-weight:
+            600;
+
+        font-size:
+            13px;
+    }
+
+
+    .attach-desc {
+
+        color:
+            #64748b;
+
+        font-size:
+            11px;
+    }
+
+
+    /* =====================================================
+       FILE UPLOADER
+       ===================================================== */
+
+    [data-testid="stFileUploader"] {
+
+        margin-top:
+            4px;
+    }
+
+
+    /* =====================================================
+       SIDEBAR INPUTS
+       ===================================================== */
+
+    section[data-testid="stSidebar"] input {
+
+        background:
+            rgba(10,16,35,.9) !important;
+
+        color:
+            #e2e8f0 !important;
+
+        border-radius:
+            10px !important;
     }
 
 
@@ -757,18 +949,7 @@ st.markdown(
 
 
     /* =====================================================
-       DIVIDERS
-       ===================================================== */
-
-    hr {
-
-        border-color:
-            rgba(255,255,255,0.06);
-    }
-
-
-    /* =====================================================
-       MOBILE
+       RESPONSIVE
        ===================================================== */
 
     @media (max-width: 768px) {
@@ -791,11 +972,41 @@ st.markdown(
         .quantum-logo {
 
             font-size:
-                60px;
+                58px;
         }
     }
 
     </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# =========================================================
+# BACKGROUND STARS
+# =========================================================
+
+st.markdown(
+    """
+    <div class="quantum-stars">
+
+        <span class="star">✦</span>
+        <span class="star">·</span>
+        <span class="star">✧</span>
+        <span class="star">·</span>
+        <span class="star">✦</span>
+        <span class="star">·</span>
+        <span class="star">✧</span>
+        <span class="star">✦</span>
+        <span class="star">·</span>
+        <span class="star">✧</span>
+        <span class="star">·</span>
+        <span class="star">✦</span>
+        <span class="star">✧</span>
+        <span class="star">·</span>
+        <span class="star">✦</span>
+
+    </div>
     """,
     unsafe_allow_html=True,
 )
@@ -854,6 +1065,10 @@ if not st.session_state.logged_in:
 
             try:
 
+                # =================================================
+                # EXISTING DATABASE FUNCTION — UNCHANGED
+                # =================================================
+
                 user_id = get_or_create_user(
                     email.strip()
                 )
@@ -872,11 +1087,10 @@ if not st.session_state.logged_in:
 
                 st.rerun()
 
-            except Exception:
+            except Exception as e:
 
                 st.error(
-                    "Unable to complete login. "
-                    "Please check your connection and try again."
+                    f"Login failed: {str(e)}"
                 )
 
     st.stop()
@@ -893,22 +1107,55 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    st.title("QUANTUM LAB")
+    st.markdown(
+        """
+        <div style="
+            text-align:center;
+            font-family:'Space Grotesk';
+            font-weight:700;
+            font-size:19px;
+            color:#e9d5ff;
+            letter-spacing:2px;
+        ">
+            QUANTUM LAB
+        </div>
 
-    st.caption(
-        "AI LEARNING ENVIRONMENT"
+        <div style="
+            text-align:center;
+            color:#64748b;
+            font-size:9px;
+            letter-spacing:2px;
+            margin-bottom:18px;
+        ">
+            AI LEARNING ENVIRONMENT
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     st.markdown(
-        f"🟢  {st.session_state.user_email}"
+        f"""
+        <div style="
+            padding:10px 12px;
+            border-radius:12px;
+            border:1px solid rgba(139,92,246,.16);
+            background:rgba(15,23,42,.65);
+            color:#cbd5e1;
+            font-size:12px;
+        ">
+            <span style="color:#22c55e;">●</span>
+            &nbsp;{st.session_state.user_email}
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     st.divider()
 
 
-    # -----------------------------------------------------
-    # WORKSPACE
-    # -----------------------------------------------------
+    # =====================================================
+    # NEW CHAT
+    # =====================================================
 
     st.caption("WORKSPACE")
 
@@ -918,6 +1165,10 @@ with st.sidebar:
     ):
 
         try:
+
+            # =================================================
+            # EXISTING DATABASE FUNCTION — UNCHANGED
+            # =================================================
 
             session_id = create_chat_session(
                 st.session_state.user_id
@@ -931,18 +1182,22 @@ with st.sidebar:
 
             st.rerun()
 
-        except Exception:
+        except Exception as e:
 
             st.error(
-                "Unable to create a new chat right now."
+                f"Could not create chat: {str(e)}"
             )
 
 
-    # -----------------------------------------------------
-    # LOAD SESSIONS
-    # -----------------------------------------------------
+    # =====================================================
+    # LOAD EXISTING CHATS
+    # =====================================================
 
     try:
+
+        # =================================================
+        # EXISTING DATABASE FUNCTION — UNCHANGED
+        # =================================================
 
         st.session_state.sessions = get_user_sessions(
             st.session_state.user_id
@@ -957,78 +1212,74 @@ with st.sidebar:
         )
 
 
-    # -----------------------------------------------------
-    # SESSION LIST
-    # -----------------------------------------------------
-
     st.caption("YOUR SESSIONS")
 
-    if not st.session_state.sessions:
 
-        st.caption(
-            "No saved sessions available."
+    for chat in st.session_state.sessions:
+
+        session_id = chat["session_id"]
+
+        title = chat.get(
+            "title",
+            "New Quantum Chat"
         )
 
-    else:
+        if st.button(
+            f"◈  {title}",
+            key=f"chat_{session_id}",
+            use_container_width=True,
+        ):
 
-        for chat in st.session_state.sessions:
+            try:
 
-            session_id = chat["session_id"]
+                # =================================================
+                # EXISTING DATABASE FUNCTION — UNCHANGED
+                # =================================================
 
-            title = chat.get(
-                "title",
-                "New Quantum Chat"
-            )
+                history = restore_chat(
+                    session_id,
+                    st.session_state.user_id
+                )
 
-            if st.button(
-                f"◈  {title}",
-                key=f"chat_{session_id}",
-                use_container_width=True,
-            ):
+                st.session_state.session_id = (
+                    session_id
+                )
 
-                try:
+                st.session_state.messages = []
 
-                    history = restore_chat(
-                        session_id,
-                        st.session_state.user_id
-                    )
+                for message in history:
 
-                    st.session_state.session_id = (
-                        session_id
-                    )
-
-                    st.session_state.messages = []
-
-                    st.session_state.uploaded_files = []
-
-                    for message in history:
-
-                        st.session_state.messages.append(
-                            {
-                                "role": (
+                    st.session_state.messages.append(
+                        {
+                            "role":
+                                (
                                     "user"
                                     if message["sender"] == "user"
                                     else "assistant"
                                 ),
-                                "content": message["content"],
-                            }
-                        )
 
-                    st.rerun()
-
-                except Exception:
-
-                    st.error(
-                        "Unable to open this chat right now."
+                            "content":
+                                message["content"],
+                        }
                     )
+
+                st.session_state.uploaded_files = []
+
+                st.rerun()
+
+            except Exception as e:
+
+                st.error(
+                    f"Could not open chat: {str(e)}"
+                )
 
 
     st.divider()
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # CHAT SETTINGS
-    # -----------------------------------------------------
+    # =====================================================
 
     if st.session_state.session_id:
 
@@ -1054,6 +1305,10 @@ with st.sidebar:
 
                 try:
 
+                    # =============================================
+                    # EXISTING DATABASE FUNCTION — UNCHANGED
+                    # =============================================
+
                     rename_chat(
                         st.session_state.session_id,
                         st.session_state.user_id,
@@ -1061,15 +1316,15 @@ with st.sidebar:
                     )
 
                     st.success(
-                        "Chat renamed successfully."
+                        "Chat renamed."
                     )
 
                     st.rerun()
 
-                except Exception:
+                except Exception as e:
 
                     st.error(
-                        "Unable to rename this chat."
+                        f"Rename failed: {str(e)}"
                     )
 
 
@@ -1079,6 +1334,10 @@ with st.sidebar:
         ):
 
             try:
+
+                # =============================================
+                # EXISTING DATABASE FUNCTION — UNCHANGED
+                # =============================================
 
                 delete_chat(
                     st.session_state.session_id,
@@ -1092,24 +1351,24 @@ with st.sidebar:
                 st.session_state.uploaded_files = []
 
                 st.success(
-                    "Chat deleted successfully."
+                    "Chat deleted."
                 )
 
                 st.rerun()
 
-            except Exception:
+            except Exception as e:
 
                 st.error(
-                    "Unable to delete this chat."
+                    f"Delete failed: {str(e)}"
                 )
 
 
     st.divider()
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # LOGOUT
-    # -----------------------------------------------------
+    # =====================================================
 
     if st.button(
         "↪  Logout",
@@ -1167,7 +1426,7 @@ st.markdown(
 
 
 # =========================================================
-# REQUIRE CHAT
+# REQUIRE ACTIVE CHAT
 # =========================================================
 
 if not st.session_state.session_id:
@@ -1195,40 +1454,27 @@ for message in st.session_state.messages:
 
 
 # =========================================================
-# ATTACHMENT AREA
+# ATTACHMENT POPUP
 # =========================================================
 
-# ---------------------------------------------------------
-# SHOW CURRENT ATTACHMENTS
-# ---------------------------------------------------------
+# The plus button is placed ABOVE the native chat input,
+# but visually designed as part of the same prompt area.
 
-if st.session_state.uploaded_files:
-
-    st.markdown(
-        "📎 **Attached:**"
-    )
-
-    for uploaded in st.session_state.uploaded_files:
-
-        st.caption(
-            f"• {uploaded.name}"
-        )
-
-
-# =========================================================
-# PROMPT CONTROLS
-# =========================================================
-
-prompt_col1, prompt_col2 = st.columns(
-    [1, 8]
+plus_col, prompt_col, mic_col = st.columns(
+    [0.8, 7.8, 1.0]
 )
 
 
 # =========================================================
-# PLUS ATTACHMENT BUTTON
+# PLUS BUTTON
 # =========================================================
 
-with prompt_col1:
+with plus_col:
+
+    st.markdown(
+        '<div class="plus-button">',
+        unsafe_allow_html=True,
+    )
 
     with st.popover(
         "＋",
@@ -1236,12 +1482,14 @@ with prompt_col1:
     ):
 
         st.markdown(
-            '<div class="attach-title">Add to your question</div>',
+            '<div class="attach-heading">Add to your question</div>',
             unsafe_allow_html=True,
         )
 
         st.markdown(
-            '<div class="attach-description">Choose something to attach</div>',
+            '<div class="attach-subheading">'
+            'Attach something to your conversation'
+            '</div>',
             unsafe_allow_html=True,
         )
 
@@ -1252,26 +1500,36 @@ with prompt_col1:
 
         st.markdown(
             """
-            <div class="attachment-card">
-                🖼️ <b>Add photos</b><br>
-                <span style="color:#64748b;">
-                Upload images from your computer
+            <div class="attach-option">
+
+                <span class="attach-icon">🖼️</span>
+
+                <span class="attach-name">
+                    Add photos
                 </span>
+
+                <br>
+
+                <span class="attach-desc">
+                    Upload images from your computer
+                </span>
+
             </div>
             """,
             unsafe_allow_html=True,
         )
 
         photos = st.file_uploader(
-            "Photos",
+            "Choose photos",
             type=[
                 "png",
                 "jpg",
                 "jpeg",
                 "webp",
+                "gif",
             ],
             accept_multiple_files=True,
-            key="photo_uploader",
+            key="quantum_photos",
             label_visibility="collapsed",
         )
 
@@ -1282,18 +1540,27 @@ with prompt_col1:
 
         st.markdown(
             """
-            <div class="attachment-card">
-                📄 <b>Add files</b><br>
-                <span style="color:#64748b;">
-                Upload PDF, TXT, DOCX or other files
+            <div class="attach-option">
+
+                <span class="attach-icon">📄</span>
+
+                <span class="attach-name">
+                    Add files
                 </span>
+
+                <br>
+
+                <span class="attach-desc">
+                    PDF, TXT, DOCX, CSV, Python and more
+                </span>
+
             </div>
             """,
             unsafe_allow_html=True,
         )
 
         documents = st.file_uploader(
-            "Files",
+            "Choose files",
             type=[
                 "pdf",
                 "txt",
@@ -1306,13 +1573,13 @@ with prompt_col1:
                 "md",
             ],
             accept_multiple_files=True,
-            key="document_uploader",
+            key="quantum_documents",
             label_visibility="collapsed",
         )
 
 
         # -------------------------------------------------
-        # SAVE ATTACHMENTS TO FRONTEND STATE
+        # STORE FRONTEND ATTACHMENTS
         # -------------------------------------------------
 
         selected_files = []
@@ -1336,82 +1603,161 @@ with prompt_col1:
             )
 
             st.success(
-                f"{len(selected_files)} attachment(s) added."
+                f"📎 {len(selected_files)} file(s) attached"
             )
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 
 # =========================================================
 # MICROPHONE
 # =========================================================
 
-with prompt_col2:
+with mic_col:
 
-    mic_col, input_col = st.columns(
-        [1, 15]
-    )
-
-    with mic_col:
-
-        st.markdown(
-            """
-            <div style="
-                text-align:center;
-                padding-top:8px;
-                font-size:20px;
-            ">
-                🎙️
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with input_col:
-
-        query = st.chat_input(
-            "Ask your quantum question..."
-        )
-
-
-# =========================================================
-# OPTIONAL VOICE INPUT
-# =========================================================
-
-with st.expander(
-    "🎙️ Voice input",
-    expanded=False,
-):
-
-    st.caption(
-        "Record a voice message here. "
-        "Your existing RAG pipeline is not modified."
+    st.markdown(
+        '<div class="mic-container">',
+        unsafe_allow_html=True,
     )
 
     audio_value = st.audio_input(
-        "Record your question",
+        "🎙️",
+        key="quantum_microphone",
         label_visibility="collapsed",
     )
 
-    if audio_value:
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
-        st.success(
-            "Voice recording captured."
+
+# =========================================================
+# PROMPT
+# =========================================================
+
+with prompt_col:
+
+    query = st.chat_input(
+        "Ask your quantum question..."
+    )
+
+
+# =========================================================
+# MICROPHONE → SPEECH → TEXT
+# =========================================================
+
+voice_query = None
+
+
+if audio_value:
+
+    # Prevent processing the exact same recording
+    # multiple times during Streamlit reruns.
+
+    audio_bytes = audio_value.getvalue()
+
+    current_audio_id = hash(
+        audio_bytes
+    )
+
+    if (
+        current_audio_id
+        != st.session_state.last_audio_id
+    ):
+
+        st.session_state.last_audio_id = (
+            current_audio_id
         )
 
-        st.caption(
-            "Audio is currently kept in the frontend only. "
-            "It is not sent to the RAG engine."
-        )
+        if not SPEECH_RECOGNITION_AVAILABLE:
+
+            st.warning(
+                "🎙️ Microphone recording works, "
+                "but speech-to-text is not installed yet. "
+                "Add SpeechRecognition to requirements.txt."
+            )
+
+        else:
+
+            try:
+
+                recognizer = sr.Recognizer()
+
+                audio_file = io.BytesIO(
+                    audio_bytes
+                )
+
+                with sr.AudioFile(
+                    audio_file
+                ) as source:
+
+                    recorded_audio = (
+                        recognizer.record(source)
+                    )
+
+                with st.spinner(
+                    "🎙️ Understanding your voice..."
+                ):
+
+                    voice_query = (
+                        recognizer.recognize_google(
+                            recorded_audio
+                        )
+                    )
+
+                if voice_query:
+
+                    st.toast(
+                        f"🎙️ Heard: {voice_query}"
+                    )
+
+            except sr.UnknownValueError:
+
+                st.warning(
+                    "I couldn't understand the recording. "
+                    "Please try speaking again."
+                )
+
+            except sr.RequestError:
+
+                st.warning(
+                    "Speech recognition service is "
+                    "temporarily unavailable."
+                )
+
+            except Exception as e:
+
+                st.warning(
+                    f"Microphone processing failed: {str(e)}"
+                )
+
+
+# =========================================================
+# CHOOSE TEXT OR VOICE QUERY
+# =========================================================
+
+final_query = None
+
+if query:
+
+    final_query = query.strip()
+
+elif voice_query:
+
+    final_query = voice_query.strip()
 
 
 # =========================================================
 # PROCESS QUESTION
 # =========================================================
 
-if query:
+if final_query:
 
-    query = query.strip()
-
-    if not query:
+    if not final_query:
 
         st.stop()
 
@@ -1423,34 +1769,38 @@ if query:
     st.session_state.messages.append(
         {
             "role": "user",
-            "content": query,
+            "content": final_query,
         }
     )
+
 
     with st.chat_message(
         "user"
     ):
 
         st.markdown(
-            query
+            final_query
         )
 
-        # Show attachments visually,
-        # but DO NOT send them to RAG.
+        # Attachments are shown visually only.
+        # They are NOT passed into answer_question().
 
         if st.session_state.uploaded_files:
 
             st.caption(
                 "📎 "
-                + ", ".join(
+                +
+                ", ".join(
                     file.name
-                    for file in st.session_state.uploaded_files
+                    for file
+                    in st.session_state.uploaded_files
                 )
             )
 
 
     # -----------------------------------------------------
-    # RAG ANSWER
+    # EXISTING RAG FUNCTION
+    # DO NOT CHANGE
     # -----------------------------------------------------
 
     with st.chat_message(
@@ -1463,8 +1813,12 @@ if query:
 
             try:
 
+                # =============================================
+                # YOUR EXISTING RAG CALL
+                # =============================================
+
                 answer = answer_question(
-                    query=query,
+                    query=final_query,
                     session_id=st.session_state.session_id,
                     user_id=st.session_state.user_id,
                 )
@@ -1482,7 +1836,7 @@ if query:
 
 
     # -----------------------------------------------------
-    # SAVE ANSWER
+    # SAVE ANSWER TO UI STATE
     # -----------------------------------------------------
 
     st.session_state.messages.append(
@@ -1492,5 +1846,9 @@ if query:
         }
     )
 
-    # Clear attachments after sending
+
+    # -----------------------------------------------------
+    # CLEAR FRONTEND ATTACHMENTS
+    # -----------------------------------------------------
+
     st.session_state.uploaded_files = []

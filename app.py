@@ -359,111 +359,6 @@ html, body {
 
 
 /* ============================================================
-   LEARNING MODE
-   ============================================================ */
-
-.learning-card {
-    position: relative;
-    overflow: hidden;
-    padding: 18px;
-    border-radius: 18px;
-    background: linear-gradient(145deg, rgba(25,55,105,0.96), rgba(8,22,52,0.96));
-    border: 1px solid rgba(76,150,255,0.45);
-    box-shadow: 0 15px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
-    transition: all 0.35s ease;
-}
-
-
-.learning-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(90,170,255,0.85);
-    box-shadow: 0 20px 45px rgba(0,0,0,0.45), 0 0 30px rgba(50,130,255,0.16);
-}
-
-
-.learning-card::before {
-    content: "";
-    position: absolute;
-    width: 200px;
-    height: 200px;
-    right: -100px;
-    top: -100px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(100,150,255,0.30), transparent 70%);
-}
-
-
-.learning-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 16px;
-}
-
-
-.learning-icon {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    background: rgba(125,90,255,0.2);
-    border: 1px solid rgba(160,135,255,0.35);
-    font-size: 20px;
-    box-shadow: 0 0 18px rgba(100,80,255,0.2);
-}
-
-
-.learning-title {
-    font-family: 'Orbitron', sans-serif;
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-}
-
-
-.learning-status {
-    color: #61b8ff;
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    margin-top: 3px;
-}
-
-
-.learning-question {
-    color: #b9c8e5;
-    font-size: 12px;
-    margin-bottom: 10px;
-}
-
-
-.learning-topic {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 9px;
-    margin-bottom: 7px;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.035);
-    border: 1px solid rgba(255,255,255,0.04);
-    color: #d9e4f8;
-    font-size: 11px;
-    transition: all 0.25s ease;
-}
-
-
-.learning-topic:hover {
-    transform: translateX(6px);
-    background: rgba(90,160,255,0.13);
-    border-color: rgba(100,170,255,0.28);
-    color: white;
-}
-
-
-/* ============================================================
    MAIN HERO
    ============================================================ */
 
@@ -949,33 +844,11 @@ with st.sidebar:
         st.rerun()
 
     # --------------------------------------------------------
-    # LOGOUT
+    # LOGOUT (LAST ITEM IN SIDEBAR)
     # --------------------------------------------------------
     if st.button("🚪 Logout", use_container_width=True):
         st.session_state.logged_in = False
         st.rerun()
-
-    # --------------------------------------------------------
-    # LEARNING MODE
-    # --------------------------------------------------------
-    st.markdown('<div class="side-divider"></div>', unsafe_allow_html=True)
-    st.markdown(
-        """<div class="learning-card">
-    <div class="learning-header">
-        <div class="learning-icon">🧠</div>
-        <div>
-            <div class="learning-title">LEARNING MODE</div>
-            <div class="learning-status">QUANTUM KNOWLEDGE</div>
-        </div>
-    </div>
-    <div class="learning-question">Ask questions about:</div>
-    <div class="learning-topic"><span>⚛️</span> Quantum Computing</div>
-    <div class="learning-topic"><span>🔵</span> Qubits</div>
-    <div class="learning-topic"><span>〰️</span> Quantum Gates</div>
-    <div class="learning-topic"><span>🧪</span> Qiskit</div>
-</div>""",
-        unsafe_allow_html=True
-    )
 
 
 # ============================================================
@@ -994,7 +867,7 @@ st.markdown(
 
 
 # ============================================================
-# CHAT INTERFACE
+# CHAT INTERFACE & USER PROMPT TOPICS SYMBOL
 # ============================================================
 
 current_chat = st.session_state.current_chat
@@ -1005,8 +878,29 @@ for message in messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
+# Interactive Learning Mode Popover attached above User Prompt
+pop_col, _ = st.columns([0.25, 0.75])
+with pop_col:
+    with st.popover("💡 Learning Topics", use_container_width=True):
+        st.markdown("### 🧠 LEARNING MODE")
+        st.caption("Click a topic to ask the AI tutor:")
+        
+        topics = [
+            ("⚛️ Quantum Computing", "What is Quantum Computing?"),
+            ("🔵 Qubits", "What is a Qubit and how does it work?"),
+            ("〰️ Quantum Gates", "Explain Quantum Gates with examples."),
+            ("🧪 Qiskit", "How do I get started with Qiskit?")
+        ]
+        
+        for label, topic_prompt in topics:
+            if st.button(label, key=f"topic_{label}", use_container_width=True):
+                messages.append({"role": "user", "content": topic_prompt})
+                response_text = answer_question(topic_prompt, messages)
+                messages.append({"role": "assistant", "content": response_text})
+                st.rerun()
+
 # User input
-if prompt := st.chat_input("Ask anything about quantum computing..."):pythi
+if prompt := st.chat_input("Ask anything about quantum computing..."):
     # Append user prompt
     messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):

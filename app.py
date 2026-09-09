@@ -676,15 +676,15 @@ input_left, input_center, input_right = st.columns(
 
 with input_left:
 
-    st.markdown(
-        """
+    st.markdown("""
         <style>
         /* Attachment popover button */
         div[data-testid="stPopover"] > button {
             width: 52px !important;
             height: 52px !important;
             border-radius: 50% !important;
-            border: 1px solid rgba(120,180,255,0.45) !important;
+            border: 1px solid 
+        rgba(120,180,255,0.45) !important;
             background:
                 radial-gradient(
                     circle at 35% 30%,
@@ -692,10 +692,13 @@ with input_left:
                     rgba(20,30,60,0.95)
                 ) !important;
             box-shadow:
-                0 0 12px rgba(70,170,255,0.35),
-                inset 0 0 12px rgba(100,200,255,0.12) !important;
-            font-size: 24px !important;
-            transition: all 0.25s ease !important;
+                0 0 12px 
+        rgba(70,170,255,0.35),
+                inset 0 0 12px 
+        rgba(100,200,255,0.12) !important;
+                font-size: 24px !important;
+                transition: all 0.25s ease !
+        important;
         }
 
         div[data-testid="stPopover"] > button:hover {
@@ -706,9 +709,7 @@ with input_left:
                 inset 0 0 15px rgba(100,220,255,0.18) !important;
         }
         </style>
-        """,
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
 
     with st.popover("＋"):
 

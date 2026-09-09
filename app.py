@@ -66,6 +66,463 @@ if "learning_progress" not in st.session_state:
 st.markdown(
     """
 <style>
+/* ============================================================
+   NEW QUANTUM BACKGROUND
+   ============================================================ */
+
+.stApp {
+    position: relative;
+    overflow-x: hidden;
+
+    background:
+        radial-gradient(
+            circle at 20% 25%,
+            rgba(104, 61, 255, 0.22),
+            transparent 24%
+        ),
+        radial-gradient(
+            circle at 82% 18%,
+            rgba(0, 174, 255, 0.18),
+            transparent 25%
+        ),
+        radial-gradient(
+            circle at 65% 78%,
+            rgba(154, 45, 255, 0.17),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 35% 85%,
+            rgba(34, 106, 255, 0.12),
+            transparent 24%
+        ),
+        linear-gradient(
+            135deg,
+            #02030d 0%,
+            #05081b 35%,
+            #07051d 65%,
+            #020713 100%
+        );
+}
+
+
+/* ============================================================
+   QUANTUM GRID
+   ============================================================ */
+
+.stApp::after {
+
+    content: "";
+
+    position: fixed;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 0;
+
+    opacity: 0.16;
+
+    background-image:
+        linear-gradient(
+            rgba(120, 100, 255, 0.10) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(120, 100, 255, 0.10) 1px,
+            transparent 1px
+        );
+
+    background-size:
+        70px 70px;
+
+    mask-image:
+        radial-gradient(
+            ellipse at center,
+            black 0%,
+            transparent 75%
+        );
+
+    animation:
+        gridFloat 18s linear infinite;
+}
+
+
+@keyframes gridFloat {
+
+    0% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(20px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+
+/* ============================================================
+   FLOATING QUANTUM PARTICLES
+   ============================================================ */
+
+.stApp::before {
+
+    content: "";
+
+    position: fixed;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 0;
+
+    background-image:
+
+        radial-gradient(
+            2px 2px at 8% 18%,
+            rgba(255,255,255,0.85),
+            transparent
+        ),
+
+        radial-gradient(
+            1px 1px at 14% 72%,
+            rgba(130,170,255,0.9),
+            transparent
+        ),
+
+        radial-gradient(
+            2px 2px at 22% 42%,
+            rgba(190,150,255,0.8),
+            transparent
+        ),
+
+        radial-gradient(
+            1px 1px at 31% 12%,
+            rgba(255,255,255,0.7),
+            transparent
+        ),
+
+        radial-gradient(
+            2px 2px at 43% 78%,
+            rgba(100,180,255,0.8),
+            transparent
+        ),
+
+        radial-gradient(
+            1px 1px at 51% 32%,
+            rgba(255,255,255,0.9),
+            transparent
+        ),
+
+        radial-gradient(
+            2px 2px at 61% 17%,
+            rgba(170,120,255,0.85),
+            transparent
+        ),
+
+        radial-gradient(
+            1px 1px at 70% 65%,
+            rgba(120,190,255,0.9),
+            transparent
+        ),
+
+        radial-gradient(
+            2px 2px at 78% 30%,
+            rgba(255,255,255,0.75),
+            transparent
+        ),
+
+        radial-gradient(
+            1px 1px at 88% 78%,
+            rgba(170,140,255,0.9),
+            transparent
+        ),
+
+        radial-gradient(
+            2px 2px at 94% 18%,
+            rgba(100,190,255,0.8),
+            transparent
+        );
+
+    background-size:
+        420px 420px;
+
+    opacity:
+        0.65;
+
+    animation:
+        particlesMove 30s linear infinite;
+}
+
+
+@keyframes particlesMove {
+
+    0% {
+        transform:
+            translate3d(0, 0, 0);
+    }
+
+    50% {
+        transform:
+            translate3d(-18px, -25px, 0);
+    }
+
+    100% {
+        transform:
+            translate3d(0, 0, 0);
+    }
+}
+
+
+/* ============================================================
+   QUANTUM ORBIT GLOW
+   ============================================================ */
+
+.main::before {
+
+    content: "";
+
+    position: fixed;
+
+    width: 520px;
+
+    height: 520px;
+
+    left: 48%;
+
+    top: 47%;
+
+    transform:
+        translate(-50%, -50%)
+        rotate(-18deg);
+
+    border:
+        1px solid
+        rgba(116, 91, 255, 0.12);
+
+    border-radius:
+        50%;
+
+    box-shadow:
+        0 0 80px rgba(87, 61, 255, 0.08),
+        inset 0 0 80px rgba(50, 100, 255, 0.05);
+
+    pointer-events:
+        none;
+
+    z-index:
+        0;
+
+    animation:
+        quantumOrbit 18s linear infinite;
+}
+
+
+.main::after {
+
+    content: "";
+
+    position: fixed;
+
+    width: 380px;
+
+    height: 380px;
+
+    left: 48%;
+
+    top: 47%;
+
+    transform:
+        translate(-50%, -50%)
+        rotate(42deg)
+        scaleY(0.42);
+
+    border:
+        1px solid
+        rgba(70, 170, 255, 0.14);
+
+    border-radius:
+        50%;
+
+    box-shadow:
+        0 0 50px rgba(65, 125, 255, 0.08);
+
+    pointer-events:
+        none;
+
+    z-index:
+        0;
+
+    animation:
+        quantumOrbitReverse 14s linear infinite;
+}
+
+
+@keyframes quantumOrbit {
+
+    0% {
+        transform:
+            translate(-50%, -50%)
+            rotate(-18deg);
+    }
+
+    100% {
+        transform:
+            translate(-50%, -50%)
+            rotate(342deg);
+    }
+}
+
+
+@keyframes quantumOrbitReverse {
+
+    0% {
+        transform:
+            translate(-50%, -50%)
+            rotate(42deg)
+            scaleY(0.42);
+    }
+
+    100% {
+        transform:
+            translate(-50%, -50%)
+            rotate(-318deg)
+            scaleY(0.42);
+    }
+}
+
+
+/* ============================================================
+   CENTER QUANTUM ENERGY
+   ============================================================ */
+
+.quantum-header::before {
+
+    content: "";
+
+    position: absolute;
+
+    width: 420px;
+
+    height: 180px;
+
+    left: 50%;
+
+    top: 90px;
+
+    transform:
+        translateX(-50%);
+
+    background:
+        radial-gradient(
+            ellipse,
+            rgba(106, 72, 255, 0.15),
+            transparent 70%
+        );
+
+    filter:
+        blur(25px);
+
+    pointer-events:
+        none;
+
+    z-index:
+        -1;
+}
+
+
+/* ============================================================
+   MAKE CONTENT SIT ABOVE BACKGROUND
+   ============================================================ */
+
+.main .block-container,
+[data-testid="stSidebar"],
+[data-testid="stChatInput"] {
+
+    position:
+        relative;
+
+    z-index:
+        5;
+}
+
+
+/* ============================================================
+   SUBTLE GLOW BEHIND EMPTY CHAT
+   ============================================================ */
+
+.welcome-container {
+
+    position:
+        relative;
+}
+
+
+.welcome-container::before {
+
+    content: "";
+
+    position: absolute;
+
+    width: 280px;
+
+    height: 180px;
+
+    left: 50%;
+
+    top: 50%;
+
+    transform:
+        translate(-50%, -50%);
+
+    background:
+        radial-gradient(
+            ellipse,
+            rgba(108, 70, 255, 0.14),
+            transparent 70%
+        );
+
+    filter:
+        blur(30px);
+
+    pointer-events:
+        none;
+
+    z-index:
+        -1;
+}
+
+
+/* ============================================================
+   REDUCE EFFECT ON SMALL SCREENS
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    .main::before {
+
+        width:
+            360px;
+
+        height:
+            360px;
+    }
+
+    .main::after {
+
+        width:
+            270px;
+
+        height:
+            270px;
+    }
+
+}
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap');
 
 html, body {

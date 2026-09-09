@@ -47,7 +47,7 @@ if "sessions" not in st.session_state:
 
 
 # =========================================================
-# FRONTEND CSS ONLY
+# FRONTEND CSS
 # =========================================================
 
 st.markdown(
@@ -55,49 +55,47 @@ st.markdown(
     <style>
 
     /* =====================================================
-       GLOBAL BACKGROUND
+       GLOBAL
        ===================================================== */
 
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+    @import url(
+        'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap'
+    );
 
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+    html,
+    body,
+    [class*="css"] {
+        font-family: "Inter", sans-serif;
     }
 
     .stApp {
         background:
             radial-gradient(
                 circle at 10% 10%,
-                rgba(99, 102, 241, 0.20),
+                rgba(99, 102, 241, 0.18),
                 transparent 28%
             ),
             radial-gradient(
                 circle at 90% 15%,
-                rgba(6, 182, 212, 0.13),
+                rgba(6, 182, 212, 0.12),
                 transparent 25%
             ),
             radial-gradient(
-                circle at 70% 90%,
+                circle at 70% 85%,
                 rgba(139, 92, 246, 0.12),
                 transparent 30%
             ),
             linear-gradient(
                 135deg,
-                #030712 0%,
-                #080d24 45%,
+                #020617 0%,
+                #080d24 48%,
                 #020617 100%
             );
     }
 
-    .main .block-container {
-        max-width: 1250px;
-        padding-top: 2rem;
-        padding-bottom: 6rem;
-    }
-
 
     /* =====================================================
-       QUANTUM GRID
+       BACKGROUND GRID
        ===================================================== */
 
     .stApp::before {
@@ -108,17 +106,33 @@ st.markdown(
 
         background-image:
             linear-gradient(
-                rgba(148,163,184,0.025) 1px,
+                rgba(148, 163, 184, 0.025) 1px,
                 transparent 1px
             ),
             linear-gradient(
                 90deg,
-                rgba(148,163,184,0.025) 1px,
+                rgba(148, 163, 184, 0.025) 1px,
                 transparent 1px
             );
 
         background-size: 55px 55px;
-        z-index: 0;
+
+        mask-image: linear-gradient(
+            to bottom,
+            rgba(0,0,0,0.9),
+            transparent
+        );
+    }
+
+
+    /* =====================================================
+       MAIN CONTAINER
+       ===================================================== */
+
+    .main .block-container {
+        max-width: 1250px;
+        padding-top: 2rem;
+        padding-bottom: 6rem;
     }
 
 
@@ -130,217 +144,137 @@ st.markdown(
         background:
             linear-gradient(
                 180deg,
-                #050816 0%,
-                #070b1d 100%
+                #040713 0%,
+                #070b1d 55%,
+                #030611 100%
             );
 
-        border-right: 1px solid rgba(139, 92, 246, 0.18);
+        border-right: 1px solid rgba(139, 92, 246, 0.20);
     }
 
     section[data-testid="stSidebar"] > div {
         padding-top: 1rem;
     }
 
-    section[data-testid="stSidebar"] .stButton button {
-        background:
-            linear-gradient(
-                135deg,
-                rgba(20, 26, 55, 0.95),
-                rgba(10, 15, 35, 0.95)
-            );
 
-        border: 1px solid rgba(139, 92, 246, 0.18);
-        border-radius: 12px;
+    /* Sidebar title */
+
+    section[data-testid="stSidebar"] h1 {
+        font-family: "Space Grotesk", sans-serif;
+
+        font-size: 22px;
+
+        font-weight: 700;
+
+        letter-spacing: 2px;
+
+        color: #f8fafc;
+    }
+
+
+    /* Sidebar subtitles */
+
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        font-family: "Space Grotesk", sans-serif;
 
         color: #dbeafe;
 
-        transition: all 0.2s ease;
+        letter-spacing: 0.5px;
+    }
+
+
+    /* =====================================================
+       SIDEBAR BUTTONS
+       ===================================================== */
+
+    section[data-testid="stSidebar"] .stButton button {
+
+        min-height: 43px;
+
+        border-radius: 12px;
+
+        border: 1px solid rgba(139, 92, 246, 0.18);
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(19, 27, 57, 0.95),
+                rgba(9, 14, 32, 0.95)
+            );
+
+        color: #dbeafe;
+
+        font-weight: 500;
+
+        transition:
+            all 0.2s ease;
     }
 
     section[data-testid="stSidebar"] .stButton button:hover {
+
         border-color: rgba(139, 92, 246, 0.60);
 
         background:
             linear-gradient(
                 135deg,
-                rgba(35, 29, 76, 0.98),
-                rgba(15, 23, 50, 0.98)
+                rgba(39, 31, 82, 0.98),
+                rgba(13, 21, 48, 0.98)
             );
 
         transform: translateY(-1px);
 
         box-shadow:
-            0 8px 25px rgba(0, 0, 0, 0.30),
-            0 0 20px rgba(139, 92, 246, 0.12);
-    }
-
-    section[data-testid="stSidebar"] .stTextInput input {
-        background: #090f24;
-        border: 1px solid rgba(139, 92, 246, 0.20);
-        border-radius: 10px;
-        color: white;
+            0 8px 25px rgba(0,0,0,0.30),
+            0 0 20px rgba(139,92,246,0.12);
     }
 
 
     /* =====================================================
-       SIDEBAR BRAND
+       SIDEBAR TEXT INPUT
        ===================================================== */
 
-    .sidebar-brand {
-        text-align: center;
-        padding: 8px 0 15px 0;
+    section[data-testid="stSidebar"] input {
+
+        background: #080d22 !important;
+
+        color: #f8fafc !important;
+
+        border: 1px solid rgba(139,92,246,0.20) !important;
+
+        border-radius: 10px !important;
     }
 
-    .sidebar-icon {
-        font-size: 55px;
-        line-height: 1;
+    section[data-testid="stSidebar"] input:focus {
 
-        text-shadow:
-            0 0 8px rgba(167,139,250,0.90),
-            0 0 20px rgba(99,102,241,0.70),
-            0 0 40px rgba(59,130,246,0.40);
-
-        animation: quantumGlow 3s ease-in-out infinite;
-    }
-
-    @keyframes quantumGlow {
-        0%, 100% {
-            transform: scale(1);
-            filter: brightness(1);
-        }
-
-        50% {
-            transform: scale(1.08);
-            filter: brightness(1.25);
-        }
-    }
-
-    .sidebar-title {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 20px;
-        font-weight: 700;
-
-        letter-spacing: 4px;
-
-        color: #f8fafc;
-
-        margin-top: 8px;
-    }
-
-    .sidebar-subtitle {
-        color: #7180a5;
-        font-size: 9px;
-
-        letter-spacing: 2px;
-        text-transform: uppercase;
-
-        margin-top: 4px;
-    }
-
-
-    /* =====================================================
-       USER CARD
-       ===================================================== */
-
-    .user-card {
-        padding: 11px 13px;
-
-        margin: 5px 0 20px 0;
-
-        border-radius: 12px;
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(20,27,57,0.90),
-                rgba(9,14,33,0.90)
-            );
-
-        border: 1px solid rgba(139,92,246,0.15);
-
-        color: #cbd5e1;
-
-        font-size: 12px;
-
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .online-dot {
-        display: inline-block;
-
-        width: 7px;
-        height: 7px;
-
-        margin-right: 7px;
-
-        border-radius: 50%;
-
-        background: #22c55e;
+        border-color: rgba(139,92,246,0.65) !important;
 
         box-shadow:
-            0 0 8px rgba(34,197,94,0.9);
+            0 0 0 1px rgba(139,92,246,0.20) !important;
     }
 
 
     /* =====================================================
-       SIDEBAR LABELS
+       MAIN TITLE
        ===================================================== */
 
-    .sidebar-label {
-        color: #64748b;
+    .main-title {
 
-        font-size: 9px;
-        font-weight: 700;
+        font-family: "Space Grotesk", sans-serif;
 
-        letter-spacing: 2px;
-
-        text-transform: uppercase;
-
-        margin-top: 12px;
-        margin-bottom: 8px;
-    }
-
-
-    /* =====================================================
-       MAIN QUANTUM ICON
-       ===================================================== */
-
-    .main-icon {
         text-align: center;
 
-        font-size: 72px;
-
-        line-height: 1;
-
-        margin-top: 5px;
-        margin-bottom: 8px;
-
-        text-shadow:
-            0 0 8px rgba(255,255,255,0.80),
-            0 0 20px rgba(139,92,246,0.90),
-            0 0 45px rgba(99,102,241,0.65),
-            0 0 80px rgba(59,130,246,0.35);
-
-        animation: quantumGlow 3s ease-in-out infinite;
-    }
-
-
-    /* =====================================================
-       HERO TITLE
-       ===================================================== */
-
-    .hero-title {
-        text-align: center;
-
-        font-family: 'Space Grotesk', sans-serif;
-
-        font-size: clamp(32px, 5vw, 56px);
+        font-size: clamp(
+            34px,
+            5vw,
+            58px
+        );
 
         font-weight: 700;
 
         letter-spacing: 5px;
+
+        margin-top: 8px;
 
         background:
             linear-gradient(
@@ -352,17 +286,22 @@ st.markdown(
             );
 
         -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
 
-        margin-top: 4px;
+        -webkit-text-fill-color: transparent;
     }
 
-    .hero-subtitle {
+
+    /* =====================================================
+       SUBTITLE
+       ===================================================== */
+
+    .subtitle {
+
         text-align: center;
 
-        max-width: 700px;
+        max-width: 750px;
 
-        margin: 14px auto 20px auto;
+        margin: 15px auto 22px auto;
 
         color: #94a3b8;
 
@@ -373,51 +312,89 @@ st.markdown(
 
 
     /* =====================================================
+       QUANTUM ICON
+       ===================================================== */
+
+    .quantum-icon {
+
+        text-align: center;
+
+        font-size: 76px;
+
+        line-height: 1;
+
+        margin-bottom: 8px;
+
+        text-shadow:
+            0 0 8px rgba(255,255,255,0.9),
+            0 0 20px rgba(139,92,246,0.9),
+            0 0 45px rgba(99,102,241,0.7),
+            0 0 80px rgba(59,130,246,0.4);
+
+        animation: quantum-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes quantum-pulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+            filter: brightness(1);
+        }
+
+        50% {
+            transform: scale(1.08);
+            filter: brightness(1.25);
+        }
+    }
+
+
+    /* =====================================================
        ONLINE STATUS
        ===================================================== */
 
-    .hero-online {
+    .online {
+
         width: fit-content;
 
-        margin: 0 auto 25px auto;
+        margin: 0 auto 28px auto;
 
-        padding: 7px 14px;
+        padding: 7px 15px;
 
         border-radius: 999px;
 
         background: rgba(34,197,94,0.06);
 
-        border: 1px solid rgba(34,197,94,0.18);
+        border: 1px solid rgba(34,197,94,0.20);
 
         color: #86efac;
 
         font-size: 10px;
 
-        font-weight: 600;
+        font-weight: 700;
 
-        letter-spacing: 1.7px;
-
-        text-transform: uppercase;
+        letter-spacing: 1.8px;
     }
 
 
     /* =====================================================
-       HERO SEPARATOR
+       QUANTUM LINE
        ===================================================== */
 
     .quantum-line {
-        width: 200px;
+
+        width: 220px;
 
         height: 1px;
 
-        margin: 0 auto 28px auto;
+        margin: 0 auto 25px auto;
 
         background:
             linear-gradient(
                 90deg,
                 transparent,
-                rgba(139,92,246,0.70),
-                rgba(59,130,246,0.70),
+                rgba(139,92,246,0.8),
+                rgba(59,130,246,0.8),
                 transparent
             );
     }
@@ -428,6 +405,7 @@ st.markdown(
        ===================================================== */
 
     [data-testid="stChatMessage"] {
+
         border-radius: 16px;
 
         border: 1px solid rgba(139,92,246,0.10);
@@ -435,21 +413,30 @@ st.markdown(
         background:
             linear-gradient(
                 135deg,
-                rgba(17,24,45,0.80),
-                rgba(7,12,28,0.80)
+                rgba(15,23,42,0.78),
+                rgba(7,12,28,0.78)
             );
 
-        margin-bottom: 10px;
+        margin-bottom: 11px;
 
-        transition: all 0.2s ease;
+        transition:
+            border-color 0.2s ease,
+            transform 0.2s ease;
     }
 
     [data-testid="stChatMessage"]:hover {
-        border-color: rgba(139,92,246,0.25);
+
+        border-color:
+            rgba(139,92,246,0.25);
+
+        transform:
+            translateY(-1px);
     }
 
     [data-testid="stChatMessage"] p {
+
         color: #dbe4f0;
+
         line-height: 1.7;
     }
 
@@ -459,14 +446,15 @@ st.markdown(
        ===================================================== */
 
     [data-testid="stChatInput"] > div {
+
         background:
             linear-gradient(
                 135deg,
-                rgba(13,18,38,0.98),
+                rgba(12,18,38,0.98),
                 rgba(5,10,25,0.98)
             );
 
-        border: 1px solid rgba(139,92,246,0.22);
+        border: 1px solid rgba(139,92,246,0.25);
 
         border-radius: 16px;
 
@@ -475,7 +463,9 @@ st.markdown(
     }
 
     [data-testid="stChatInput"] > div:focus-within {
-        border-color: rgba(139,92,246,0.60);
+
+        border-color:
+            rgba(139,92,246,0.65);
 
         box-shadow:
             0 0 0 1px rgba(139,92,246,0.20),
@@ -483,11 +473,34 @@ st.markdown(
     }
 
     [data-testid="stChatInput"] textarea {
+
         color: #f8fafc !important;
+
+        font-size: 14px !important;
     }
 
     [data-testid="stChatInput"] textarea::placeholder {
+
         color: #64748b !important;
+    }
+
+
+    /* =====================================================
+       NORMAL BUTTONS
+       ===================================================== */
+
+    .stButton button {
+
+        border-radius: 11px;
+
+        transition:
+            all 0.2s ease;
+    }
+
+    .stButton button:hover {
+
+        transform:
+            translateY(-1px);
     }
 
 
@@ -496,6 +509,7 @@ st.markdown(
        ===================================================== */
 
     div[data-testid="stAlert"] {
+
         border-radius: 13px;
     }
 
@@ -505,7 +519,34 @@ st.markdown(
        ===================================================== */
 
     hr {
-        border-color: rgba(255,255,255,0.06);
+
+        border-color:
+            rgba(255,255,255,0.06);
+    }
+
+
+    /* =====================================================
+       SCROLLBAR
+       ===================================================== */
+
+    ::-webkit-scrollbar {
+
+        width: 7px;
+    }
+
+    ::-webkit-scrollbar-track {
+
+        background:
+            rgba(2,6,23,0.8);
+    }
+
+    ::-webkit-scrollbar-thumb {
+
+        background:
+            rgba(100,116,139,0.45);
+
+        border-radius:
+            10px;
     }
 
 
@@ -515,16 +556,20 @@ st.markdown(
 
     @media (max-width: 768px) {
 
-        .hero-title {
-            font-size: 31px;
+        .main-title {
+
+            font-size: 32px;
+
             letter-spacing: 2px;
         }
 
-        .hero-subtitle {
+        .subtitle {
+
             font-size: 13px;
         }
 
-        .main-icon {
+        .quantum-icon {
+
             font-size: 60px;
         }
     }
@@ -542,32 +587,22 @@ st.markdown(
 if not st.session_state.logged_in:
 
     st.markdown(
-        '<div class="main-icon">⚛️</div>',
+        '<div class="quantum-icon">⚛️</div>',
         unsafe_allow_html=True,
     )
 
     st.markdown(
-        '<div class="hero-title">QUANTUM AI TUTOR</div>',
+        '<div class="main-title">QUANTUM AI TUTOR</div>',
         unsafe_allow_html=True,
     )
 
     st.markdown(
-        """
-        <div class="hero-subtitle">
-            Explore quantum computing through an intelligent
-            RAG-powered learning environment.
-        </div>
-        """,
+        '<div class="subtitle">Explore quantum computing through an intelligent RAG-powered learning environment.</div>',
         unsafe_allow_html=True,
     )
 
     st.markdown(
-        """
-        <div class="hero-online">
-            <span class="online-dot"></span>
-            AI TUTOR ONLINE
-        </div>
-        """,
+        '<div class="online">🟢 AI TUTOR ONLINE</div>',
         unsafe_allow_html=True,
     )
 
@@ -585,7 +620,9 @@ if not st.session_state.logged_in:
 
         if not email.strip():
 
-            st.error("Please enter your email.")
+            st.error(
+                "Please enter your email."
+            )
 
         else:
 
@@ -609,10 +646,11 @@ if not st.session_state.logged_in:
 
                 st.rerun()
 
-            except Exception as e:
+            except Exception:
 
                 st.error(
-                    f"Login failed: {str(e)}"
+                    "Unable to complete login. "
+                    "Please check your connection and try again."
                 )
 
     st.stop()
@@ -626,43 +664,41 @@ with st.sidebar:
 
     st.markdown(
         """
-        <div class="sidebar-brand">
-
-            <div class="sidebar-icon">
+        <div style="
+            text-align:center;
+            padding:8px 0 12px 0;
+        ">
+            <div style="
+                font-size:48px;
+                text-shadow:
+                    0 0 12px rgba(139,92,246,0.9),
+                    0 0 30px rgba(99,102,241,0.7);
+            ">
                 ⚛️
             </div>
-
-            <div class="sidebar-title">
-                QUANTUM LAB
-            </div>
-
-            <div class="sidebar-subtitle">
-                AI Learning Environment
-            </div>
-
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown(
-        f"""
-        <div class="user-card">
-            <span class="online-dot"></span>
-            {st.session_state.user_email}
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.title("QUANTUM LAB")
+
+    st.caption(
+        "AI LEARNING ENVIRONMENT"
     )
 
     st.markdown(
-        '<div class="sidebar-label">Workspace</div>',
-        unsafe_allow_html=True,
+        f"🟢  {st.session_state.user_email}"
     )
 
-    # -----------------------------------------------------
+    st.divider()
+
+
+    # =====================================================
     # NEW CHAT
-    # -----------------------------------------------------
+    # =====================================================
+
+    st.caption("WORKSPACE")
 
     if st.button(
         "＋  New Quantum Session",
@@ -681,16 +717,16 @@ with st.sidebar:
 
             st.rerun()
 
-        except Exception as e:
+        except Exception:
 
             st.error(
-                f"Could not create chat: {str(e)}"
+                "Unable to create a new chat right now."
             )
 
 
-    # -----------------------------------------------------
-    # LOAD SESSIONS
-    # -----------------------------------------------------
+    # =====================================================
+    # LOAD CHAT SESSIONS
+    # =====================================================
 
     try:
 
@@ -698,83 +734,90 @@ with st.sidebar:
             st.session_state.user_id
         )
 
-    except Exception as e:
+    except Exception:
 
-        st.error(
-            f"Could not load chats: {str(e)}"
+        st.session_state.sessions = []
+
+        st.warning(
+            "Chat history is temporarily unavailable. "
+            "Your RAG tutor is still available for a new session."
         )
 
 
-    # -----------------------------------------------------
-    # SESSIONS
-    # -----------------------------------------------------
+    # =====================================================
+    # SESSION LIST
+    # =====================================================
 
-    st.markdown(
-        '<div class="sidebar-label">Your Sessions</div>',
-        unsafe_allow_html=True,
-    )
+    st.caption("YOUR SESSIONS")
 
-    for chat in st.session_state.sessions:
+    if not st.session_state.sessions:
 
-        session_id = chat["session_id"]
-
-        title = chat.get(
-            "title",
-            "New Quantum Chat"
+        st.caption(
+            "No saved sessions available."
         )
 
-        if st.button(
-            f"◈  {title}",
-            key=f"chat_{session_id}",
-            use_container_width=True,
-        ):
+    else:
 
-            try:
+        for chat in st.session_state.sessions:
 
-                history = restore_chat(
-                    session_id,
-                    st.session_state.user_id
-                )
+            session_id = chat["session_id"]
 
-                st.session_state.session_id = session_id
+            title = chat.get(
+                "title",
+                "New Quantum Chat"
+            )
 
-                st.session_state.messages = []
+            if st.button(
+                f"◈  {title}",
+                key=f"chat_{session_id}",
+                use_container_width=True,
+            ):
 
-                for message in history:
+                try:
 
-                    st.session_state.messages.append(
-                        {
-                            "role": (
-                                "user"
-                                if message["sender"] == "user"
-                                else "assistant"
-                            ),
-                            "content": message["content"],
-                        }
+                    history = restore_chat(
+                        session_id,
+                        st.session_state.user_id
                     )
 
-                st.rerun()
+                    st.session_state.session_id = (
+                        session_id
+                    )
 
-            except Exception as e:
+                    st.session_state.messages = []
 
-                st.error(
-                    f"Could not open chat: {str(e)}"
-                )
+                    for message in history:
+
+                        st.session_state.messages.append(
+                            {
+                                "role": (
+                                    "user"
+                                    if message["sender"] == "user"
+                                    else "assistant"
+                                ),
+                                "content": message["content"],
+                            }
+                        )
+
+                    st.rerun()
+
+                except Exception:
+
+                    st.error(
+                        "Unable to open this chat right now."
+                    )
 
 
     st.divider()
 
 
-    # -----------------------------------------------------
-    # CHAT SETTINGS
-    # -----------------------------------------------------
+    # =====================================================
+    # CHAT MANAGEMENT
+    # =====================================================
 
     if st.session_state.session_id:
 
-        st.markdown(
-            '<div class="sidebar-label">Chat Settings</div>',
-            unsafe_allow_html=True,
-        )
+        st.caption("CHAT SETTINGS")
 
         new_title = st.text_input(
             "Rename chat",
@@ -803,20 +846,20 @@ with st.sidebar:
                     )
 
                     st.success(
-                        "Chat renamed."
+                        "Chat renamed successfully."
                     )
 
                     st.rerun()
 
-                except Exception as e:
+                except Exception:
 
                     st.error(
-                        f"Rename failed: {str(e)}"
+                        "Unable to rename this chat."
                     )
 
 
         if st.button(
-            "🗑  Delete Chat",
+            "🗑️  Delete Chat",
             use_container_width=True,
         ):
 
@@ -832,24 +875,24 @@ with st.sidebar:
                 st.session_state.messages = []
 
                 st.success(
-                    "Chat deleted."
+                    "Chat deleted successfully."
                 )
 
                 st.rerun()
 
-            except Exception as e:
+            except Exception:
 
                 st.error(
-                    f"Delete failed: {str(e)}"
+                    "Unable to delete this chat."
                 )
 
 
     st.divider()
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # LOGOUT
-    # -----------------------------------------------------
+    # =====================================================
 
     if st.button(
         "↪  Logout",
@@ -874,30 +917,28 @@ with st.sidebar:
 # =========================================================
 
 st.markdown(
-    '<div class="main-icon">⚛️</div>',
+    '<div class="quantum-icon">⚛️</div>',
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    '<div class="hero-online"><span class="online-dot"></span> AI TUTOR ONLINE</div>',
+    '<div class="online">🟢 AI TUTOR ONLINE</div>',
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    '<div class="hero-title">QUANTUM AI TUTOR</div>',
+    '<div class="main-title">QUANTUM AI TUTOR</div>',
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    '<div class="quantum-line"></div>',
     unsafe_allow_html=True,
 )
 
 st.markdown(
     """
-    <div class="quantum-line"></div>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-    <div class="hero-subtitle">
+    <div class="subtitle">
         Learn quantum computing and technical concepts
         through an intelligent RAG-powered learning environment.
     </div>
@@ -955,9 +996,9 @@ if query:
         st.stop()
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # USER MESSAGE
-    # -----------------------------------------------------
+    # =====================================================
 
     st.session_state.messages.append(
         {
@@ -971,9 +1012,9 @@ if query:
         st.markdown(query)
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # RAG ANSWER
-    # -----------------------------------------------------
+    # =====================================================
 
     with st.chat_message("assistant"):
 
@@ -999,9 +1040,9 @@ if query:
         st.markdown(answer)
 
 
-    # -----------------------------------------------------
-    # SAVE ANSWER TO SESSION STATE
-    # -----------------------------------------------------
+    # =====================================================
+    # SAVE ANSWER TO UI STATE
+    # =====================================================
 
     st.session_state.messages.append(
         {

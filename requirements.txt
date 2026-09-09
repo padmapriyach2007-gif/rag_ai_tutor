@@ -1,4 +1,5 @@
 streamlit
+groq
 python-dotenv
 langchain-core
 langchain-chroma

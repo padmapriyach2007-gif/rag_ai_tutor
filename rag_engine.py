@@ -1,16 +1,13 @@
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-from langchain_groq import ChatGroq
+from groq import Groq
 
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-
-from langchain_huggingface import HuggingFaceEmbeddings
+from sentence_transformers import SentenceTransformer
 
 from tavily import TavilyClient
 
@@ -19,34 +16,19 @@ from tavily import TavilyClient
 # LOAD ENVIRONMENT VARIABLES
 # =========================================================
 
-env_path = (
-    Path(__file__).resolve().parent / ".env"
-)
-
-load_dotenv(
-    dotenv_path=env_path
-)
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 
 # =========================================================
 # API KEYS
 # =========================================================
 
-GROQ_API_KEY = os.getenv(
-    "GROQ_API_KEY"
-)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
-TAVILY_API_KEY = os.getenv(
-    "TAVILY_API_KEY"
-)
-
-SUPABASE_URL = os.getenv(
-    "SUPABASE_URL"
-)
-
-SUPABASE_SERVICE_KEY = os.getenv(
-    "SUPABASE_SERVICE_KEY"
-)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 
 # =========================================================
@@ -54,23 +36,16 @@ SUPABASE_SERVICE_KEY = os.getenv(
 # =========================================================
 
 try:
-
     import streamlit as st
 
     if not GROQ_API_KEY:
-        GROQ_API_KEY = st.secrets.get(
-            "GROQ_API_KEY"
-        )
+        GROQ_API_KEY = st.secrets.get("GROQ_API_KEY")
 
     if not TAVILY_API_KEY:
-        TAVILY_API_KEY = st.secrets.get(
-            "TAVILY_API_KEY"
-        )
+        TAVILY_API_KEY = st.secrets.get("TAVILY_API_KEY")
 
     if not SUPABASE_URL:
-        SUPABASE_URL = st.secrets.get(
-            "SUPABASE_URL"
-        )
+        SUPABASE_URL = st.secrets.get("SUPABASE_URL")
 
     if not SUPABASE_SERVICE_KEY:
         SUPABASE_SERVICE_KEY = st.secrets.get(
@@ -88,26 +63,19 @@ except Exception:
 missing_keys = []
 
 if not GROQ_API_KEY:
-    missing_keys.append(
-        "GROQ_API_KEY"
-    )
+    missing_keys.append("GROQ_API_KEY")
+
+if not TAVILY_API_KEY:
+    missing_keys.append("TAVILY_API_KEY")
 
 if not SUPABASE_URL:
-    missing_keys.append(
-        "SUPABASE_URL"
-    )
+    missing_keys.append("SUPABASE_URL")
 
 if not SUPABASE_SERVICE_KEY:
-    missing_keys.append(
-        "SUPABASE_SERVICE_KEY"
-    )
+    missing_keys.append("SUPABASE_SERVICE_KEY")
 
-
-# Tavily is optional.
-# RAG will still work without Tavily.
 
 if missing_keys:
-
     raise ValueError(
         "Missing required environment variables:\n\n"
         + "\n".join(
@@ -119,7 +87,7 @@ if missing_keys:
 
 
 # =========================================================
-# SUPABASE CONNECTION
+# CONNECTIONS
 # =========================================================
 
 supabase: Client = create_client(
@@ -127,60 +95,161 @@ supabase: Client = create_client(
     SUPABASE_SERVICE_KEY
 )
 
+tavily_client = TavilyClient(
+    api_key=TAVILY_API_KEY
+)
+
 
 # =========================================================
-# TAVILY CONNECTION
+# GROQ CLIENT
 # =========================================================
 
-tavily_client = None
-
-if TAVILY_API_KEY:
-
-    try:
-
-        tavily_client = TavilyClient(
-            api_key=TAVILY_API_KEY
-        )
-
-    except Exception:
-
-        tavily_client = None
+groq_client = Groq(
+    api_key=GROQ_API_KEY
+)
 
 
 # =========================================================
 # EMBEDDING MODEL
 # =========================================================
+#
+# all-MiniLM-L6-v2 produces 384-dimensional embeddings.
+#
+# This matches:
+#
+# embedding vector(384)
+#
+# in Supabase.
+# =========================================================
 
-@staticmethod
-def _dummy():
-    pass
-
-
-@staticmethod
-def _dummy2():
-    pass
-
-
-def get_embeddings():
-
-    return HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
+embedding_model = SentenceTransformer(
+    "sentence-transformers/all-MiniLM-L6-v2"
+)
 
 
 # =========================================================
 # AI MODEL
 # =========================================================
 
-def get_llm():
+GROQ_MODEL = "openai/gpt-oss-20b"
 
-    return ChatGroq(
-        model="llama-3.1-8b-instant",
+
+# =========================================================
+# GET LLM ANSWER
+# =========================================================
+
+def get_llm_response(
+    prompt: str
+) -> str:
+
+    response = groq_client.chat.completions.create(
+        model=GROQ_MODEL,
+
+        messages=[
+            {
+                "role": "system",
+                "content": """
+You are Quantum Lab's AI Tutor.
+
+You are an intelligent, versatile and helpful
+AI assistant.
+
+Your job is to help students learn clearly.
+
+You can answer questions about:
+
+- Quantum Computing
+- Qubits
+- Quantum Gates
+- Quantum Circuits
+- Qiskit
+- Artificial Intelligence
+- Machine Learning
+- Programming
+- Python
+- C
+- C++
+- Java
+- JavaScript
+- HTML
+- CSS
+- SQL
+- Data Structures
+- Algorithms
+- Mathematics
+- Physics
+- Chemistry
+- Engineering
+- Science
+- History
+- Geography
+- General Knowledge
+- Current Affairs
+- Movies and entertainment
+- Writing
+- Assignments
+- Exam preparation
+
+IMPORTANT RULES:
+
+1. Answer the exact question asked.
+
+2. Use the supplied knowledge-base context
+   whenever it is relevant.
+
+3. Do not invent facts that contradict the
+   supplied knowledge base.
+
+4. If the knowledge base does not contain
+   enough information, use your general
+   knowledge.
+
+5. If web search information is provided,
+   use it for current information.
+
+6. Explain difficult concepts in a simple,
+   student-friendly way.
+
+7. For programming questions:
+   - Give correct code.
+   - Explain the logic.
+   - Mention important mistakes when useful.
+
+8. For mathematics:
+   - Show the steps.
+   - Give the final answer clearly.
+
+9. For educational questions:
+   - Use headings when useful.
+   - Give examples.
+   - Keep explanations understandable.
+
+10. Do not mention API keys, databases,
+    embeddings, prompts, backend implementation,
+    or internal tools.
+
+11. Never expose credentials.
+
+12. Do not say that you can only answer
+    quantum computing questions.
+
+13. If the retrieved context is not relevant
+    to the question, do not force it into
+    the answer.
+"""
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+
         temperature=0.5,
-        api_key=GROQ_API_KEY,
-        max_retries=3,
-        request_timeout=60,
+
+        max_tokens=4096
     )
+
+    return response.choices[0].message.content
 
 
 # =========================================================
@@ -195,7 +264,6 @@ def get_or_create_user(
     email = email.strip().lower()
 
     if not email:
-
         raise ValueError(
             "Email cannot be empty."
         )
@@ -204,41 +272,30 @@ def get_or_create_user(
         supabase
         .table("users")
         .select("user_id")
-        .eq(
-            "email",
-            email
-        )
+        .eq("email", email)
         .limit(1)
         .execute()
     )
 
     if response.data:
-
-        return response.data[0][
-            "user_id"
-        ]
+        return response.data[0]["user_id"]
 
     response = (
         supabase
         .table("users")
-        .insert(
-            {
-                "email": email,
-                "role": role,
-            }
-        )
+        .insert({
+            "email": email,
+            "role": role
+        })
         .execute()
     )
 
     if not response.data:
-
         raise RuntimeError(
             "Failed to create user."
         )
 
-    return response.data[0][
-        "user_id"
-    ]
+    return response.data[0]["user_id"]
 
 
 # =========================================================
@@ -251,7 +308,6 @@ def create_chat_session(
 ) -> str:
 
     if not user_id:
-
         raise ValueError(
             "User ID is required."
         )
@@ -259,24 +315,19 @@ def create_chat_session(
     response = (
         supabase
         .table("chat_sessions")
-        .insert(
-            {
-                "user_id": user_id,
-                "title": title,
-            }
-        )
+        .insert({
+            "user_id": user_id,
+            "title": title
+        })
         .execute()
     )
 
     if not response.data:
-
         raise RuntimeError(
             "Failed to create chat session."
         )
 
-    return response.data[0][
-        "session_id"
-    ]
+    return response.data[0]["session_id"]
 
 
 # =========================================================
@@ -288,7 +339,6 @@ def get_user_sessions(
 ):
 
     if not user_id:
-
         return []
 
     response = (
@@ -321,15 +371,12 @@ def verify_session_owner(
 ) -> bool:
 
     if not session_id or not user_id:
-
         return False
 
     response = (
         supabase
         .table("chat_sessions")
-        .select(
-            "session_id"
-        )
+        .select("session_id")
         .eq(
             "session_id",
             session_id
@@ -342,9 +389,7 @@ def verify_session_owner(
         .execute()
     )
 
-    return bool(
-        response.data
-    )
+    return bool(response.data)
 
 
 # =========================================================
@@ -360,7 +405,6 @@ def rename_chat(
     new_title = new_title.strip()
 
     if not new_title:
-
         raise ValueError(
             "Chat name cannot be empty."
         )
@@ -369,7 +413,6 @@ def rename_chat(
         session_id,
         user_id
     ):
-
         raise PermissionError(
             "You cannot rename this chat."
         )
@@ -377,11 +420,9 @@ def rename_chat(
     response = (
         supabase
         .table("chat_sessions")
-        .update(
-            {
-                "title": new_title
-            }
-        )
+        .update({
+            "title": new_title
+        })
         .eq(
             "session_id",
             session_id
@@ -407,20 +448,17 @@ def save_message(
 ):
 
     if not session_id:
-
         raise ValueError(
             "Session ID is required."
         )
 
     if not content:
-
         return None
 
     if sender not in [
         "user",
         "assistant"
     ]:
-
         raise ValueError(
             "Sender must be 'user' or 'assistant'."
         )
@@ -428,13 +466,11 @@ def save_message(
     response = (
         supabase
         .table("chat_messages")
-        .insert(
-            {
-                "session_id": session_id,
-                "sender": sender,
-                "content": content,
-            }
-        )
+        .insert({
+            "session_id": session_id,
+            "sender": sender,
+            "content": content
+        })
         .execute()
     )
 
@@ -450,7 +486,6 @@ def get_chat_history(
 ):
 
     if not session_id:
-
         return []
 
     response = (
@@ -486,7 +521,6 @@ def restore_chat(
         session_id,
         user_id
     ):
-
         raise PermissionError(
             "You cannot access this chat."
         )
@@ -494,6 +528,37 @@ def restore_chat(
     return get_chat_history(
         session_id
     )
+
+
+# =========================================================
+# CLEAR CHAT
+# =========================================================
+
+def clear_chat(
+    session_id: str,
+    user_id: str
+):
+
+    if not verify_session_owner(
+        session_id,
+        user_id
+    ):
+        raise PermissionError(
+            "You cannot clear this chat."
+        )
+
+    (
+        supabase
+        .table("chat_messages")
+        .delete()
+        .eq(
+            "session_id",
+            session_id
+        )
+        .execute()
+    )
+
+    return True
 
 
 # =========================================================
@@ -509,7 +574,6 @@ def delete_chat(
         session_id,
         user_id
     ):
-
         raise PermissionError(
             "You cannot delete this chat."
         )
@@ -533,6 +597,10 @@ def delete_chat(
             "session_id",
             session_id
         )
+        .eq(
+            "user_id",
+            user_id
+        )
         .execute()
     )
 
@@ -540,92 +608,77 @@ def delete_chat(
 
 
 # =========================================================
-# RAG RETRIEVAL
+# CREATE EMBEDDING
 # =========================================================
 
-def retrieve_documents(
+def create_embedding(
+    text: str
+) -> List[float]:
+
+    embedding = embedding_model.encode(
+        text,
+        normalize_embeddings=True
+    )
+
+    return embedding.tolist()
+
+
+# =========================================================
+# RAG DOCUMENT SEARCH
+# =========================================================
+
+def search_knowledge_base(
     query: str,
     match_count: int = 5
-):
-
-    """
-    Convert the user's question into an embedding
-    and search the Supabase vector database.
-    """
+) -> str:
 
     try:
 
-        embeddings = get_embeddings()
-
-        query_embedding = (
-            embeddings.embed_query(
-                query
-            )
+        query_embedding = create_embedding(
+            query
         )
 
         response = supabase.rpc(
             "match_documents",
             {
-                "query_embedding":
-                    query_embedding,
-
-                "match_count":
-                    match_count,
+                "query_embedding": query_embedding,
+                "match_count": match_count
             }
         ).execute()
 
-        return response.data or []
+        documents = response.data or []
 
-    except Exception as e:
+        if not documents:
+            return ""
 
-        print(
-            "RAG retrieval error:",
-            str(e)
-        )
+        context_parts = []
 
-        return []
+        for i, document in enumerate(
+            documents,
+            start=1
+        ):
 
+            content = document.get(
+                "content",
+                ""
+            )
 
-# =========================================================
-# FORMAT RAG DOCUMENTS
-# =========================================================
+            metadata = document.get(
+                "metadata",
+                {}
+            )
 
-def format_documents(
-    documents
-) -> str:
+            similarity = document.get(
+                "similarity",
+                None
+            )
 
-    if not documents:
+            if not content:
+                continue
 
-        return ""
-
-    formatted = []
-
-    for i, document in enumerate(
-        documents,
-        start=1
-    ):
-
-        content = document.get(
-            "content",
-            ""
-        )
-
-        metadata = document.get(
-            "metadata",
-            {}
-        )
-
-        similarity = document.get(
-            "similarity",
-            ""
-        )
-
-        if not content:
-            continue
-
-        formatted.append(
-            f"""
-DOCUMENT {i}
+            context_parts.append(
+                f"""
+KNOWLEDGE SOURCE {i}
 
 Content:
 {content}
@@ -636,11 +689,20 @@ Metadata:
 Similarity:
 {similarity}
 """
+            )
+
+        return "\n".join(
+            context_parts
         )
 
-    return "\n".join(
-        formatted
-    )
+    except Exception as e:
+
+        print(
+            "Knowledge base search error:",
+            str(e)
+        )
+
+        return ""
 
 
 # =========================================================
@@ -651,16 +713,12 @@ def web_search(
     query: str
 ) -> str:
 
-    if tavily_client is None:
-
-        return ""
-
     try:
 
         results = tavily_client.search(
             query=query,
             search_depth="advanced",
-            max_results=6,
+            max_results=5
         )
 
     except Exception as e:
@@ -721,25 +779,7 @@ def needs_web_search(
     query: str
 ) -> bool:
 
-    query_lower = (
-        query.lower().strip()
-    )
-
-    # Very short messages such as:
-    # hi, hello, hey
-    greetings = [
-        "hi",
-        "hello",
-        "hey",
-        "hai",
-        "good morning",
-        "good afternoon",
-        "good evening",
-    ]
-
-    if query_lower in greetings:
-
-        return False
+    query_lower = query.lower().strip()
 
     current_keywords = [
 
@@ -752,8 +792,6 @@ def needs_web_search(
         "news",
 
         "2026",
-        "2025",
-        "2024",
 
         "this year",
         "this month",
@@ -775,7 +813,7 @@ def needs_web_search(
         "updated",
         "update",
 
-        "what is happening",
+        "what is happening"
     ]
 
     return any(
@@ -793,7 +831,6 @@ def format_history(
 ) -> str:
 
     if not history:
-
         return ""
 
     formatted = []
@@ -813,13 +850,11 @@ def format_history(
         if not content:
             continue
 
-        if sender == "user":
-
-            name = "User"
-
-        else:
-
-            name = "Assistant"
+        name = (
+            "User"
+            if sender == "user"
+            else "Assistant"
+        )
 
         formatted.append(
             f"{name}: {content}"
@@ -834,226 +869,79 @@ def format_history(
 # GENERATE RAG ANSWER
 # =========================================================
 
-def generate_rag_answer(
-    query: str,
-    context: str = "",
-    history: str = "",
-    web_context: str = "",
-) -> str:
-
-    llm = get_llm()
-
-    prompt = ChatPromptTemplate.from_messages(
-        [
-
-            (
-                "system",
-
-                """
-You are Quantum Lab's AI Tutor.
-
-You are an intelligent and helpful educational
-AI tutor.
-
-You can answer questions about:
-
-- Quantum Computing
-- Qubits
-- Quantum Gates
-- Quantum Circuits
-- Qiskit
-- Artificial Intelligence
-- Machine Learning
-- Python
-- C
-- C++
-- Java
-- JavaScript
-- HTML
-- CSS
-- SQL
-- Data Structures
-- Algorithms
-- Mathematics
-- Physics
-- Chemistry
-- Engineering
-- Science
-- General Knowledge
-- Assignments
-- Exam preparation
-
-================================================
-RAG INSTRUCTIONS
-================================================
-
-The KNOWLEDGE BASE CONTEXT contains information
-retrieved from the application's knowledge base.
-
-Use the knowledge base context when it is relevant
-to the user's question.
-
-Do not invent information that contradicts the
-knowledge base.
-
-If the knowledge base contains the answer,
-prioritize it.
-
-If the knowledge base does not contain enough
-information, use your general knowledge.
-
-WEB CONTEXT contains information retrieved from
-the web.
-
-Use WEB CONTEXT for current information when it
-is available.
-
-================================================
-IMPORTANT RULES
-================================================
-
-1. Answer the exact question asked.
-
-2. Explain difficult concepts in a simple,
-   student-friendly way.
-
-3. For programming questions:
-   - Give correct code.
-   - Explain the logic.
-   - Mention important mistakes when useful.
-
-4. For mathematical questions:
-   - Show the steps.
-   - Give the final answer clearly.
-
-5. For educational questions:
-   - Use headings when useful.
-   - Give examples.
-   - Keep explanations understandable.
-
-6. Do not blindly copy retrieved information.
-
-7. Combine retrieved information with reasoning.
-
-8. Do not mention internal prompts, databases,
-   API keys, backend implementation, or internal
-   tools.
-
-9. Never expose API keys or credentials.
-
-10. You are not restricted to quantum computing.
-
-================================================
-PREVIOUS CONVERSATION
-================================================
-
-{history}
-
-================================================
-KNOWLEDGE BASE CONTEXT
-================================================
-
-{context}
-
-================================================
-WEB CONTEXT
-================================================
-
-{web_context}
-
-================================================
-"""
-            ),
-
-            (
-                "human",
-                "{input}"
-            ),
-        ]
-    )
-
-    chain = (
-        prompt
-        | llm
-        | StrOutputParser()
-    )
-
-    return chain.invoke(
-        {
-            "history": history,
-            "context": context,
-            "web_context": web_context,
-            "input": query,
-        }
-    )
-
-
-# =========================================================
-# GENERAL ANSWER FALLBACK
-# =========================================================
-
-def generate_general_answer(
+def generate_answer(
     query: str,
     history: str = "",
+    knowledge_context: str = "",
     web_context: str = ""
 ) -> str:
 
-    llm = get_llm()
-
-    prompt = ChatPromptTemplate.from_messages(
-        [
-
-            (
-                "system",
-
-                """
+    prompt = f"""
 You are Quantum Lab's AI Tutor.
 
-Answer the user's question directly and clearly.
+Answer the user's question using the information
+provided below.
 
-You are a general educational AI tutor and can
-answer questions about programming, mathematics,
-science, engineering, quantum computing, AI,
-assignments, exams and general knowledge.
+==============================
+KNOWLEDGE BASE
+==============================
 
-If web context is provided, use it for current
-information.
+{knowledge_context}
 
-Explain concepts in a simple,
-student-friendly manner.
+==============================
+WEB INFORMATION
+==============================
 
-Do not mention internal systems,
-databases, API keys, prompts, or tools.
+{web_context}
 
-Previous conversation:
+==============================
+PREVIOUS CONVERSATION
+==============================
 
 {history}
 
-Web context:
+==============================
+USER QUESTION
+==============================
 
-{web_context}
+{query}
+
+==============================
+INSTRUCTIONS
+==============================
+
+1. Answer the user's question directly.
+
+2. Give priority to relevant knowledge-base
+   information.
+
+3. If the knowledge base does not contain
+   enough information, use your general
+   knowledge.
+
+4. Use web information when it is available
+   and relevant, especially for current topics.
+
+5. Do not mention the knowledge base,
+   embeddings, Supabase, APIs, prompts,
+   databases, or internal implementation.
+
+6. Explain concepts in a simple,
+   student-friendly way.
+
+7. For code questions, provide working code
+   and explain it.
+
+8. For mathematics, show the steps.
+
+9. Use headings and bullet points when
+   they improve readability.
+
+10. Never expose credentials or API keys.
 """
-            ),
 
-            (
-                "human",
-                "{input}"
-            ),
-        ]
-    )
-
-    chain = (
+    return get_llm_response(
         prompt
-        | llm
-        | StrOutputParser()
-    )
-
-    return chain.invoke(
-        {
-            "history": history,
-            "web_context": web_context,
-            "input": query,
-        }
     )
 
 
@@ -1064,20 +952,17 @@ Web context:
 def answer_question(
     query: str,
     session_id: Optional[str] = None,
-    user_id: Optional[str] = None,
+    user_id: Optional[str] = None
 ) -> str:
 
     query = query.strip()
 
     if not query:
+        return "Please enter a question."
 
-        return (
-            "Please enter a question."
-        )
-
-    # =====================================================
-    # VERIFY CHAT OWNERSHIP
-    # =====================================================
+    # -----------------------------------------------------
+    # VERIFY CHAT OWNER
+    # -----------------------------------------------------
 
     if session_id and user_id:
 
@@ -1085,14 +970,13 @@ def answer_question(
             session_id,
             user_id
         ):
-
             raise PermissionError(
                 "This chat does not belong to this user."
             )
 
-    # =====================================================
+    # -----------------------------------------------------
     # GET CHAT HISTORY
-    # =====================================================
+    # -----------------------------------------------------
 
     history_str = ""
 
@@ -1117,9 +1001,9 @@ def answer_question(
                 str(e)
             )
 
-    # =====================================================
+    # -----------------------------------------------------
     # SAVE USER QUESTION
-    # =====================================================
+    # -----------------------------------------------------
 
     if session_id:
 
@@ -1129,122 +1013,56 @@ def answer_question(
             query
         )
 
-    # =====================================================
-    # HANDLE GREETINGS DIRECTLY
-    # =====================================================
-
-    greetings = {
-
-        "hi":
-            "Hello! 👋 How can I help you learn today?",
-
-        "hello":
-            "Hello! 👋 How can I help you?",
-
-        "hey":
-            "Hey! 👋 What would you like to learn?",
-
-        "hai":
-            "Hello! 👋 What can I help you with?",
-
-        "good morning":
-            "Good morning! ☀️ What would you like to learn today?",
-
-        "good afternoon":
-            "Good afternoon! 😊 How can I help you?",
-
-        "good evening":
-            "Good evening! 🌙 What would you like to learn?",
-    }
-
-    if query.lower() in greetings:
-
-        answer = greetings[
-            query.lower()
-        ]
-
-        if session_id:
-
-            save_message(
-                session_id,
-                "assistant",
-                answer
-            )
-
-        return answer
-
-    # =====================================================
+    # -----------------------------------------------------
     # RAG RETRIEVAL
-    # =====================================================
+    # -----------------------------------------------------
 
-    documents = retrieve_documents(
-        query=query,
+    knowledge_context = search_knowledge_base(
+        query,
         match_count=5
     )
 
-    context = format_documents(
-        documents
-    )
-
-    # =====================================================
+    # -----------------------------------------------------
     # WEB SEARCH
-    # =====================================================
+    # -----------------------------------------------------
 
     web_context = ""
 
-    if needs_web_search(
-        query
-    ):
+    if needs_web_search(query):
 
         web_context = web_search(
             query
         )
 
-    # =====================================================
+    # -----------------------------------------------------
     # GENERATE ANSWER
-    # =====================================================
+    # -----------------------------------------------------
 
     try:
 
-        answer = generate_rag_answer(
+        answer = generate_answer(
             query=query,
-            context=context,
             history=history_str,
-            web_context=web_context,
+            knowledge_context=knowledge_context,
+            web_context=web_context
         )
 
     except Exception as e:
 
         print(
-            "RAG/AI error:",
+            "\nAI Error:",
             str(e)
         )
 
-        # Try general LLM response
-        try:
+        answer = (
+            "⚠️ Sorry, I could not generate "
+            "a response right now.\n\n"
+            f"Error details: `{str(e)}`"
+        )
 
-            answer = generate_general_answer(
-                query=query,
-                history=history_str,
-                web_context=web_context,
-            )
-
-        except Exception as second_error:
-
-            print(
-                "General AI error:",
-                str(second_error)
-            )
-
-            answer = (
-                "⚠️ Sorry, I could not generate "
-                "a response right now.\n\n"
-                f"Error: `{str(second_error)}`"
-            )
-
-    # =====================================================
+    # -----------------------------------------------------
     # SAVE AI ANSWER
-    # =====================================================
+    # -----------------------------------------------------
 
     if session_id:
 

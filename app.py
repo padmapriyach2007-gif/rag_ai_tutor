@@ -478,3 +478,55 @@ if typed_prompt or (st.session_state.staged_voice_text and not typed_prompt and 
             st.markdown(reply)
 
     current_messages.append({"role": "assistant", "content": reply})
+    # ============================================================
+# CHAT INPUT WITH ATTACHMENTS
+# ============================================================
+
+prompt = st.chat_input(
+    "Ask anything...",
+    accept_file="multiple",
+    file_type=[
+        "jpg", "jpeg", "png", "webp",
+        "pdf", "txt", "docx", "csv"
+    ],
+    accept_audio=True
+)
+
+if prompt:
+    # Text
+    user_text = prompt.text
+
+    # Attached files / photos
+    uploaded_files = prompt.files
+
+    # Microphone recording
+    audio = prompt.audio
+
+    # Show user's text
+    if user_text:
+        st.session_state.chats[
+            st.session_state.current_chat
+        ].append({
+            "role": "user",
+            "content": user_text
+        })
+
+    # Process attached files
+    for uploaded_file in uploaded_files:
+        st.session_state.chats[
+            st.session_state.current_chat
+        ].append({
+            "role": "user",
+            "content": f"📎 Attached: {uploaded_file.name}"
+        })
+
+    # Process microphone recording
+    if audio:
+        st.session_state.chats[
+            st.session_state.current_chat
+        ].append({
+            "role": "user",
+            "content": "🎤 Voice message attached"
+        })
+
+    st.rerun()

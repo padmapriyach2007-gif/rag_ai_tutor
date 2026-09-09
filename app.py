@@ -651,8 +651,6 @@ section[data-testid="stSidebar"] .stButton button:hover {
 
     line-height: 1.7;
 }
-
-
 # =========================================================
 # QUANTUM CHAT INPUT BAR
 # =========================================================
@@ -661,14 +659,16 @@ section[data-testid="stSidebar"] .stButton button:hover {
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 
-# ---------------------------------------------------------
+
+# =========================================================
 # INPUT BAR LAYOUT
-# ---------------------------------------------------------
+# =========================================================
 
 input_left, input_center, input_right = st.columns(
     [0.09, 0.78, 0.13],
     vertical_alignment="bottom"
 )
+
 
 # =========================================================
 # LEFT — ATTACHMENTS
@@ -676,40 +676,52 @@ input_left, input_center, input_right = st.columns(
 
 with input_left:
 
-    st.markdown("""
+    st.markdown(
+        """
         <style>
-        /* Attachment popover button */
+
+        /* =====================================================
+           ATTACHMENT POPOVER BUTTON
+           ===================================================== */
+
         div[data-testid="stPopover"] > button {
             width: 52px !important;
             height: 52px !important;
             border-radius: 50% !important;
-            border: 1px solid 
-        rgba(120,180,255,0.45) !important;
+
+            border: 1px solid rgba(120,180,255,0.45) !important;
+
             background:
                 radial-gradient(
                     circle at 35% 30%,
                     rgba(130,220,255,0.30),
                     rgba(20,30,60,0.95)
                 ) !important;
+
             box-shadow:
-                0 0 12px 
-        rgba(70,170,255,0.35),
-                inset 0 0 12px 
-        rgba(100,200,255,0.12) !important;
-                font-size: 24px !important;
-                transition: all 0.25s ease !
-        important;
+                0 0 12px rgba(70,170,255,0.35),
+                inset 0 0 12px rgba(100,200,255,0.12) !important;
+
+            font-size: 24px !important;
+
+            transition:
+                all 0.25s ease !important;
         }
 
         div[data-testid="stPopover"] > button:hover {
-            transform: translateY(-2px) scale(1.05);
+            transform:
+                translateY(-2px) scale(1.05);
+
             box-shadow:
                 0 0 20px rgba(80,190,255,0.65),
                 0 0 40px rgba(80,120,255,0.25),
                 inset 0 0 15px rgba(100,220,255,0.18) !important;
         }
+
         </style>
-        """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True
+    )
 
     with st.popover("＋"):
 
@@ -742,6 +754,7 @@ with input_left:
         )
 
         if uploaded:
+
             st.session_state.uploaded_files = uploaded
 
             st.success(
@@ -749,7 +762,10 @@ with input_left:
             )
 
             for file in uploaded:
-                st.caption(f"📄 {file.name}")
+
+                st.caption(
+                    f"📄 {file.name}"
+                )
 
 
 # =========================================================
@@ -774,11 +790,16 @@ with input_right:
         """
         <style>
 
-        /* Microphone container */
+        /* =====================================================
+           MICROPHONE
+           ===================================================== */
+
         div[data-testid="stAudioInput"] {
+
             width: 62px !important;
             min-width: 62px !important;
             height: 52px !important;
+
             border-radius: 26px !important;
 
             background:
@@ -788,7 +809,8 @@ with input_right:
                     rgba(20,25,55,0.98)
                 ) !important;
 
-            border: 1px solid rgba(100,200,255,0.55) !important;
+            border:
+                1px solid rgba(100,200,255,0.55) !important;
 
             box-shadow:
                 0 0 12px rgba(70,190,255,0.45),
@@ -803,7 +825,9 @@ with input_right:
         }
 
         div[data-testid="stAudioInput"]:hover {
-            transform: translateY(-2px) scale(1.04);
+
+            transform:
+                translateY(-2px) scale(1.04);
 
             box-shadow:
                 0 0 18px rgba(70,210,255,0.75),
@@ -812,14 +836,20 @@ with input_right:
         }
 
         /* Hide unnecessary audio-input text */
+
         div[data-testid="stAudioInput"] label {
             display: none !important;
         }
 
         div[data-testid="stAudioInput"] button {
+
             border: none !important;
-            background: transparent !important;
-            box-shadow: none !important;
+
+            background:
+                transparent !important;
+
+            box-shadow:
+                none !important;
         }
 
         </style>
@@ -832,6 +862,70 @@ with input_right:
         key="quantum_microphone",
         label_visibility="collapsed"
     )
+
+
+# =========================================================
+# SEND BUTTON STYLING
+# =========================================================
+
+st.markdown(
+    """
+    <style>
+
+    /* =====================================================
+       CHAT INPUT / SEND BUTTON
+       ===================================================== */
+
+    [data-testid="stChatInput"] {
+
+        border-radius: 18px !important;
+
+        border:
+            1px solid rgba(139,92,246,0.30) !important;
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(15,23,42,0.95),
+                rgba(7,12,28,0.95)
+            ) !important;
+
+        box-shadow:
+            0 0 25px rgba(99,102,241,0.12),
+            inset 0 0 15px rgba(99,102,241,0.05) !important;
+    }
+
+    [data-testid="stChatInput"] button {
+
+        border-radius: 11px !important;
+
+        border:
+            1px solid rgba(139,92,246,0.35) !important;
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(99,102,241,0.85),
+                rgba(59,130,246,0.85)
+            ) !important;
+
+        transition:
+            all 0.2s ease !important;
+    }
+
+    [data-testid="stChatInput"] button:hover {
+
+        transform:
+            translateY(-1px) scale(1.04);
+
+        box-shadow:
+            0 0 18px rgba(99,102,241,0.45) !important;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 
 # =========================================================
@@ -901,9 +995,11 @@ if audio_value is not None:
 final_query = ""
 
 if query:
+
     final_query = query.strip()
 
 elif voice_query:
+
     final_query = voice_query.strip()
 
 
@@ -937,896 +1033,3 @@ if final_query:
     )
 
     st.rerun()
-/* =========================================================
-   SEND BUTTON
-   ========================================================= */
-
-[data-testid="stChatInput"] button {
-
-    border-radius: 11px !important;
-
-    transition:
-        all .2s ease !important;
-}
-
-
-[data-testid="stChatInput"] button:hover {
-
-    transform:
-        scale(1.05);
-
-    box-shadow:
-        0 0 18px rgba(139,92,246,.35);
-}
-
-
-/* =========================================================
-   ATTACHMENT POPUP
-   ========================================================= */
-
-div[data-baseweb="popover"] {
-
-    background:
-        linear-gradient(
-            145deg,
-            #0b1024,
-            #060a18
-        ) !important;
-
-    border:
-        1px solid rgba(139,92,246,.32) !important;
-
-    border-radius:
-        18px !important;
-
-    box-shadow:
-        0 25px 70px rgba(0,0,0,.65),
-        0 0 35px rgba(99,102,241,.12) !important;
-}
-
-
-.attach-title {
-
-    font-family:
-        "Space Grotesk",
-        sans-serif;
-
-    color:
-        #f8fafc;
-
-    font-size:
-        17px;
-
-    font-weight:
-        700;
-
-    margin-bottom:
-        3px;
-}
-
-
-.attach-subtitle {
-
-    color:
-        #64748b;
-
-    font-size:
-        11px;
-
-    margin-bottom:
-        12px;
-}
-
-
-.attach-card {
-
-    padding:
-        10px;
-
-    margin:
-        6px 0;
-
-    border-radius:
-        12px;
-
-    background:
-        rgba(15,23,42,.72);
-
-    border:
-        1px solid rgba(139,92,246,.13);
-}
-
-
-.attach-card-title {
-
-    color:
-        #e2e8f0;
-
-    font-size:
-        13px;
-
-    font-weight:
-        600;
-}
-
-
-.attach-card-desc {
-
-    color:
-        #64748b;
-
-    font-size:
-        10px;
-}
-
-
-/* =========================================================
-   FILE UPLOADER
-   ========================================================= */
-
-[data-testid="stFileUploader"] {
-
-    margin-top: 5px;
-}
-
-
-[data-testid="stFileUploader"] section {
-
-    background:
-        rgba(15,23,42,.50) !important;
-
-    border-radius:
-        10px !important;
-
-    border:
-        1px dashed rgba(139,92,246,.30) !important;
-}
-
-
-/* =========================================================
-   SIDEBAR INPUT
-   ========================================================= */
-
-section[data-testid="stSidebar"] input {
-
-    background:
-        rgba(10,16,35,.9) !important;
-
-    color:
-        #e2e8f0 !important;
-
-    border-radius:
-        10px !important;
-}
-
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    .main-title {
-        font-size: 31px;
-        letter-spacing: 2px;
-    }
-
-    .quantum-logo {
-        font-size: 56px;
-    }
-
-    [data-testid="stAudioInput"] {
-        right: 68px !important;
-        bottom: 16px !important;
-    }
-}
-
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
-
-# =========================================================
-# REALISTIC STAR BACKGROUND
-# =========================================================
-
-st.markdown(
-    '<div class="quantum-space"></div>',
-    unsafe_allow_html=True,
-)
-
-
-# =========================================================
-# LOGIN
-# =========================================================
-
-if not st.session_state.logged_in:
-
-    st.markdown(
-        '<div class="quantum-logo">⚛️</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        '<div class="main-title">QUANTUM AI TUTOR</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        """
-        <div class="subtitle">
-            Explore quantum computing through an intelligent
-            RAG-powered learning environment.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        '<div class="online">● AI TUTOR ONLINE</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.subheader("🔐 Login")
-
-    email = st.text_input(
-        "Enter your email",
-        placeholder="student@example.com",
-    )
-
-    if st.button(
-        "🚀 Start Learning",
-        use_container_width=True,
-    ):
-
-        if not email.strip():
-
-            st.error(
-                "Please enter your email."
-            )
-
-        else:
-
-            try:
-
-                # =============================================
-                # EXISTING DATABASE FUNCTION
-                # =============================================
-
-                user_id = get_or_create_user(
-                    email.strip()
-                )
-
-                st.session_state.logged_in = True
-
-                st.session_state.user_email = (
-                    email.strip().lower()
-                )
-
-                st.session_state.user_id = user_id
-
-                st.session_state.session_id = None
-
-                st.session_state.messages = []
-
-                st.rerun()
-
-            except Exception as e:
-
-                st.error(
-                    f"Login failed: {str(e)}"
-                )
-
-    st.stop()
-
-
-# =========================================================
-# SIDEBAR
-# =========================================================
-
-with st.sidebar:
-
-    st.markdown(
-        '<div class="quantum-logo" style="font-size:48px;">⚛️</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        """
-        <div style="
-            text-align:center;
-            font-family:'Space Grotesk';
-            font-weight:700;
-            color:#e9d5ff;
-            letter-spacing:2px;
-            font-size:18px;
-        ">
-            QUANTUM LAB
-        </div>
-
-        <div style="
-            text-align:center;
-            color:#64748b;
-            font-size:9px;
-            letter-spacing:2px;
-            margin-bottom:18px;
-        ">
-            AI LEARNING ENVIRONMENT
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        f"""
-        <div style="
-            padding:10px 12px;
-            border-radius:12px;
-            border:1px solid rgba(139,92,246,.16);
-            background:rgba(15,23,42,.65);
-            color:#cbd5e1;
-            font-size:12px;
-        ">
-            <span style="color:#22c55e;">●</span>
-            &nbsp;{st.session_state.user_email}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.divider()
-
-    # =====================================================
-    # NEW CHAT
-    # =====================================================
-
-    st.caption("WORKSPACE")
-
-    if st.button(
-        "＋  New Quantum Session",
-        use_container_width=True,
-    ):
-
-        try:
-
-            # =============================================
-            # EXISTING DATABASE FUNCTION
-            # =============================================
-
-            session_id = create_chat_session(
-                st.session_state.user_id
-            )
-
-            st.session_state.session_id = session_id
-
-            st.session_state.messages = []
-
-            st.session_state.uploaded_files = []
-
-            st.rerun()
-
-        except Exception as e:
-
-            st.error(
-                f"Could not create chat: {str(e)}"
-            )
-
-
-    # =====================================================
-    # LOAD SESSIONS
-    # =====================================================
-
-    try:
-
-        # =============================================
-        # EXISTING DATABASE FUNCTION
-        # =============================================
-
-        st.session_state.sessions = get_user_sessions(
-            st.session_state.user_id
-        )
-
-    except Exception as e:
-
-        st.session_state.sessions = []
-
-        st.error(
-            f"Could not load chats: {str(e)}"
-        )
-
-
-    st.caption("YOUR SESSIONS")
-
-
-    for chat in st.session_state.sessions:
-
-        session_id = chat["session_id"]
-
-        title = chat.get(
-            "title",
-            "New Quantum Chat"
-        )
-
-        if st.button(
-            f"◈  {title}",
-            key=f"chat_{session_id}",
-            use_container_width=True,
-        ):
-
-            try:
-
-                # =============================================
-                # EXISTING DATABASE FUNCTION
-                # =============================================
-
-                history = restore_chat(
-                    session_id,
-                    st.session_state.user_id
-                )
-
-                st.session_state.session_id = session_id
-
-                st.session_state.messages = []
-
-                for message in history:
-
-                    st.session_state.messages.append(
-                        {
-                            "role":
-                                (
-                                    "user"
-                                    if message["sender"] == "user"
-                                    else "assistant"
-                                ),
-
-                            "content":
-                                message["content"],
-                        }
-                    )
-
-                st.rerun()
-
-            except Exception as e:
-
-                st.error(
-                    f"Could not open chat: {str(e)}"
-                )
-
-
-    st.divider()
-
-
-    # =====================================================
-    # CHAT SETTINGS
-    # =====================================================
-
-    if st.session_state.session_id:
-
-        st.caption("CHAT SETTINGS")
-
-        new_title = st.text_input(
-            "Rename chat",
-            placeholder="Enter new chat name",
-        )
-
-        if st.button(
-            "✎  Rename Chat",
-            use_container_width=True,
-        ):
-
-            if not new_title.strip():
-
-                st.warning(
-                    "Enter a chat name."
-                )
-
-            else:
-
-                try:
-
-                    # =============================================
-                    # EXISTING DATABASE FUNCTION
-                    # =============================================
-
-                    rename_chat(
-                        st.session_state.session_id,
-                        st.session_state.user_id,
-                        new_title,
-                    )
-
-                    st.success(
-                        "Chat renamed."
-                    )
-
-                    st.rerun()
-
-                except Exception as e:
-
-                    st.error(
-                        f"Rename failed: {str(e)}"
-                    )
-
-
-        if st.button(
-            "🗑️  Delete Chat",
-            use_container_width=True,
-        ):
-
-            try:
-
-                # =============================================
-                # EXISTING DATABASE FUNCTION
-                # =============================================
-
-                delete_chat(
-                    st.session_state.session_id,
-                    st.session_state.user_id,
-                )
-
-                st.session_state.session_id = None
-
-                st.session_state.messages = []
-
-                st.session_state.uploaded_files = []
-
-                st.success(
-                    "Chat deleted."
-                )
-
-                st.rerun()
-
-            except Exception as e:
-
-                st.error(
-                    f"Delete failed: {str(e)}"
-                )
-
-
-    st.divider()
-
-
-    # =====================================================
-    # LOGOUT
-    # =====================================================
-
-    if st.button(
-        "↪  Logout",
-        use_container_width=True,
-    ):
-
-        st.session_state.logged_in = False
-
-        st.session_state.user_email = ""
-
-        st.session_state.user_id = None
-
-        st.session_state.session_id = None
-
-        st.session_state.messages = []
-
-        st.session_state.uploaded_files = []
-
-        st.rerun()
-
-
-# =========================================================
-# MAIN HEADER
-# =========================================================
-
-st.markdown(
-    '<div class="quantum-logo">⚛️</div>',
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    '<div class="online">● AI TUTOR ONLINE</div>',
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    '<div class="main-title">QUANTUM AI TUTOR</div>',
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    '<div class="quantum-line"></div>',
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-    <div class="subtitle">
-        Learn quantum computing and technical concepts
-        through an intelligent RAG-powered learning environment.
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# =========================================================
-# REQUIRE ACTIVE CHAT
-# =========================================================
-
-if not st.session_state.session_id:
-
-    st.info(
-        "✨ Create a new quantum session from the sidebar to start learning."
-    )
-
-    st.stop()
-
-
-# =========================================================
-# DISPLAY CHAT HISTORY
-# =========================================================
-
-for message in st.session_state.messages:
-
-    with st.chat_message(
-        message["role"]
-    ):
-
-        st.markdown(
-            message["content"]
-        )
-
-
-# =========================================================
-# ATTACHMENT BUTTON
-# =========================================================
-
-attach_col, spacer_col = st.columns([1, 11])
-
-with attach_col:
-
-    with st.popover("＋", use_container_width=False):
-
-        st.markdown(
-            """
-            <div style="
-                font-size:15px;
-                font-weight:600;
-                margin-bottom:10px;
-            ">
-                Add files
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        photos = st.file_uploader(
-            "Images",
-            type=["png", "jpg", "jpeg", "webp"],
-            accept_multiple_files=True,
-            key="photo_uploader"
-        )
-
-        documents = st.file_uploader(
-            "Documents",
-            type=["pdf", "txt", "docx"],
-            accept_multiple_files=True,
-            key="document_uploader"
-        )
-
-        selected_files = []
-
-        if photos:
-            selected_files.extend(photos)
-
-        if documents:
-            selected_files.extend(documents)
-
-        if selected_files:
-            st.session_state.uploaded_files = selected_files
-
-            st.markdown(
-                f"""
-                <div style="
-                    margin-top:10px;
-                    padding:8px 10px;
-                    border-radius:10px;
-                    background:rgba(255,255,255,0.05);
-                    font-size:13px;
-                ">
-                    📎 {len(selected_files)} file(s) attached
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            for file in selected_files:
-                st.caption(f"📄 {file.name}")
-
-
-# =========================================================
-# MICROPHONE
-# =========================================================
-
-audio_value = st.audio_input(
-    "🎙️",
-    key="voice_input"
-)
-
-
-# =========================================================
-# NATIVE CHAT INPUT
-# =========================================================
-
-query = st.chat_input(
-    "Ask your quantum question..."
-)
-
-
-# =========================================================
-# PROCESS MICROPHONE INPUT
-# =========================================================
-
-voice_query = None
-
-if audio_value is not None:
-
-    try:
-
-        # Read audio bytes
-        audio_bytes = audio_value.getvalue()
-
-        # Create a unique hash so the same recording
-        # is not processed repeatedly
-        import hashlib
-
-        audio_hash = hashlib.md5(audio_bytes).hexdigest()
-
-        if st.session_state.get("processed_audio_hash") != audio_hash:
-
-            st.session_state.processed_audio_hash = audio_hash
-
-            # Check whether speech_recognition is available
-            if sr is not None:
-
-                recognizer = sr.Recognizer()
-
-                audio_file = io.BytesIO(audio_bytes)
-
-                with sr.AudioFile(audio_file) as source:
-
-                    audio_data = recognizer.record(source)
-
-                try:
-
-                    voice_query = recognizer.recognize_google(
-                        audio_data
-                    )
-
-                except sr.UnknownValueError:
-
-                    st.warning(
-                        "Sorry, I couldn't understand the audio."
-                    )
-
-                except sr.RequestError:
-
-                    st.warning(
-                        "Speech recognition service is unavailable."
-                    )
-
-            else:
-
-                st.warning(
-                    "Speech recognition is not available. "
-                    "Please install SpeechRecognition."
-                )
-
-    except Exception as e:
-
-        st.error(
-            f"Could not process microphone input: {e}"
-        )
-
-
-# =========================================================
-# SELECT TEXT OR VOICE INPUT
-# =========================================================
-
-final_query = None
-
-if query and query.strip():
-
-    final_query = query.strip()
-
-elif voice_query and voice_query.strip():
-
-    final_query = voice_query.strip()
-
-
-# =========================================================
-# RAG PROCESSING
-# =========================================================
-
-if final_query:
-
-    # Add user's message to chat history
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": final_query
-        }
-    )
-
-    # Display user message immediately
-    with st.chat_message("user"):
-
-        st.markdown(final_query)
-
-        # Show attached files with the message
-        if st.session_state.uploaded_files:
-
-            for file in st.session_state.uploaded_files:
-
-                st.caption(
-                    f"📎 {file.name}"
-                )
-
-    # =====================================================
-    # ASSISTANT RESPONSE
-    # =====================================================
-
-    with st.chat_message("assistant"):
-
-        with st.spinner("Thinking..."):
-
-            try:
-
-                answer = answer_question(
-                    final_query,
-                    st.session_state.uploaded_files
-                )
-
-            except TypeError:
-
-                # If your existing answer_question()
-                # accepts only the question
-                answer = answer_question(
-                    final_query
-                )
-
-            except Exception as e:
-
-                answer = (
-                    "Sorry, I couldn't process your question.\n\n"
-                    f"Error: {e}"
-                )
-
-        st.markdown(answer)
-
-    # Save assistant response
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": answer
-        }
-    )
-
-    # =====================================================
-    # CLEAR INPUT-RELATED STATE
-    # =====================================================
-
-    st.session_state.uploaded_files = []
-
-    st.session_state.processed_audio_hash = None
-
-    # Refresh UI
-    st.rerun()
-
-
-# =========================================================
-# CLEAR FRONTEND ATTACHMENTS
-# =========================================================
-
-# Do NOT clear uploaded_files here.
-#
-# It is cleared after the question is actually processed.
-# This prevents attachments from disappearing before
-# the user presses Send.
-    st.session_state.uploaded_files = []

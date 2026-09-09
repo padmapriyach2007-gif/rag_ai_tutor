@@ -136,18 +136,18 @@ html, body {
     color: #ffffff;
 }
 
-/* FIX: Target Column Container to Pin Prompt Input Bar strictly at Bottom */
-div[data-testid="stHorizontalBlock"]:has(div[key="custom_input_photos"]) {
+/* FIX: Target the prompt composer and keep it pinned at the bottom */
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) {
     position: fixed !important;
     bottom: 24px !important;
     left: calc(50% + 120px) !important;
     transform: translateX(-50%) !important;
     width: min(850px, 75vw) !important;
     z-index: 999999 !important;
-    background: rgba(18, 22, 45, 0.95) !important;
-    border: 1px solid rgba(120, 105, 255, 0.45) !important;
+    background: rgba(18, 22, 45, 0.96) !important;
+    border: 1px solid rgba(120, 105, 255, 0.55) !important;
     border-radius: 40px !important;
-    padding: 6px 14px !important;
+    padding: 6px 10px !important;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65), 0 0 20px rgba(108, 63, 255, 0.25) !important;
     backdrop-filter: blur(16px) !important;
     display: flex !important;
@@ -155,16 +155,84 @@ div[data-testid="stHorizontalBlock"]:has(div[key="custom_input_photos"]) {
 }
 
 /* Adjust position when sidebar is collapsed */
-[data-testid="stSidebar"][aria-expanded="false"] ~ .main div[data-testid="stHorizontalBlock"]:has(div[key="custom_input_photos"]) {
+[data-testid="stSidebar"][aria-expanded="false"] ~ .main div[data-testid="stHorizontalBlock"]:has(.composer-anchor) {
     left: 50% !important;
     width: min(850px, 90vw) !important;
 }
 
-/* Vertical Alignment for Inner Columns */
-div[data-testid="stHorizontalBlock"]:has(div[key="custom_input_photos"]) > div[data-testid="column"] {
+/* Keep all composer columns inside the same prompt box */
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) > div[data-testid="column"] {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    min-height: 48px !important;
+}
+
+/* + button stays inside the left side of the prompt box */
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) > div[data-testid="column"]:first-child {
+    flex: 0 0 52px !important;
+    width: 52px !important;
+}
+
+/* The native Streamlit chat input fills the prompt box */
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) > div[data-testid="column"]:nth-child(2) {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+}
+
+/* Microphone sits immediately before the native up-arrow send button */
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) > div[data-testid="column"]:last-child {
+    flex: 0 0 52px !important;
+    width: 52px !important;
+}
+
+/* Remove extra spacing around the native chat input */
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) [data-testid="stChatInput"] {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+}
+
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) [data-testid="stChatInput"] > div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Prompt text area */
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) [data-testid="stChatInput"] textarea {
+    min-height: 42px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #ffffff !important;
+    font-size: 15px !important;
+    padding: 10px 4px !important;
+}
+
+/* Keep the native up-arrow send button visible */
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) [data-testid="stChatInput"] button {
+    z-index: 3 !important;
+}
+
+/* Composer popover buttons */
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) .stPopover button {
+    border-radius: 50% !important;
+    background: rgba(30, 35, 70, 0.85) !important;
+    border: 1px solid rgba(120, 105, 255, 0.40) !important;
+    color: #cbd2ef !important;
+    height: 40px !important;
+    width: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    font-size: 18px !important;
+}
+
+div[data-testid="stHorizontalBlock"]:has(.composer-anchor) .stPopover button:hover {
+    background: rgba(110, 90, 220, 0.55) !important;
+    border-color: rgba(160, 145, 255, 0.80) !important;
+    color: #ffffff !important;
 }
 
 /* Chat Input Interior Styling */
@@ -381,6 +449,7 @@ if st.session_state.staged_attachments or st.session_state.staged_voice_text:
 composer_left, composer_input, composer_right = st.columns([0.07, 0.86, 0.07])
 
 with composer_left:
+    st.markdown('<div class="composer-anchor"></div>', unsafe_allow_html=True)
     with st.popover("＋", help="Add photos, camera, or files"):
         st.markdown("### Attach")
         tab_photos, tab_camera, tab_files = st.tabs(["🖼️ Photos", "📷 Camera", "📎 Files"])

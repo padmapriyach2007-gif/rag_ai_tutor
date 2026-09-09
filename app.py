@@ -1,4 +1,3 @@
-```python
 import io
 import os
 import streamlit as st
@@ -1504,4 +1503,3 @@ if prompt:
     # --------------------------------------------------------
 
     st.rerun()
-```

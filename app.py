@@ -35,6 +35,9 @@ if "current_chat" not in st.session_state:
 if "chat_counter" not in st.session_state:
     st.session_state.chat_counter = 1
 
+if "staged_attachments" not in st.session_state:
+    st.session_state.staged_attachments = []
+
 if "staged_voice_text" not in st.session_state:
     st.session_state.staged_voice_text = ""
 
@@ -155,16 +158,7 @@ html, body {
     box-shadow: 0 4px 18px rgba(70,60,200,0.3);
 }
 
-/* Prompt Dock Toolbar */
-.prompt-dock-wrapper {
-    background: rgba(10, 14, 38, 0.90);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(120, 105, 255, 0.35);
-    border-radius: 14px;
-    padding: 6px 12px;
-    margin-bottom: 8px;
-}
-
+/* Popover Modal Customization */
 [data-testid="stPopoverBody"] {
     background: #080c24 !important;
     border: 1px solid rgba(120, 105, 255, 0.45) !important;
@@ -184,6 +178,20 @@ html, body {
 [data-testid="stChatInput"] textarea:focus {
     border-color: rgba(120, 105, 255, 0.85) !important;
     box-shadow: 0 0 20px rgba(90, 75, 255, 0.25) !important;
+}
+
+/* Integrated Attachment Button Alignment */
+.stPopover button {
+    border-radius: 12px !important;
+    background: rgba(18, 21, 48, 0.9) !important;
+    border: 1px solid rgba(105, 105, 180, 0.35) !important;
+    color: #bfc6e5 !important;
+    height: 46px !important;
+}
+
+.stPopover button:hover {
+    border-color: rgba(130, 115, 255, 0.8) !important;
+    color: #ffffff !important;
 }
 
 /* Login Screen */
@@ -295,11 +303,10 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ============================================================
-# SIDEBAR (TOP-LEFT MENU: PROFILE, NEW CHAT, CHAT HISTORY)
+# SIDEBAR
 # ============================================================
 
 with st.sidebar:
-    # 1. Profile
     username = st.session_state.user_email.split("@")[0].capitalize()
     st.markdown(
         f"""
@@ -314,7 +321,6 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    # 2. New Chat
     if st.button("➕ New Chat", use_container_width=True):
         st.session_state.chat_counter += 1
         new_session = f"Quantum Session {st.session_state.chat_counter}"
@@ -325,7 +331,6 @@ with st.sidebar:
     st.markdown("<div style='margin: 10px 0; height: 1px; background: rgba(255,255,255,0.08);'></div>", unsafe_allow_html=True)
     st.caption("**CHAT SESSIONS**")
 
-    # 3. Chat History Switcher
     for chat_name in list(st.session_state.chats.keys()):
         is_active = (chat_name == st.session_state.current_chat)
         label = f"👉 {chat_name}" if is_active else f"💬 {chat_name}"
@@ -336,7 +341,6 @@ with st.sidebar:
     st.markdown("<div style='margin: 14px 0; height: 1px; background: rgba(255,255,255,0.08);'></div>", unsafe_allow_html=True)
     st.caption("**SESSION TOOLS**")
 
-    # 4. Session Operations
     with st.expander("⚙️ Manage Session"):
         rename_input = st.text_input("Rename Title", value=st.session_state.current_chat)
         if st.button("Confirm Rename"):
@@ -357,7 +361,6 @@ with st.sidebar:
             st.session_state.chats[st.session_state.current_chat] = []
             st.rerun()
 
-    # 5. Logout
     if st.button("🚪 Logout", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.user_email = ""
@@ -375,158 +378,104 @@ for message in current_messages:
     with st.chat_message(role, avatar=avatar):
         st.markdown(message["content"])
 
+# Display staged attachments / voice pill notifications above input bar
+staged_info = []
+if st.session_state.staged_attachments:
+    staged_info.append(f"📎 {len(st.session_state.staged_attachments)} item(s) attached")
+if st.session_state.staged_voice_text:
+    staged_info.append(f"🎙️ Voice text staged: \"{st.session_state.staged_voice_text[:30]}...\"")
+
+if staged_info:
+    st.info(" | ".join(staged_info))
+
 # ============================================================
-# PROMPT SPACE: ATTACHMENTS (CAMERA, PHOTOS, FILES) & MIC
+# INTEGRATED CHAT INPUT WITH '+' ATTACHMENT MENU
 # ============================================================
 
-st.markdown("<div class='prompt-dock-wrapper'>", unsafe_allow_html=True)
+col_plus, col_input = st.columns([0.06, 0.94])
 
-col_attach, col_mic, col_status = st.columns([1.2, 1.2, 5])
-
-attachment_notes = []
-
-# Attachments Popover: Camera, Photos, Files
-with col_attach:
-    with st.popover("📎 Attach"):
-        tab_cam, tab_photos, tab_files = st.tabs(["📷 Camera", "🖼️ Photos", "📁 Files"])
-
-        with tab_cam:
-            cam_capture = st.camera_input("Capture with Camera", key="dock_cam")
-            if cam_capture:
-                attachment_notes.append("📷 *Live Camera snapshot attached.*")
-                st.success("Snapshot staged.")
+# Plus Popover Dropdown (Integrated at bottom left of input)
+with col_plus:
+    with st.popover("＋", help="Attach images, files, or recorded voice notes"):
+        st.markdown("### Add to your message")
+        tab_photos, tab_cam, tab_files, tab_voice = st.tabs(["🖼️ Photos", "📷 Camera", "📎 Files", "🎤 Voice"])
 
         with tab_photos:
-            photo_uploads = st.file_uploader(
+            photos = st.file_uploader(
                 "Upload photos",
                 type=["png", "jpg", "jpeg", "webp"],
                 accept_multiple_files=True,
-                key="dock_photos"
+                key="input_photos"
             )
-            if photo_uploads:
-                for photo in photo_uploads:
-                    attachment_notes.append(f"🖼️ *Photo:* `{photo.name}` ({round(photo.size / 1024, 1)} KB)")
-                st.success(f"{len(photo_uploads)} photo(s) staged.")
+            if photos:
+                for photo in photos:
+                    note = f"🖼️ Photo: `{photo.name}` ({round(photo.size / 1024, 1)} KB)"
+                    if note not in st.session_state.staged_attachments:
+                        st.session_state.staged_attachments.append(note)
+                st.success(f"{len(photos)} photo(s) attached.")
+
+        with tab_cam:
+            camera_photo = st.camera_input("Take a snapshot", key="input_cam")
+            if camera_photo:
+                note = "📷 *Camera Snapshot*"
+                if note not in st.session_state.staged_attachments:
+                    st.session_state.staged_attachments.append(note)
+                st.success("Snapshot attached.")
 
         with tab_files:
-            file_uploads = st.file_uploader(
-                "Upload documents, code, or datasets",
-                type=["pdf", "txt", "csv", "py", "json", "docx"],
+            files = st.file_uploader(
+                "Upload documents/code",
+                type=["pdf", "txt", "docx", "csv", "xlsx", "py", "json"],
                 accept_multiple_files=True,
-                key="dock_files"
+                key="input_files"
             )
-            if file_uploads:
-                for fl in file_uploads:
-                    attachment_notes.append(f"📁 *Document:* `{fl.name}` ({round(fl.size / 1024, 1)} KB)")
-                st.success(f"{len(file_uploads)} file(s) staged.")
+            if files:
+                for file in files:
+                    note = f"📎 Document: `{file.name}` ({round(file.size / 1024, 1)} KB)"
+                    if note not in st.session_state.staged_attachments:
+                        st.session_state.staged_attachments.append(note)
+                st.success(f"{len(files)} file(s) attached.")
 
-# Microphone Popover: Record and Whisper Transcribe
-with col_mic:
-    with st.popover("🎙️ Voice"):
-        st.caption("Record voice prompt:")
-        audio_stream = st.audio_input("Record Audio", key="dock_mic")
-        if audio_stream:
-            with st.spinner("Transcribing quantum voice note..."):
-                transcription = transcribe_audio(audio_stream.read())
-                if transcription:
-                    st.session_state.staged_voice_text = transcription
-                    st.success("Transcribed successfully!")
+        with tab_voice:
+            audio_stream = st.audio_input("Record audio note", key="input_voice")
+            if audio_stream:
+                with st.spinner("Transcribing audio..."):
+                    transcription = transcribe_audio(audio_stream.read())
+                    if transcription:
+                        st.session_state.staged_voice_text = transcription
+                        st.success("Voice transcribed! Text staged for prompt.")
 
-with col_status:
-    # Notification pills showing staged items
-    status_badges = []
-    if attachment_notes:
-        status_badges.append(f"📎 {len(attachment_notes)} item(s) attached")
-    if st.session_state.staged_voice_text:
-        status_badges.append(f"🎙️ Voice: \"{st.session_state.staged_voice_text[:35]}...\"")
+# Text Input Bar
+with col_input:
+    prompt = st.chat_input("Ask anything...", key="main_chat_input")
 
-    if status_badges:
-        st.markdown(
-            f"<div style='padding: 6px 0; font-size: 11px; color: #62b0ff;'>{' | '.join(status_badges)}</div>",
-            unsafe_allow_html=True
-        )
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-# Main Text Input Bar
-typed_prompt = st.chat_input("Ask anything or submit instructions...")
-
-# Determine final query between typed or voice inputs
-chosen_text = typed_prompt if typed_prompt else (st.session_state.staged_voice_text if typed_prompt is None and st.session_state.staged_voice_text and not typed_prompt else None)
-
-if typed_prompt or (st.session_state.staged_voice_text and not typed_prompt and st.button("🚀 Send Voice Prompt")):
-    final_query = typed_prompt if typed_prompt else st.session_state.staged_voice_text
-
-    # Merge attachments metadata with the prompt
-    if attachment_notes:
-        full_query = f"{final_query}\n\n" + "\n".join(attachment_notes)
-    else:
-        full_query = final_query
-
-    # Reset staged voice
-    st.session_state.staged_voice_text = ""
-
-    # Append & display user message
-    current_messages.append({"role": "user", "content": full_query})
-    with st.chat_message("user", avatar="👨‍🚀"):
-        st.markdown(full_query)
-
-    # Compute AI response
-    with st.chat_message("assistant", avatar="⚛️"):
-        with st.spinner("Computing response..."):
-            reply = ai_response(current_messages)
-            st.markdown(reply)
-
-    current_messages.append({"role": "assistant", "content": reply})
-    # ============================================================
-# CHAT INPUT WITH ATTACHMENTS
+# ============================================================
+# PROCESS USER INPUT & GENERATE RESPONSE
 # ============================================================
 
-prompt = st.chat_input(
-    "Ask anything...",
-    accept_file="multiple",
-    file_type=[
-        "jpg", "jpeg", "png", "webp",
-        "pdf", "txt", "docx", "csv"
-    ],
-    accept_audio=True
-)
-
 if prompt:
-    # Text
-    user_text = prompt.text
-
-    # Attached files / photos
-    uploaded_files = prompt.files
-
-    # Microphone recording
-    audio = prompt.audio
-
-    # Show user's text
+    user_text = prompt.strip()
+    
+    # Combine user text with staged voice and attachments metadata
+    combined_parts = []
     if user_text:
-        st.session_state.chats[
-            st.session_state.current_chat
-        ].append({
-            "role": "user",
-            "content": user_text
-        })
+        combined_parts.append(user_text)
+    if st.session_state.staged_voice_text:
+        combined_parts.append(f"🎙️ Transcribed Voice Note: \"{st.session_state.staged_voice_text}\"")
+    if st.session_state.staged_attachments:
+        combined_parts.append("\n".join(st.session_state.staged_attachments))
 
-    # Process attached files
-    for uploaded_file in uploaded_files:
-        st.session_state.chats[
-            st.session_state.current_chat
-        ].append({
-            "role": "user",
-            "content": f"📎 Attached: {uploaded_file.name}"
-        })
+    full_query = "\n\n".join(combined_parts)
 
-    # Process microphone recording
-    if audio:
-        st.session_state.chats[
-            st.session_state.current_chat
-        ].append({
-            "role": "user",
-            "content": "🎤 Voice message attached"
-        })
+    # Clear staged data
+    st.session_state.staged_attachments = []
+    st.session_state.staged_voice_text = ""
+
+    # Append user input to session history
+    current_messages.append({"role": "user", "content": full_query})
+
+    # Generate response
+    response_text = ai_response(current_messages)
+    current_messages.append({"role": "assistant", "content": response_text})
 
     st.rerun()

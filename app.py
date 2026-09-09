@@ -167,30 +167,56 @@ html, body {
     box-shadow: 0 10px 40px rgba(0,0,0,0.75) !important;
 }
 
-/* Chat Input custom glow */
+/* UNIFIED INNER BAR STYLING */
+div[data-testid="column"] {
+    display: flex;
+    align-items: center;
+}
+
+/* Custom Input Wrapper Pill */
+.integrated-bar-wrapper {
+    background: rgba(18, 22, 46, 0.85);
+    border: 1px solid rgba(105, 105, 180, 0.35);
+    border-radius: 20px;
+    padding: 4px 10px;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* Hide chat input inner border so it seamlessly connects with buttons */
+[data-testid="stChatInput"] {
+    padding: 0 !important;
+}
+
+[data-testid="stChatInput"] > div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
 [data-testid="stChatInput"] textarea {
-    background: rgba(6, 9, 27, 0.94) !important;
-    border: 1px solid rgba(105, 105, 175, 0.38) !important;
+    background: transparent !important;
+    border: none !important;
     color: white !important;
-    border-radius: 15px !important;
 }
 
 [data-testid="stChatInput"] textarea:focus {
-    border-color: rgba(120, 105, 255, 0.85) !important;
-    box-shadow: 0 0 20px rgba(90, 75, 255, 0.25) !important;
+    box-shadow: none !important;
 }
 
-/* Integrated Attachment & Voice Buttons Alignment */
+/* Subdued Popover Buttons for Integrated look */
 .stPopover button {
     border-radius: 12px !important;
-    background: rgba(18, 21, 48, 0.9) !important;
-    border: 1px solid rgba(105, 105, 180, 0.35) !important;
+    background: rgba(30, 35, 70, 0.6) !important;
+    border: 1px solid rgba(120, 105, 255, 0.3) !important;
     color: #bfc6e5 !important;
-    height: 46px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    padding: 0 10px !important;
 }
 
 .stPopover button:hover {
-    border-color: rgba(130, 115, 255, 0.8) !important;
+    background: rgba(120, 105, 255, 0.35) !important;
+    border-color: rgba(140, 125, 255, 0.8) !important;
     color: #ffffff !important;
 }
 
@@ -389,15 +415,17 @@ if staged_info:
     st.info(" | ".join(staged_info))
 
 # ============================================================
-# INTEGRATED CHAT INPUT (PLUS LEFT, INPUT MIDDLE, VOICE RIGHT)
+# SINGLE INTEGRATED CHAT INPUT BAR WITH POPUPS (+ & MIC)
 # ============================================================
 
-col_plus, col_input, col_voice = st.columns([0.06, 0.88, 0.06])
+# Wrapper container for unified input bar appearance
+st.markdown('<div class="integrated-bar-wrapper">', unsafe_allow_html=True)
+col_plus, col_input, col_voice = st.columns([0.05, 0.90, 0.05])
 
-# 1. Plus Popover Dropdown (Left side)
+# 1. Plus Popover Dropdown (Photos, Camera, Files inside)
 with col_plus:
-    with st.popover("＋", help="Attach images or files"):
-        st.markdown("### Add to your message")
+    with st.popover("＋", help="Add Photos, Camera, or Files"):
+        st.markdown("### Attach Files")
         tab_photos, tab_cam, tab_files = st.tabs(["🖼️ Photos", "📷 Camera", "📎 Files"])
 
         with tab_photos:
@@ -436,21 +464,23 @@ with col_plus:
                         st.session_state.staged_attachments.append(note)
                 st.success(f"{len(files)} file(s) attached.")
 
-# 2. Main Chat Input Box (Middle)
+# 2. Main Chat Input Text Field
 with col_input:
     prompt = st.chat_input("Ask anything...", key="main_chat_input")
 
-# 3. Dedicated Voice Popover Button (Right side, next to up arrow)
+# 3. Dedicated Voice Popover Button (Microphone popup)
 with col_voice:
-    with st.popover("🎤", help="Record audio note"):
-        st.markdown("### Record Voice Note")
-        audio_stream = st.audio_input("Record audio", key="input_voice_standalone")
+    with st.popover("🎤", help="Voice recording"):
+        st.markdown("### Voice Input")
+        audio_stream = st.audio_input("Record audio note", key="input_voice_standalone")
         if audio_stream:
-            with st.spinner("Transcribing..."):
+            with st.spinner("Transcribing voice..."):
                 transcription = transcribe_audio(audio_stream.read())
                 if transcription:
                     st.session_state.staged_voice_text = transcription
                     st.success("Voice transcribed! Text staged for prompt.")
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================
 # PROCESS USER INPUT & GENERATE RESPONSE

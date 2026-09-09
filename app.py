@@ -41,6 +41,15 @@ if "staged_attachments" not in st.session_state:
 if "staged_voice_text" not in st.session_state:
     st.session_state.staged_voice_text = ""
 
+if "learning_mode" not in st.session_state:
+    st.session_state.learning_mode = False
+
+if "learning_topic" not in st.session_state:
+    st.session_state.learning_topic = "Quantum Computing Basics"
+
+if "learning_progress" not in st.session_state:
+    st.session_state.learning_progress = {}
+
 # ============================================================
 # GALAXY THEME & FIXED BOTTOM BAR CSS
 # ============================================================
@@ -279,6 +288,45 @@ div[data-testid="stHorizontalBlock"]:has(.composer-anchor) .stPopover button:hov
     color: #ffffff !important;
 }
 
+/* Learning Mode */
+.learning-panel {
+    max-width: 980px;
+    margin: 20px auto 120px auto;
+    padding: 28px;
+    border-radius: 24px;
+    background: linear-gradient(145deg, rgba(22,26,60,0.82), rgba(6,9,26,0.92));
+    border: 1px solid rgba(120,105,255,0.38);
+    box-shadow: 0 20px 70px rgba(0,0,0,0.35);
+}
+.learning-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 27px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #ffffff, #b59cff, #67bfff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.learning-subtitle {
+    color: #8c98ba;
+    font-size: 13px;
+    margin-bottom: 18px;
+}
+.learning-card {
+    background: rgba(12,16,42,0.72);
+    border: 1px solid rgba(120,105,255,0.25);
+    border-radius: 16px;
+    padding: 18px;
+    margin: 10px 0;
+}
+.learning-card h3 {
+    margin-top: 0;
+    color: #ffffff;
+}
+.learning-card p, .learning-card li {
+    color: #c5cbea;
+    line-height: 1.65;
+}
+
 /* Login Box */
 .login-container {
     width: min(460px, 90vw);
@@ -319,9 +367,20 @@ def ai_response(chat_history):
     if not client:
         return "⚠️ **Groq API key missing.** Please set your `GROQ_API_KEY` in your environment."
 
+    if st.session_state.get("learning_mode", False):
+        system_content = (
+            "You are Quantum Lab AI Tutor in Learning Mode. Teach quantum computing "
+            "step by step using clear, beginner-friendly explanations. Define technical "
+            "terms, use intuitive examples, show equations when useful, and ask short "
+            "practice questions when appropriate. Focus on the user's selected topic: "
+            f"{st.session_state.get('learning_topic', 'Quantum Computing Basics')}."
+        )
+    else:
+        system_content = "You are Quantum Lab AI, an intelligent assistant."
+
     system_message = {
         "role": "system",
-        "content": "You are Quantum Lab AI, an intelligent assistant."
+        "content": system_content
     }
     full_messages = [system_message] + chat_history
 
@@ -405,6 +464,11 @@ with st.sidebar:
         st.session_state.current_chat = new_session
         st.rerun()
 
+    learning_button_label = "🧠 Exit Learning Mode" if st.session_state.learning_mode else "🧠 Learning Mode"
+    if st.button(learning_button_label, use_container_width=True):
+        st.session_state.learning_mode = not st.session_state.learning_mode
+        st.rerun()
+
     st.markdown("<div style='margin: 10px 0; height: 1px; background: rgba(255,255,255,0.08);'></div>", unsafe_allow_html=True)
     st.caption("**CHAT SESSIONS**")
 
@@ -421,6 +485,157 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.session_state.user_email = ""
         st.rerun()
+
+# ============================================================
+# QUANTUM COMPUTING LEARNING MODE
+# ============================================================
+
+if st.session_state.learning_mode:
+    st.markdown(
+        """
+        <div class="learning-panel">
+            <div class="learning-title">🧠 QUANTUM LEARNING MODE</div>
+            <div class="learning-subtitle">Learn quantum computing step by step with short lessons, examples, and quizzes.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    learning_topics = [
+        "Quantum Computing Basics",
+        "Qubits & Superposition",
+        "Entanglement",
+        "Quantum Gates",
+        "Quantum Circuits",
+        "Measurement",
+        "Grover's Algorithm",
+        "Shor's Algorithm"
+    ]
+
+    selected_topic = st.selectbox(
+        "Choose a topic",
+        learning_topics,
+        index=learning_topics.index(st.session_state.learning_topic),
+        key="learning_topic_select"
+    )
+    st.session_state.learning_topic = selected_topic
+
+    lessons = {
+        "Quantum Computing Basics": {
+            "intro": "Quantum computing uses quantum-mechanical effects to process information. Instead of ordinary bits, quantum computers use qubits.",
+            "points": [
+                "A classical bit is either 0 or 1.",
+                "A qubit can be in a quantum state that combines |0⟩ and |1⟩ until it is measured.",
+                "Quantum algorithms use interference, entanglement, and measurement to solve particular problems.",
+                "Quantum computers are not simply faster versions of classical computers; their advantage depends on the problem and algorithm."
+            ],
+            "example": "Think of a classical bit like a switch that is OFF or ON. A qubit is described by a quantum state with amplitudes for |0⟩ and |1⟩.",
+            "quiz": ("What is the basic information unit of a quantum computer?", ["Byte", "Qubit", "Pixel", "Register"], "Qubit")
+        },
+        "Qubits & Superposition": {
+            "intro": "A qubit is the basic unit of quantum information. Superposition allows its state to be represented as a combination of |0⟩ and |1⟩.",
+            "points": [
+                "The state is commonly written as α|0⟩ + β|1⟩.",
+                "The amplitudes α and β are generally complex numbers.",
+                "Their squared magnitudes determine measurement probabilities, with |α|² + |β|² = 1.",
+                "Measurement produces a classical result, either 0 or 1 for a computational-basis measurement."
+            ],
+            "example": "If α = 1/√2 and β = 1/√2, measuring the qubit in the computational basis gives 0 or 1 with equal probability.",
+            "quiz": ("What does measurement of a single qubit in the computational basis return?", ["Only 0", "Only 1", "0 or 1", "Always both"], "0 or 1")
+        },
+        "Entanglement": {
+            "intro": "Entanglement is a quantum correlation in which the joint state of multiple qubits cannot be described as independent states of each qubit.",
+            "points": [
+                "Entangled qubits share a joint quantum state.",
+                "Measuring one part gives information about correlations with the other part.",
+                "Entanglement is important in quantum communication, algorithms, and error correction.",
+                "Entanglement does not by itself allow faster-than-light communication."
+            ],
+            "example": "A Bell state such as (|00⟩ + |11⟩)/√2 produces strongly correlated measurement outcomes.",
+            "quiz": ("Which concept describes strong quantum correlations between qubits?", ["Compilation", "Entanglement", "Caching", "Sampling"], "Entanglement")
+        },
+        "Quantum Gates": {
+            "intro": "Quantum gates are operations that change qubit states. They are represented mathematically by unitary matrices.",
+            "points": [
+                "X gate acts like a quantum NOT operation in the computational basis.",
+                "H (Hadamard) creates equal superposition from |0⟩ or |1⟩.",
+                "Z changes the phase of the |1⟩ component.",
+                "CNOT is a two-qubit gate that can create entanglement when used with suitable input states."
+            ],
+            "example": "Starting with |0⟩, applying H produces (|0⟩ + |1⟩)/√2.",
+            "quiz": ("Which gate is commonly used to create an equal superposition from |0⟩?", ["X", "H", "Z", "CNOT"], "H")
+        },
+        "Quantum Circuits": {
+            "intro": "A quantum circuit is a sequence of quantum gates applied to qubits, followed by measurements to obtain classical results.",
+            "points": [
+                "Qubits are represented as wires or lines in a circuit diagram.",
+                "Gates are applied from left to right in many circuit diagrams.",
+                "Multi-qubit gates connect two or more wires.",
+                "A circuit can be simulated on a classical computer or executed on quantum hardware."
+            ],
+            "example": "A simple circuit can prepare |0⟩, apply H, and then measure. Repeating it produces approximately half 0s and half 1s ideally.",
+            "quiz": ("What usually comes at the end of a quantum circuit to obtain classical information?", ["Measurement", "Compression", "Encryption", "Sorting"], "Measurement")
+        },
+        "Measurement": {
+            "intro": "Measurement converts quantum information into classical information and generally changes the quantum state.",
+            "points": [
+                "A computational-basis measurement of a qubit gives 0 or 1.",
+                "Probabilities are determined by the squared magnitudes of state amplitudes.",
+                "Measurement is probabilistic for a superposition unless the state is already an eigenstate of the measurement basis.",
+                "Repeated measurements are used to estimate a circuit's output distribution."
+            ],
+            "example": "For (|0⟩ + |1⟩)/√2, an ideal computational-basis measurement returns 0 or 1 with 50% probability each.",
+            "quiz": ("What determines the probability of observing a basis state?", ["Amplitude squared", "Amplitude sign only", "Number of gates only", "Circuit color"], "Amplitude squared")
+        },
+        "Grover's Algorithm": {
+            "intro": "Grover's algorithm provides a quadratic speedup for searching an unstructured space compared with the standard classical black-box search model.",
+            "points": [
+                "It prepares a superposition of candidate states.",
+                "An oracle marks the desired state or states.",
+                "The diffusion operation amplifies the amplitude of marked states.",
+                "For N possibilities, the ideal query complexity is on the order of √N."
+            ],
+            "example": "A classical search may require O(N) oracle queries in the worst case, while Grover's algorithm requires O(√N) queries.",
+            "quiz": ("What is the ideal query complexity of Grover's search for N items?", ["O(N²)", "O(N)", "O(√N)", "O(log N)"], "O(√N)")
+        },
+        "Shor's Algorithm": {
+            "intro": "Shor's algorithm is a quantum algorithm for integer factoring and related number-theoretic problems, using a quantum period-finding procedure.",
+            "points": [
+                "It uses quantum period finding as a key subroutine.",
+                "The quantum Fourier transform is an important component.",
+                "Factoring large integers efficiently is believed to be difficult for classical computers in general, while Shor's algorithm offers an efficient quantum approach under its model.",
+                "Its relevance is one reason large-scale fault-tolerant quantum computing matters for cryptography."
+            ],
+            "example": "The algorithm can transform a factoring problem into a period-finding problem that can be processed using quantum interference and the quantum Fourier transform.",
+            "quiz": ("Which transform is a major component of Shor's algorithm?", ["Fast Fourier Transform only", "Quantum Fourier Transform", "Laplace Transform", "Haar Transform"], "Quantum Fourier Transform")
+        }
+    }
+
+    lesson = lessons[selected_topic]
+    st.markdown(f"### ⚛️ {selected_topic}")
+    st.markdown(f"<div class='learning-card'><h3>📘 Learn</h3><p>{lesson['intro']}</p></div>", unsafe_allow_html=True)
+
+    st.markdown("#### 🔑 Key Concepts")
+    for point in lesson["points"]:
+        st.markdown(f"- {point}")
+
+    st.markdown(f"<div class='learning-card'><h3>💡 Example</h3><p>{lesson['example']}</p></div>", unsafe_allow_html=True)
+
+    st.markdown("#### 🧪 Quick Quiz")
+    question, options, answer = lesson["quiz"]
+    quiz_key = f"quiz_{selected_topic}"
+    choice = st.radio(question, options, key=quiz_key)
+    if st.button("Check Answer", key=f"check_{selected_topic}"):
+        if choice == answer:
+            st.success("🎉 Correct! Great job.")
+            st.session_state.learning_progress[selected_topic] = True
+        else:
+            st.error(f"Not quite. The correct answer is **{answer}**.")
+
+    completed = sum(1 for topic in learning_topics if st.session_state.learning_progress.get(topic))
+    st.progress(completed / len(learning_topics), text=f"Learning progress: {completed}/{len(learning_topics)} topics completed")
+
+    st.info("💬 Use the chat box below to ask the AI Tutor for a simpler explanation, examples, equations, or practice questions about the selected topic.")
 
 # ============================================================
 # CHAT CONVERSATION VIEW

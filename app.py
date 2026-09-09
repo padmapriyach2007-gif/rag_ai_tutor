@@ -1,3 +1,4 @@
+import io
 import os
 import streamlit as st
 from groq import Groq
@@ -13,9 +14,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-
 # ============================================================
-# SESSION STATE
+# SESSION STATE INITIALIZATION
 # ============================================================
 
 if "logged_in" not in st.session_state:
@@ -26,12 +26,17 @@ if "user_email" not in st.session_state:
 
 if "chats" not in st.session_state:
     st.session_state.chats = {
-        "Quantum Learning": []
+        "Quantum Session 1": []
     }
 
 if "current_chat" not in st.session_state:
-    st.session_state.current_chat = "Quantum Learning"
+    st.session_state.current_chat = "Quantum Session 1"
 
+if "chat_counter" not in st.session_state:
+    st.session_state.chat_counter = 1
+
+if "staged_voice_text" not in st.session_state:
+    st.session_state.staged_voice_text = ""
 
 # ============================================================
 # GALAXY THEME CSS
@@ -40,19 +45,7 @@ if "current_chat" not in st.session_state:
 st.markdown(
     """
 <style>
-
-/* ============================================================
-   IMPORT FONT
-   ============================================================ */
-
-@import url(
-    'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap'
-);
-
-
-/* ============================================================
-   GLOBAL
-   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap');
 
 html, body {
     font-family: 'Inter', sans-serif;
@@ -60,34 +53,12 @@ html, body {
 
 .stApp {
     background:
-        radial-gradient(
-            circle at 15% 20%,
-            rgba(108, 63, 255, 0.18),
-            transparent 25%
-        ),
-        radial-gradient(
-            circle at 85% 15%,
-            rgba(0, 157, 255, 0.16),
-            transparent 28%
-        ),
-        radial-gradient(
-            circle at 50% 80%,
-            rgba(168, 52, 255, 0.13),
-            transparent 32%
-        ),
-        linear-gradient(
-            135deg,
-            #02030d,
-            #070b20,
-            #030716
-        );
+        radial-gradient(circle at 15% 20%, rgba(108, 63, 255, 0.18), transparent 25%),
+        radial-gradient(circle at 85% 15%, rgba(0, 157, 255, 0.16), transparent 28%),
+        radial-gradient(circle at 50% 80%, rgba(168, 52, 255, 0.13), transparent 32%),
+        linear-gradient(135deg, #02030d, #070b20, #030716);
     color: #ffffff;
 }
-
-
-/* ============================================================
-   GALAXY STAR FIELD
-   ============================================================ */
 
 .stApp::before {
     content: "";
@@ -95,46 +66,17 @@ html, body {
     inset: 0;
     pointer-events: none;
     background-image:
-        radial-gradient(
-            1px 1px at 10% 20%,
-            rgba(255,255,255,0.8),
-            transparent
-        ),
-        radial-gradient(
-            1px 1px at 20% 80%,
-            rgba(160,190,255,0.8),
-            transparent
-        ),
-        radial-gradient(
-            1px 1px at 35% 35%,
-            rgba(255,255,255,0.7),
-            transparent
-        ),
-        radial-gradient(
-            1px 1px at 50% 15%,
-            rgba(170,120,255,0.8),
-            transparent
-        ),
-        radial-gradient(
-            1px 1px at 65% 70%,
-            rgba(255,255,255,0.7),
-            transparent
-        ),
-        radial-gradient(
-            1px 1px at 80% 40%,
-            rgba(100,180,255,0.8),
-            transparent
-        ),
-        radial-gradient(
-            2px 2px at 90% 85%,
-            rgba(255,255,255,0.9),
-            transparent
-        );
+        radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 20% 80%, rgba(160,190,255,0.8), transparent),
+        radial-gradient(1px 1px at 35% 35%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 50% 15%, rgba(170,120,255,0.8), transparent),
+        radial-gradient(1px 1px at 65% 70%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 80% 40%, rgba(100,180,255,0.8), transparent),
+        radial-gradient(2px 2px at 90% 85%, rgba(255,255,255,0.9), transparent);
     background-size: 250px 250px;
     opacity: 0.7;
     animation: starsMove 25s linear infinite;
 }
-
 
 @keyframes starsMove {
     0% { transform: translateY(0px); }
@@ -142,774 +84,397 @@ html, body {
     100% { transform: translateY(0px); }
 }
 
-
-/* ============================================================
-   SUBTLE GRID
-   ============================================================ */
-
-.stApp::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-        linear-gradient(
-            rgba(90, 90, 180, 0.025) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            rgba(90, 90, 180, 0.025) 1px,
-            transparent 1px
-        );
-    background-size: 35px 35px;
-}
-
-
-/* ============================================================
-   MAIN AREA
-   ============================================================ */
-
-[data-testid="stMain"] {
-    background: transparent;
-}
-
-
-/* ============================================================
-   SIDEBAR
-   ============================================================ */
-
+/* Sidebar Styles */
 [data-testid="stSidebar"] {
     background:
-        radial-gradient(
-            circle at 30% 5%,
-            rgba(105, 65, 255, 0.18),
-            transparent 30%
-        ),
-        radial-gradient(
-            circle at 80% 75%,
-            rgba(0, 150, 255, 0.10),
-            transparent 35%
-        ),
-        linear-gradient(
-            180deg,
-            #03040e,
-            #070a1c,
-            #02030b
-        ) !important;
+        radial-gradient(circle at 30% 5%, rgba(105, 65, 255, 0.18), transparent 30%),
+        radial-gradient(circle at 80% 75%, rgba(0, 150, 255, 0.10), transparent 35%),
+        linear-gradient(180deg, #03040e, #070a1c, #02030b) !important;
     border-right: 1px solid rgba(120, 105, 255, 0.25);
 }
 
-
-/* ============================================================
-   BRAND
-   ============================================================ */
-
-.quantum-brand {
+.user-profile-card {
+    background: linear-gradient(135deg, rgba(28, 32, 68, 0.75), rgba(12, 16, 42, 0.85));
+    border: 1px solid rgba(130, 115, 255, 0.35);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 18px;
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 5px 0 10px 0;
 }
 
-
-.brand-icon {
-    width: 46px;
-    height: 46px;
+.profile-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #7c4dff, #1e88e5);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #8b5cff, #397dff);
-    border: 1px solid rgba(210,190,255,0.6);
-    font-size: 25px;
-    color: white;
-    box-shadow: 0 0 20px rgba(117, 75, 255, 0.55), 0 0 45px rgba(45, 120, 255, 0.25);
-    animation: iconPulse 3s ease-in-out infinite;
+    font-size: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 15px rgba(124, 77, 255, 0.45);
 }
 
-
-@keyframes iconPulse {
-    0%, 100% {
-        box-shadow: 0 0 20px rgba(117,75,255,0.45), 0 0 40px rgba(45,120,255,0.15);
-    }
-    50% {
-        box-shadow: 0 0 30px rgba(117,75,255,0.75), 0 0 60px rgba(45,120,255,0.30);
-    }
+.profile-info {
+    overflow: hidden;
 }
 
-
-.brand-title {
+.profile-name {
     font-family: 'Orbitron', sans-serif;
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    background: linear-gradient(90deg, #ffffff, #bca8ff, #72b9ff, #ffffff);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: galaxyText 5s linear infinite;
-}
-
-
-.brand-subtitle {
-    color: #737b9c;
-    font-size: 10px;
-    margin-top: 4px;
-    letter-spacing: 0.5px;
-}
-
-
-@keyframes galaxyText {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
-}
-
-
-/* ============================================================
-   SIDEBAR DIVIDER
-   ============================================================ */
-
-.side-divider {
-    height: 1px;
-    margin: 18px 0;
-    background: linear-gradient(90deg, transparent, rgba(120,100,255,0.35), rgba(40,150,255,0.25), transparent);
-}
-
-
-/* ============================================================
-   SIDEBAR TITLES
-   ============================================================ */
-
-.section-label,
-.section-title {
-    font-family: 'Orbitron', sans-serif;
-    color: #dfe5ff;
     font-size: 13px;
     font-weight: 700;
+    color: #ffffff;
     letter-spacing: 0.5px;
 }
 
-
-/* ============================================================
-   EMAIL
-   ============================================================ */
-
-.user-email {
-    color: #65aaff;
-    font-size: 12px;
-    margin-top: 7px;
-    text-shadow: 0 0 10px rgba(60,140,255,0.35);
-    transition: all 0.3s ease;
+.profile-status {
+    font-size: 11px;
+    color: #4cf0a0;
+    letter-spacing: 0.5px;
 }
-
-
-.user-email:hover {
-    color: #b19aff;
-    text-shadow: 0 0 15px rgba(120,80,255,0.7);
-}
-
-
-/* ============================================================
-   SIDEBAR BUTTONS
-   ============================================================ */
 
 [data-testid="stSidebar"] .stButton > button {
     width: 100%;
-    min-height: 44px;
+    min-height: 40px;
     border-radius: 12px;
     background: linear-gradient(135deg, rgba(18,21,48,0.90), rgba(8,11,30,0.95));
     border: 1px solid rgba(105,105,180,0.28);
     color: #bfc6e5;
     font-size: 12px;
     font-weight: 600;
-    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
-}
-
-
-[data-testid="stSidebar"] .stButton > button:hover {
-    transform: translateX(5px);
-    background: linear-gradient(100deg, rgba(77,55,180,0.85), rgba(27,82,160,0.85));
-    border-color: rgba(130,115,255,0.8);
-    color: #ffffff;
-    box-shadow: 0 8px 25px rgba(70,60,200,0.3), 0 0 18px rgba(90,70,255,0.12);
-}
-
-
-[data-testid="stSidebar"] .stButton > button:active {
-    transform: scale(0.96);
-}
-
-
-/* ============================================================
-   EXPANDER
-   ============================================================ */
-
-[data-testid="stSidebar"] [data-testid="stExpander"] {
-    background: rgba(7,10,29,0.8) !important;
-    border: 1px solid rgba(110,105,190,0.3) !important;
-    border-radius: 12px !important;
-}
-
-
-[data-testid="stSidebar"] [data-testid="stExpander"]:hover {
-    border-color: rgba(130,110,255,0.7) !important;
-    box-shadow: 0 0 25px rgba(80,65,220,0.15);
-}
-
-
-/* ============================================================
-   MAIN HERO
-   ============================================================ */
-
-.hero-box {
-    width: min(820px, 92%);
-    margin: 45px auto 30px auto;
-    padding: 42px 30px;
-    position: relative;
-    overflow: hidden;
-    text-align: center;
-    border-radius: 24px;
-    background: linear-gradient(145deg, rgba(20,24,58,0.88), rgba(7,10,28,0.90));
-    border: 1px solid rgba(110,100,230,0.38);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 50px rgba(75,60,255,0.10);
-}
-
-
-.hero-box::before {
-    content: "";
-    position: absolute;
-    width: 500px;
-    height: 180px;
-    left: 50%;
-    top: -130px;
-    transform: translateX(-50%);
-    border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(112,76,255,0.38), transparent 70%);
-}
-
-
-.hero-icon {
-    position: relative;
-    font-size: 48px;
-    text-shadow: 0 0 12px rgba(150,120,255,0.9), 0 0 35px rgba(75,100,255,0.7);
-}
-
-
-.hero-title {
-    position: relative;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 38px;
-    font-weight: 900;
-    letter-spacing: 1px;
-    background: linear-gradient(90deg, #ffffff, #a889ff, #5ebaff, #ffffff, #a889ff);
-    background-size: 300% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: galaxyTitle 6s linear infinite;
-    text-shadow: 0 0 25px rgba(110,80,255,0.15);
-}
-
-
-@keyframes galaxyTitle {
-    0% { background-position: 0% center; }
-    100% { background-position: 300% center; }
-}
-
-
-.hero-subtitle {
-    position: relative;
-    color: #929cbc;
-    font-size: 14px;
-    margin-top: 9px;
-    letter-spacing: 0.3px;
-}
-
-
-.online {
-    position: relative;
-    margin-top: 15px;
-    color: #4cf0a0;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    text-shadow: 0 0 12px rgba(60,240,150,0.55);
-}
-
-
-/* ============================================================
-   LOGIN CARD
-   ============================================================ */
-
-.login-container {
-    width: min(460px, 90vw);
-    margin: 7vh auto 22px auto;
-    padding: 38px 40px;
-    position: relative;
-    overflow: hidden;
-    text-align: center;
-    border-radius: 25px;
-    background: radial-gradient(circle at 50% 0%, rgba(100,70,255,0.15), transparent 45%), linear-gradient(145deg, rgba(22,26,60,0.96), rgba(6,9,26,0.98));
-    border: 1px solid rgba(120,105,255,0.50);
-    box-shadow: 0 25px 80px rgba(0,0,0,0.50), 0 0 50px rgba(80,60,255,0.13), inset 0 1px 0 rgba(255,255,255,0.08);
-}
-
-
-.login-container::before {
-    content: "";
-    position: absolute;
-    width: 300px;
-    height: 300px;
-    left: 50%;
-    top: -220px;
-    transform: translateX(-50%);
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(120,80,255,0.4), transparent 70%);
-}
-
-
-.login-icon {
-    position: relative;
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 18px auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 20px;
-    background: linear-gradient(135deg, #805dff, #367eff);
-    border: 1px solid rgba(210,195,255,0.7);
-    font-size: 38px;
-    box-shadow: 0 0 25px rgba(110,75,255,0.55), 0 0 55px rgba(40,110,255,0.25);
-    animation: loginFloat 3s ease-in-out infinite;
-}
-
-
-@keyframes loginFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
-}
-
-
-.login-title {
-    position: relative;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 30px;
-    font-weight: 900;
-    letter-spacing: 1px;
-    background: linear-gradient(90deg, #ffffff, #b59cff, #67bfff, #ffffff);
-    background-size: 250% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: galaxyTitle 5s linear infinite;
-}
-
-
-.login-subtitle {
-    position: relative;
-    color: #858eae;
-    font-size: 13px;
-    margin-top: 6px;
-}
-
-
-/* ============================================================
-   INPUT
-   ============================================================ */
-
-[data-testid="stTextInput"] label {
-    color: #cdd4ed !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-}
-
-
-[data-testid="stTextInput"] input {
-    height: 48px !important;
-    border-radius: 12px !important;
-    background: rgba(4,7,22,0.92) !important;
-    border: 1px solid rgba(105,105,170,0.35) !important;
-    color: white !important;
-    transition: all 0.3s ease !important;
-}
-
-
-[data-testid="stTextInput"] input:focus {
-    border-color: #7867ff !important;
-    box-shadow: 0 0 0 3px rgba(105,85,255,0.13), 0 0 25px rgba(90,70,255,0.18) !important;
-}
-
-
-/* ============================================================
-   BUTTONS
-   ============================================================ */
-
-.stButton > button {
-    min-height: 46px;
-    border-radius: 12px;
-    background: linear-gradient(100deg, #5847dc, #386fe1);
-    border: 1px solid rgba(145,125,255,0.55);
-    color: white;
-    font-weight: 700;
-    transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
-}
-
-
-.stButton > button:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.10);
-    box-shadow: 0 12px 35px rgba(70,75,225,0.42), 0 0 20px rgba(100,80,255,0.18);
-}
-
-
-.stButton > button:active {
-    transform: translateY(1px) scale(0.98);
-}
-
-
-/* ============================================================
-   CHAT
-   ============================================================ */
-
-[data-testid="stChatMessage"] {
-    border-radius: 15px;
     transition: all 0.25s ease;
 }
 
-
-[data-testid="stChatMessage"]:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+[data-testid="stSidebar"] .stButton > button:hover {
+    transform: translateX(4px);
+    background: linear-gradient(100deg, rgba(77,55,180,0.85), rgba(27,82,160,0.85));
+    border-color: rgba(130,115,255,0.8);
+    color: #ffffff;
+    box-shadow: 0 4px 18px rgba(70,60,200,0.3);
 }
 
+/* Prompt Dock Toolbar */
+.prompt-dock-wrapper {
+    background: rgba(10, 14, 38, 0.90);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(120, 105, 255, 0.35);
+    border-radius: 14px;
+    padding: 6px 12px;
+    margin-bottom: 8px;
+}
 
-/* ============================================================
-   CHAT INPUT
-   ============================================================ */
+[data-testid="stPopoverBody"] {
+    background: #080c24 !important;
+    border: 1px solid rgba(120, 105, 255, 0.45) !important;
+    border-radius: 16px !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.75) !important;
+}
 
+/* Chat Input custom glow */
 [data-testid="stChatInput"] textarea {
-    border-radius: 15px !important;
-    background: rgba(6,9,27,0.94) !important;
-    border: 1px solid rgba(105,105,175,0.38) !important;
+    background: rgba(6, 9, 27, 0.94) !important;
+    border: 1px solid rgba(105, 105, 175, 0.38) !important;
     color: white !important;
-    transition: all 0.3s ease !important;
+    border-radius: 15px !important;
 }
-
 
 [data-testid="stChatInput"] textarea:focus {
-    border-color: rgba(120,105,255,0.8) !important;
-    box-shadow: 0 0 20px rgba(90,75,255,0.15) !important;
+    border-color: rgba(120, 105, 255, 0.85) !important;
+    box-shadow: 0 0 20px rgba(90, 75, 255, 0.25) !important;
 }
 
-
-/* ============================================================
-   INFO BOX
-   ============================================================ */
-
-[data-testid="stSidebar"] .stAlert {
-    background: rgba(20,40,78,0.72) !important;
-    border: 1px solid rgba(80,145,255,0.30) !important;
-    border-radius: 14px !important;
+/* Login Screen */
+.login-container {
+    width: min(460px, 90vw);
+    margin: 10vh auto 22px auto;
+    padding: 38px 40px;
+    text-align: center;
+    border-radius: 25px;
+    background: linear-gradient(145deg, rgba(22,26,60,0.96), rgba(6,9,26,0.98));
+    border: 1px solid rgba(120,105,255,0.50);
+    box-shadow: 0 25px 80px rgba(0,0,0,0.50);
 }
 
-
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
-
-@media (max-width: 768px) {
-    .login-container {
-        width: 88vw;
-        padding: 30px 24px;
-        margin-top: 5vh;
-    }
-
-    .login-title {
-        font-size: 26px;
-    }
-
-    .hero-box {
-        width: 92%;
-        padding: 32px 20px;
-    }
-
-    .hero-title {
-        font-size: 28px;
-    }
+.login-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    background: linear-gradient(90deg, #ffffff, #b59cff, #67bfff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
-
 </style>
 """,
     unsafe_allow_html=True
 )
 
+# ============================================================
+# BACKEND API UTILS
+# ============================================================
 
-# ============================================================
-# QUANTUM AI RESPONSE
-# ============================================================
+def get_groq_client():
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        return None
+    return Groq(api_key=api_key)
 
 def ai_response(chat_history):
-    api_key = os.environ.get("GROQ_API_KEY")
-
-    if not api_key:
-        return (
-            "⚠️ **Groq API key is missing.**\n\n"
-            "Please set your `GROQ_API_KEY` environment variable."
-        )
-
-    client = Groq(api_key=api_key)
+    client = get_groq_client()
+    if not client:
+        return "⚠️ **Groq API key missing.** Please set your `GROQ_API_KEY` in your environment."
 
     system_message = {
         "role": "system",
-        "content": """
-You are a helpful, intelligent AI assistant.
-
-You can answer questions about any subject, including:
-science, mathematics, programming, technology, education,
-history, general knowledge, writing, and everyday questions.
-
-Do not restrict yourself strictly to quantum computing.
-
-Explain things clearly and adapt your answer to the user's level.
-
-If the user asks for code, provide working code and explain it.
-
-If the user asks a conceptual question, explain it with examples.
-
-If the question is unclear, ask a useful clarification.
-"""
+        "content": (
+            "You are Quantum Lab AI, an intelligent, helpful, and adaptive assistant. "
+            "You answer questions clearly across technical, scientific, and everyday domains. "
+            "When analyzing attached files or transcripts, integrate your reasoning seamlessly."
+        )
     }
 
     full_messages = [system_message] + chat_history
-
     try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-20b",
+            model="llama-3.3-70b-versatile",
             messages=full_messages
         )
         return response.choices[0].message.content
-
     except Exception as e:
-        return (
-            "⚠️ **Sorry, I could not generate a response right now.**\n\n"
-            f"Error details: `{str(e)}`"
+        return f"⚠️ **Inference error:** `{str(e)}`"
+
+def transcribe_audio(audio_data):
+    client = get_groq_client()
+    if not client:
+        return ""
+    try:
+        if isinstance(audio_data, bytes):
+            audio_file = io.BytesIO(audio_data)
+        else:
+            audio_file = audio_data
+        audio_file.name = "audio.wav"
+        transcription = client.audio.transcriptions.create(
+            file=audio_file,
+            model="whisper-large-v3"
         )
-
-
-def answer_question(question, chat_history):
-    return ai_response(chat_history)
-
+        return transcription.text
+    except Exception as e:
+        st.error(f"Voice transcription failed: {e}")
+        return ""
 
 # ============================================================
-# LOGIN SCREEN
+# LOGIN FLOW
 # ============================================================
 
 if not st.session_state.logged_in:
     st.markdown(
-        """<div class="login-container">
-    <div class="login-icon">⚛️</div>
-    <div class="login-title">QUANTUM LAB</div>
-    <div class="login-subtitle">AI-Powered Learning Space</div>
-</div>""",
+        """
+        <div class="login-container">
+            <div style="font-size: 44px; margin-bottom: 10px;">⚛️</div>
+            <div class="login-title">QUANTUM LAB</div>
+            <p style="color: #8c98ba; font-size: 13px; margin-top: 6px;">Sign in to your Quantum Workspace</p>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
-    st.subheader("🔐 Login")
+    _, col2, _ = st.columns([1, 1.2, 1])
+    with col2:
+        email = st.text_input("Email", placeholder="researcher@quantum.lab")
+        password = st.text_input("Password", type="password", placeholder="••••••••")
 
-    email = st.text_input(
-        "Email address",
-        placeholder="Enter your email"
-    )
-
-    if st.button("🚀 Login", use_container_width=True):
-        if email.strip() == "":
-            st.error("Please enter your email address.")
-        else:
-            st.session_state.user_email = email.strip()
-            st.session_state.logged_in = True
-            st.success("Login successful!")
-            st.rerun()
-
+        if st.button("Initialize Terminal", use_container_width=True):
+            if email:
+                st.session_state.logged_in = True
+                st.session_state.user_email = email
+                st.rerun()
+            else:
+                st.warning("Please provide a valid email.")
     st.stop()
 
-
 # ============================================================
-# SIDEBAR
+# SIDEBAR (TOP-LEFT MENU: PROFILE, NEW CHAT, CHAT HISTORY)
 # ============================================================
 
 with st.sidebar:
-    # --------------------------------------------------------
-    # BRAND
-    # --------------------------------------------------------
+    # 1. Profile
+    username = st.session_state.user_email.split("@")[0].capitalize()
     st.markdown(
-        """<div class="quantum-brand">
-    <div class="brand-icon">⚛</div>
-    <div>
-        <div class="brand-title">QUANTUM LAB</div>
-        <div class="brand-subtitle">AI-Powered Learning Space</div>
-    </div>
-</div>""",
+        f"""
+        <div class="user-profile-card">
+            <div class="profile-avatar">👨‍🚀</div>
+            <div class="profile-info">
+                <div class="profile-name">{username}</div>
+                <div class="profile-status">● Quantum Node Online</div>
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
-    # --------------------------------------------------------
-    # USER
-    # --------------------------------------------------------
-    st.markdown('<div class="side-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-label">👤 &nbsp; Logged In</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="user-email">{st.session_state.user_email}</div>', unsafe_allow_html=True)
-
-    # --------------------------------------------------------
-    # NEW CHAT
-    # --------------------------------------------------------
-    st.markdown('<div class="side-divider"></div>', unsafe_allow_html=True)
-
-    if st.button("✚  New Chat", use_container_width=True):
-        chat_number = 1
-        while f"New Quantum Chat {chat_number}" in st.session_state.chats:
-            chat_number += 1
-
-        new_chat_name = f"New Quantum Chat {chat_number}"
-        st.session_state.chats[new_chat_name] = []
-        st.session_state.current_chat = new_chat_name
-        st.toast("New chat created!")
+    # 2. New Chat
+    if st.button("➕ New Chat", use_container_width=True):
+        st.session_state.chat_counter += 1
+        new_session = f"Quantum Session {st.session_state.chat_counter}"
+        st.session_state.chats[new_session] = []
+        st.session_state.current_chat = new_session
         st.rerun()
 
-    # --------------------------------------------------------
-    # YOUR CHATS
-    # --------------------------------------------------------
-    st.markdown('<div class="side-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">💬 &nbsp; Your Chats</div>', unsafe_allow_html=True)
+    st.markdown("<div style='margin: 10px 0; height: 1px; background: rgba(255,255,255,0.08);'></div>", unsafe_allow_html=True)
+    st.caption("**CHAT SESSIONS**")
 
-    chat_names = list(st.session_state.chats.keys())
-
-    for chat_name in chat_names:
-        is_current = chat_name == st.session_state.current_chat
-        button_text = f"🟣 {chat_name}" if is_current else f"💬 {chat_name}"
-
-        if st.button(button_text, key=f"open_{chat_name}", use_container_width=True):
+    # 3. Chat History Switcher
+    for chat_name in list(st.session_state.chats.keys()):
+        is_active = (chat_name == st.session_state.current_chat)
+        label = f"👉 {chat_name}" if is_active else f"💬 {chat_name}"
+        if st.button(label, key=f"session_btn_{chat_name}", use_container_width=True):
             st.session_state.current_chat = chat_name
             st.rerun()
 
-    # --------------------------------------------------------
-    # RENAME CHAT
-    # --------------------------------------------------------
-    st.markdown('<div class="side-divider"></div>', unsafe_allow_html=True)
+    st.markdown("<div style='margin: 14px 0; height: 1px; background: rgba(255,255,255,0.08);'></div>", unsafe_allow_html=True)
+    st.caption("**SESSION TOOLS**")
 
-    with st.expander("✏️ Rename Current Chat"):
-        current_name = st.session_state.current_chat
-        new_name = st.text_input("New chat name", value=current_name, key="rename_input")
-
-        if st.button("Save New Name", use_container_width=True):
-            new_name = new_name.strip()
-
-            if new_name == "":
-                st.error("Chat name cannot be empty.")
-            elif new_name == current_name:
-                st.info("This is already the current name.")
-            elif new_name in st.session_state.chats:
-                st.error("A chat with this name already exists.")
-            else:
-                st.session_state.chats[new_name] = st.session_state.chats.pop(current_name)
-                st.session_state.current_chat = new_name
-                st.success("Chat renamed!")
+    # 4. Session Operations
+    with st.expander("⚙️ Manage Session"):
+        rename_input = st.text_input("Rename Title", value=st.session_state.current_chat)
+        if st.button("Confirm Rename"):
+            if rename_input and rename_input != st.session_state.current_chat:
+                st.session_state.chats[rename_input] = st.session_state.chats.pop(st.session_state.current_chat)
+                st.session_state.current_chat = rename_input
                 st.rerun()
 
-    # --------------------------------------------------------
-    # DELETE CURRENT CHAT
-    # --------------------------------------------------------
-    st.markdown('<div class="side-divider"></div>', unsafe_allow_html=True)
+        if st.button("🗑️ Delete Current Chat"):
+            if len(st.session_state.chats) > 1:
+                del st.session_state.chats[st.session_state.current_chat]
+                st.session_state.current_chat = list(st.session_state.chats.keys())[0]
+                st.rerun()
+            else:
+                st.warning("Cannot delete the only remaining session.")
 
-    if st.button("🗑️ Delete Current Chat", use_container_width=True):
-        current_name = st.session_state.current_chat
+        if st.button("🧹 Clear Messages"):
+            st.session_state.chats[st.session_state.current_chat] = []
+            st.rerun()
 
-        if len(st.session_state.chats) == 1:
-            st.session_state.chats[current_name] = []
-            st.toast("Chat cleared!")
-        else:
-            del st.session_state.chats[current_name]
-            remaining_chats = list(st.session_state.chats.keys())
-            st.session_state.current_chat = remaining_chats[0]
-            st.toast("Chat deleted!")
-
-        st.rerun()
-
-    # --------------------------------------------------------
-    # CLEAR CONVERSATION
-    # --------------------------------------------------------
-    if st.button("🧹 Clear Conversation", use_container_width=True):
-        current_name = st.session_state.current_chat
-        st.session_state.chats[current_name] = []
-        st.toast("Conversation cleared!")
-        st.rerun()
-
-    # --------------------------------------------------------
-    # LOGOUT (LAST ITEM IN SIDEBAR)
-    # --------------------------------------------------------
+    # 5. Logout
     if st.button("🚪 Logout", use_container_width=True):
         st.session_state.logged_in = False
+        st.session_state.user_email = ""
         st.rerun()
 
-
 # ============================================================
-# MAIN AREA
-# ============================================================
-
-st.markdown(
-    """<div class="hero-box">
-    <div class="hero-icon">⚛️</div>
-    <div class="hero-title">QUANTUM AI TUTOR</div>
-    <div class="hero-subtitle">Explore quantum computing through conversation</div>
-    <div class="online">● AI TUTOR ONLINE</div>
-</div>""",
-    unsafe_allow_html=True
-)
-
-
-# ============================================================
-# CHAT INTERFACE & USER PROMPT TOPICS SYMBOL
+# CHAT CONVERSATION VIEW
 # ============================================================
 
-current_chat = st.session_state.current_chat
-messages = st.session_state.chats[current_chat]
+current_messages = st.session_state.chats[st.session_state.current_chat]
 
-# Display existing chat messages
-for message in messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+for message in current_messages:
+    role = message["role"]
+    avatar = "👨‍🚀" if role == "user" else "⚛️"
+    with st.chat_message(role, avatar=avatar):
+        st.markdown(message["content"])
 
-# Interactive Learning Mode Popover attached above User Prompt
-pop_col, _ = st.columns([0.25, 0.75])
-with pop_col:
-    with st.popover("💡 Learning Topics", use_container_width=True):
-        st.markdown("### 🧠 LEARNING MODE")
-        st.caption("Click a topic to ask the AI tutor:")
-        
-        topics = [
-            ("⚛️ Quantum Computing", "What is Quantum Computing?"),
-            ("🔵 Qubits", "What is a Qubit and how does it work?"),
-            ("〰️ Quantum Gates", "Explain Quantum Gates with examples."),
-            ("🧪 Qiskit", "How do I get started with Qiskit?")
-        ]
-        
-        for label, topic_prompt in topics:
-            if st.button(label, key=f"topic_{label}", use_container_width=True):
-                messages.append({"role": "user", "content": topic_prompt})
-                response_text = answer_question(topic_prompt, messages)
-                messages.append({"role": "assistant", "content": response_text})
-                st.rerun()
+# ============================================================
+# PROMPT SPACE: ATTACHMENTS (CAMERA, PHOTOS, FILES) & MIC
+# ============================================================
 
-# User input
-if prompt := st.chat_input("Ask anything about quantum computing..."):
-    # Append user prompt
-    messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.write(prompt)
+st.markdown("<div class='prompt-dock-wrapper'>", unsafe_allow_html=True)
 
-    # Generate and append AI response
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response_text = answer_question(prompt, messages)
-            st.write(response_text)
+col_attach, col_mic, col_status = st.columns([1.2, 1.2, 5])
 
-    messages.append({"role": "assistant", "content": response_text})
+attachment_notes = []
+
+# Attachments Popover: Camera, Photos, Files
+with col_attach:
+    with st.popover("📎 Attach"):
+        tab_cam, tab_photos, tab_files = st.tabs(["📷 Camera", "🖼️ Photos", "📁 Files"])
+
+        with tab_cam:
+            cam_capture = st.camera_input("Capture with Camera", key="dock_cam")
+            if cam_capture:
+                attachment_notes.append("📷 *Live Camera snapshot attached.*")
+                st.success("Snapshot staged.")
+
+        with tab_photos:
+            photo_uploads = st.file_uploader(
+                "Upload photos",
+                type=["png", "jpg", "jpeg", "webp"],
+                accept_multiple_files=True,
+                key="dock_photos"
+            )
+            if photo_uploads:
+                for photo in photo_uploads:
+                    attachment_notes.append(f"🖼️ *Photo:* `{photo.name}` ({round(photo.size / 1024, 1)} KB)")
+                st.success(f"{len(photo_uploads)} photo(s) staged.")
+
+        with tab_files:
+            file_uploads = st.file_uploader(
+                "Upload documents, code, or datasets",
+                type=["pdf", "txt", "csv", "py", "json", "docx"],
+                accept_multiple_files=True,
+                key="dock_files"
+            )
+            if file_uploads:
+                for fl in file_uploads:
+                    attachment_notes.append(f"📁 *Document:* `{fl.name}` ({round(fl.size / 1024, 1)} KB)")
+                st.success(f"{len(file_uploads)} file(s) staged.")
+
+# Microphone Popover: Record and Whisper Transcribe
+with col_mic:
+    with st.popover("🎙️ Voice"):
+        st.caption("Record voice prompt:")
+        audio_stream = st.audio_input("Record Audio", key="dock_mic")
+        if audio_stream:
+            with st.spinner("Transcribing quantum voice note..."):
+                transcription = transcribe_audio(audio_stream.read())
+                if transcription:
+                    st.session_state.staged_voice_text = transcription
+                    st.success("Transcribed successfully!")
+
+with col_status:
+    # Notification pills showing staged items
+    status_badges = []
+    if attachment_notes:
+        status_badges.append(f"📎 {len(attachment_notes)} item(s) attached")
+    if st.session_state.staged_voice_text:
+        status_badges.append(f"🎙️ Voice: \"{st.session_state.staged_voice_text[:35]}...\"")
+
+    if status_badges:
+        st.markdown(
+            f"<div style='padding: 6px 0; font-size: 11px; color: #62b0ff;'>{' | '.join(status_badges)}</div>",
+            unsafe_allow_html=True
+        )
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Main Text Input Bar
+typed_prompt = st.chat_input("Ask anything or submit instructions...")
+
+# Determine final query between typed or voice inputs
+chosen_text = typed_prompt if typed_prompt else (st.session_state.staged_voice_text if typed_prompt is None and st.session_state.staged_voice_text and not typed_prompt else None)
+
+if typed_prompt or (st.session_state.staged_voice_text and not typed_prompt and st.button("🚀 Send Voice Prompt")):
+    final_query = typed_prompt if typed_prompt else st.session_state.staged_voice_text
+
+    # Merge attachments metadata with the prompt
+    if attachment_notes:
+        full_query = f"{final_query}\n\n" + "\n".join(attachment_notes)
+    else:
+        full_query = final_query
+
+    # Reset staged voice
+    st.session_state.staged_voice_text = ""
+
+    # Append & display user message
+    current_messages.append({"role": "user", "content": full_query})
+    with st.chat_message("user", avatar="👨‍🚀"):
+        st.markdown(full_query)
+
+    # Compute AI response
+    with st.chat_message("assistant", avatar="⚛️"):
+        with st.spinner("Computing response..."):
+            reply = ai_response(current_messages)
+            st.markdown(reply)
+
+    current_messages.append({"role": "assistant", "content": reply})

@@ -1,5 +1,6 @@
 import io
 import hashlib
+import re
 
 import streamlit as st
 
@@ -64,6 +65,8 @@ DEFAULTS = {
     "processed_audio_hash": None,
     "audio_version": 0,
     "voice_error": None,
+    "recorded_audio_bytes": None,
+    "recording_filename": "quantum_recording.wav",
 
     "rename_session_id": None,
 
@@ -74,6 +77,12 @@ DEFAULTS = {
 
     "canvas_text": "",
     "notes_text": "",
+
+    # Added for safe Save/Clear functionality
+    "canvas_saved_text": "",
+    "notes_saved_text": "",
+    "canvas_version": 0,
+    "notes_version": 0,
 
     "prompt_version": 0,
 
@@ -794,10 +803,6 @@ section[data-testid="stSidebar"] .stButton button:hover {
    🎙️ QUANTUM MICROPHONE
    ========================================================= */
 
-/* ---------------------------------------------------------
-   MICROPHONE COLUMN
-   --------------------------------------------------------- */
-
 [class*="st-key-quantum_microphone_"] {
 
     width:
@@ -822,10 +827,6 @@ section[data-testid="stSidebar"] .stButton button:hover {
         visible !important;
 }
 
-
-/* ---------------------------------------------------------
-   AUDIO INPUT
-   --------------------------------------------------------- */
 
 [class*="st-key-quantum_microphone_"]
 [data-testid="stAudioInput"] {
@@ -873,10 +874,6 @@ section[data-testid="stSidebar"] .stButton button:hover {
         center !important;
 }
 
-
-/* ---------------------------------------------------------
-   MAIN MIC BUTTON
-   --------------------------------------------------------- */
 
 [class*="st-key-quantum_microphone_"] button {
 
@@ -944,10 +941,6 @@ section[data-testid="stSidebar"] .stButton button:hover {
 }
 
 
-/* ---------------------------------------------------------
-   REMOVE OLD ORBIT RINGS
-   --------------------------------------------------------- */
-
 [class*="st-key-quantum_microphone_"] button::before,
 [class*="st-key-quantum_microphone_"] button::after {
 
@@ -955,10 +948,6 @@ section[data-testid="stSidebar"] .stButton button:hover {
         none !important;
 }
 
-
-/* ---------------------------------------------------------
-   MICROPHONE ICON
-   --------------------------------------------------------- */
 
 [class*="st-key-quantum_microphone_"] button svg {
 
@@ -985,10 +974,6 @@ section[data-testid="stSidebar"] .stButton button:hover {
 }
 
 
-/* ---------------------------------------------------------
-   MIC HOVER
-   --------------------------------------------------------- */
-
 [class*="st-key-quantum_microphone_"] button:hover {
 
     transform:
@@ -1010,20 +995,12 @@ section[data-testid="stSidebar"] .stButton button:hover {
 }
 
 
-/* ---------------------------------------------------------
-   MIC ACTIVE
-   --------------------------------------------------------- */
-
 [class*="st-key-quantum_microphone_"] button:active {
 
     transform:
         scale(.94) !important;
 }
 
-
-/* ---------------------------------------------------------
-   HIDE AUDIO PLAYER
-   --------------------------------------------------------- */
 
 [class*="st-key-quantum_microphone_"] audio {
 
@@ -1708,6 +1685,184 @@ div[data-testid="stHorizontalBlock"]:has([class*="st-key-custom_prompt_"]) {
 }
 
 
+/* =========================================================
+   RECORDING ACTIONS
+   ========================================================= */
+
+[class*="st-key-download_wav_"] button,
+[class*="st-key-clear_recording_"] button {
+
+    min-height: 34px !important;
+
+    height: 34px !important;
+
+    padding: 0 4px !important;
+
+    border-radius: 9px !important;
+
+    font-size: 11px !important;
+
+    font-weight: 700 !important;
+
+    white-space: nowrap !important;
+}
+
+
+[class*="st-key-download_wav_"] button {
+
+    background:
+        rgba(15,23,42,.82) !important;
+
+    border:
+        1px solid rgba(96,165,250,.45) !important;
+}
+
+
+[class*="st-key-clear_recording_"] button {
+
+    background:
+        rgba(127,29,29,.30) !important;
+
+    border:
+        1px solid rgba(248,113,113,.42) !important;
+}
+
+
+[class*="st-key-download_wav_"] button:hover,
+[class*="st-key-clear_recording_"] button:hover {
+
+    transform:
+        translateY(-1px) !important;
+}
+
+
+[class*="st-key-quantum_microphone_"] [data-testid="stAudioInput"],
+[class*="st-key-quantum_microphone_"] [data-testid="stAudioInput"] > div {
+
+    overflow:
+        visible !important;
+}
+
+
+/* =========================================================
+   CANVAS / NOTES ACTION BUTTONS
+   ========================================================= */
+
+[class*="st-key-save_canvas_"] button,
+[class*="st-key-clear_canvas_"] button,
+[class*="st-key-save_notes_"] button,
+[class*="st-key-clear_notes_"] button {
+
+    min-height: 40px !important;
+
+    border-radius: 10px !important;
+
+    font-weight: 700 !important;
+}
+
+
+[class*="st-key-save_canvas_"] button,
+[class*="st-key-save_notes_"] button {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(99,102,241,.30),
+            rgba(59,130,246,.20)
+        ) !important;
+
+    border:
+        1px solid rgba(129,140,248,.50) !important;
+
+    color:
+        #eef2ff !important;
+}
+
+
+[class*="st-key-clear_canvas_"] button,
+[class*="st-key-clear_notes_"] button {
+
+    background:
+        rgba(127,29,29,.30) !important;
+
+    border:
+        1px solid rgba(248,113,113,.42) !important;
+
+    color:
+        #fecaca !important;
+}
+
+
+/* =========================================================
+   DRIVE BUTTON
+   ========================================================= */
+
+.drive-insert-button a {
+
+    width: 100% !important;
+
+    min-height: 42px !important;
+
+    border-radius: 10px !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(99,102,241,.24),
+            rgba(59,130,246,.18)
+        ) !important;
+
+    border:
+        1px solid rgba(129,140,248,.48) !important;
+
+    color:
+        #eef2ff !important;
+
+    font-weight:
+        700 !important;
+
+    text-decoration:
+        none !important;
+
+    display:
+        flex !important;
+
+    align-items:
+        center !important;
+
+    justify-content:
+        center !important;
+}
+
+
+/* =========================================================
+   THINK RESULT
+   ========================================================= */
+
+.think-active {
+
+    padding:
+        10px 14px;
+
+    border-radius:
+        12px;
+
+    border:
+        1px solid rgba(139,92,246,.25);
+
+    background:
+        rgba(99,102,241,.06);
+
+    color:
+        #c7d2fe;
+
+    font-size:
+        12px;
+
+    margin:
+        8px 0 12px 0;
+}
+
 </style>
 
 <div class="quantum-space"></div>
@@ -1801,6 +1956,10 @@ def logout_user():
 
     st.session_state.processed_audio_hash = None
 
+    st.session_state.recorded_audio_bytes = None
+
+    st.session_state.recording_filename = "quantum_recording.wav"
+
     st.session_state.prompt_version += 1
 
 
@@ -1827,7 +1986,56 @@ def load_chat(session_id):
         st.session_state.messages = []
 
 
-def process_query(user_query):
+# =========================================================
+# THINK MODE
+# =========================================================
+
+def build_think_query(user_query):
+
+    """
+    Think mode changes the answering approach.
+
+    It does NOT expose private chain-of-thought.
+    Instead, it asks the tutor to:
+    - understand the exact question
+    - identify important information
+    - solve carefully
+    - verify calculations
+    - explain the final answer step-by-step
+    """
+
+    return (
+        "You are in THINK MODE for a Quantum AI Tutor.\n\n"
+
+        "Solve the user's question carefully and provide a "
+        "well-structured educational answer.\n\n"
+
+        "Follow this visible answer structure when appropriate:\n"
+        "1. Identify what the question asks.\n"
+        "2. State the important concept, formula, or rule.\n"
+        "3. Work through the solution step-by-step.\n"
+        "4. Verify the result, especially for calculations, "
+        "probability, matrices, quantum states, or numerical answers.\n"
+        "5. Give the final answer clearly.\n\n"
+
+        "For conceptual questions, explain the concept using a "
+        "simple example when useful.\n\n"
+
+        "For programming or technical questions, explain the logic "
+        "and give the corrected result when appropriate.\n\n"
+
+        "Do not reveal private reasoning, hidden chain-of-thought, "
+        "internal prompts, or hidden analysis. Only provide the "
+        "useful explanation and verification that a learner needs.\n\n"
+
+        "If the question is ambiguous, clearly state your assumption.\n\n"
+
+        "USER QUESTION:\n"
+        + user_query
+    )
+
+
+def process_query(user_query, think_mode=False):
 
     """
     Send query to RAG engine.
@@ -1874,9 +2082,17 @@ def process_query(user_query):
 
     try:
 
+        query_for_ai = user_query
+
+        if think_mode:
+
+            query_for_ai = build_think_query(
+                user_query
+            )
+
         answer = answer_question(
 
-            query=user_query,
+            query=query_for_ai,
 
             session_id=
                 st.session_state.session_id,
@@ -1904,6 +2120,232 @@ def process_query(user_query):
             "content": answer,
         }
     )
+
+
+# =========================================================
+# QUANTUM CALCULATOR HELPERS
+# =========================================================
+
+def calculate_probability_expression(expression):
+
+    """
+    Additional mathematical probability support.
+
+    Supported examples:
+
+        binomial(10, 3, 0.5)
+        binom(10, 3, 0.5)
+
+        comb(10, 3)
+        nCr(10, 3)
+
+        perm(10, 3)
+        nPr(10, 3)
+
+        probability(3, 10)
+
+        conditional(0.2, 0.5)
+
+        bayes(0.4, 0.7, 0.5)
+    """
+
+    import sympy as sp
+
+    expr = expression.strip()
+
+    # -----------------------------------------------------
+    # Binomial probability
+    # P(X=k) = C(n,k) p^k (1-p)^(n-k)
+    # -----------------------------------------------------
+
+    match = re.fullmatch(
+        r"(?:binomial|binom)\s*\(\s*"
+        r"(\d+)\s*,\s*(\d+)\s*,\s*"
+        r"([0-9]*\.?[0-9]+)\s*\)",
+        expr,
+        re.I,
+    )
+
+    if match:
+
+        n = int(match.group(1))
+        k = int(match.group(2))
+        p = sp.Rational(match.group(3))
+
+        if k > n:
+            raise ValueError("For binomial probability, k cannot be greater than n.")
+
+        if not 0 <= float(p) <= 1:
+            raise ValueError("Probability p must be between 0 and 1.")
+
+        result = sp.simplify(
+            sp.binomial(n, k)
+            * p ** k
+            * (1 - p) ** (n - k)
+        )
+
+        return (
+            "Binomial probability",
+            result,
+            f"P(X={k}) = C({n},{k}) × p^{k} × (1-p)^({n-k})"
+        )
+
+
+    # -----------------------------------------------------
+    # Combination
+    # -----------------------------------------------------
+
+    match = re.fullmatch(
+        r"(?:comb|ncr)\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)",
+        expr,
+        re.I,
+    )
+
+    if match:
+
+        n = int(match.group(1))
+        r = int(match.group(2))
+
+        if r > n:
+            raise ValueError("r cannot be greater than n.")
+
+        result = sp.binomial(n, r)
+
+        return (
+            "Combination",
+            result,
+            f"C({n},{r})"
+        )
+
+
+    # -----------------------------------------------------
+    # Permutation
+    # -----------------------------------------------------
+
+    match = re.fullmatch(
+        r"(?:perm|npr)\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)",
+        expr,
+        re.I,
+    )
+
+    if match:
+
+        n = int(match.group(1))
+        r = int(match.group(2))
+
+        if r > n:
+            raise ValueError("r cannot be greater than n.")
+
+        result = sp.factorial(n) / sp.factorial(n - r)
+
+        return (
+            "Permutation",
+            sp.simplify(result),
+            f"P({n},{r})"
+        )
+
+
+    # -----------------------------------------------------
+    # Simple probability
+    # probability(favorable,total)
+    # -----------------------------------------------------
+
+    match = re.fullmatch(
+        r"probability\s*\(\s*"
+        r"([0-9.]+)\s*,\s*([0-9.]+)\s*\)",
+        expr,
+        re.I,
+    )
+
+    if match:
+
+        favorable = sp.Rational(match.group(1))
+        total = sp.Rational(match.group(2))
+
+        if total == 0:
+            raise ValueError("Total outcomes cannot be zero.")
+
+        result = sp.simplify(
+            favorable / total
+        )
+
+        return (
+            "Simple probability",
+            result,
+            "P(E) = favorable outcomes / total outcomes"
+        )
+
+
+    # -----------------------------------------------------
+    # Conditional probability
+    # conditional(joint,marginal)
+    #
+    # P(A|B) = P(A and B) / P(B)
+    # -----------------------------------------------------
+
+    match = re.fullmatch(
+        r"conditional\s*\(\s*"
+        r"([0-9.]+)\s*,\s*([0-9.]+)\s*\)",
+        expr,
+        re.I,
+    )
+
+    if match:
+
+        joint = sp.Rational(match.group(1))
+        marginal = sp.Rational(match.group(2))
+
+        if marginal == 0:
+            raise ValueError("The marginal probability cannot be zero.")
+
+        result = sp.simplify(
+            joint / marginal
+        )
+
+        return (
+            "Conditional probability",
+            result,
+            "P(A|B) = P(A ∩ B) / P(B)"
+        )
+
+
+    # -----------------------------------------------------
+    # Bayes theorem
+    # bayes(prior,likelihood,evidence)
+    #
+    # P(A|B) = P(B|A)P(A) / P(B)
+    # -----------------------------------------------------
+
+    match = re.fullmatch(
+        r"bayes\s*\(\s*"
+        r"([0-9.]+)\s*,\s*"
+        r"([0-9.]+)\s*,\s*"
+        r"([0-9.]+)\s*\)",
+        expr,
+        re.I,
+    )
+
+    if match:
+
+        prior = sp.Rational(match.group(1))
+        likelihood = sp.Rational(match.group(2))
+        evidence = sp.Rational(match.group(3))
+
+        if evidence == 0:
+            raise ValueError("Evidence probability cannot be zero.")
+
+        result = sp.simplify(
+            prior * likelihood / evidence
+        )
+
+        return (
+            "Bayes probability",
+            result,
+            "P(A|B) = P(B|A) × P(A) / P(B)"
+        )
+
+
+    return None
 
 
 # =========================================================
@@ -2071,10 +2513,6 @@ with st.sidebar:
 
         for chat in st.session_state.sessions:
 
-            # =================================================
-            # GET SESSION ID SAFELY
-            # =================================================
-
             session_id = (
                 chat.get("session_id")
                 or chat.get("id")
@@ -2083,10 +2521,6 @@ with st.sidebar:
             if not session_id:
                 continue
 
-
-            # =================================================
-            # GET TITLE SAFELY
-            # =================================================
 
             title = (
                 chat.get(
@@ -2111,19 +2545,11 @@ with st.sidebar:
             )
 
 
-            # =================================================
-            # CHAT ROW
-            # =================================================
-
             col1, col2, col3 = st.columns(
                 [0.62,0.19,0.19],
                 gap="small"
             )
 
-
-            # =================================================
-            # CHAT OPEN
-            # =================================================
 
             with col1:
 
@@ -2149,10 +2575,6 @@ with st.sidebar:
                     st.rerun()
 
 
-            # =================================================
-            # ✏️ RENAME BUTTON
-            # =================================================
-
             with col2:
 
                 rename_clicked = st.button(
@@ -2171,10 +2593,6 @@ with st.sidebar:
                     st.rerun()
 
 
-            # =================================================
-            # 🗑️ DELETE BUTTON
-            # =================================================
-
             with col3:
 
                 delete_clicked = st.button(
@@ -2185,10 +2603,6 @@ with st.sidebar:
                 )
 
                 if delete_clicked:
-
-                    # -----------------------------------------
-                    # Validate session ID before deleting
-                    # -----------------------------------------
 
                     if not session_id:
 
@@ -2201,19 +2615,11 @@ with st.sidebar:
 
                         try:
 
-                            # ---------------------------------
-                            # Delete from database
-                            # ---------------------------------
-
                             delete_chat(
                                 user_id=st.session_state.user_id,
                                 session_id=session_id,
                             )
 
-                            # ---------------------------------
-                            # Only update local state after
-                            # successful database deletion.
-                            # ---------------------------------
 
                             if (
                                 st.session_state.session_id
@@ -2233,15 +2639,7 @@ with st.sidebar:
                                 st.session_state.rename_session_id = None
 
 
-                            # ---------------------------------
-                            # Refresh database sessions
-                            # ---------------------------------
-
                             refresh_sessions()
-
-                            # ---------------------------------
-                            # Refresh UI
-                            # ---------------------------------
 
                             st.rerun()
 
@@ -2252,10 +2650,6 @@ with st.sidebar:
                                 f"Delete failed: {e}"
                             )
 
-
-            # =================================================
-            # ✏️ RENAME PANEL
-            # =================================================
 
             if (
                 st.session_state.rename_session_id
@@ -2281,10 +2675,6 @@ with st.sidebar:
                     gap="small"
                 )
 
-
-                # =================================================
-                # SAVE RENAME
-                # =================================================
 
                 with rename_col1:
 
@@ -2316,26 +2706,13 @@ with st.sidebar:
 
                             try:
 
-                                # -----------------------------
-                                # Rename in database
-                                # -----------------------------
-
                                 rename_chat(
                                     user_id=st.session_state.user_id,
                                     session_id=session_id,
                                     new_title=clean_title,
                                 )
 
-                                # -----------------------------
-                                # Close rename panel only
-                                # after successful rename
-                                # -----------------------------
-
                                 st.session_state.rename_session_id = None
-
-                                # -----------------------------
-                                # Refresh chat list
-                                # -----------------------------
 
                                 refresh_sessions()
 
@@ -2348,10 +2725,6 @@ with st.sidebar:
                                     f"Rename failed: {e}"
                                 )
 
-
-                # =================================================
-                # CANCEL RENAME
-                # =================================================
 
                 with rename_col2:
 
@@ -2478,29 +2851,63 @@ if st.session_state.show_canvas:
 
     canvas_text = st.text_area(
         "Canvas",
+        value=st.session_state.canvas_saved_text,
         placeholder=
             "Write your quantum notes, equations or ideas...",
         height=220,
-        key="canvas_text",
+        key=f"canvas_text_{st.session_state.canvas_version}",
     )
 
-    canvas_col1, canvas_col2 = st.columns(2)
+    canvas_col1, canvas_col2, canvas_col3 = st.columns(
+        [1, 1, 1]
+    )
 
+
+    # =====================================================
+    # SAVE CANVAS
+    # =====================================================
 
     with canvas_col1:
 
         if st.button(
             "💾 Save Canvas",
             use_container_width=True,
-            key="save_canvas",
+            key=f"save_canvas_{st.session_state.canvas_version}",
         ):
+
+            st.session_state.canvas_saved_text = canvas_text
 
             st.success(
                 "Canvas saved for this session."
             )
 
 
+    # =====================================================
+    # CLEAR CANVAS
+    # =====================================================
+
     with canvas_col2:
+
+        if st.button(
+            "🧹 Clear Canvas",
+            use_container_width=True,
+            key=f"clear_canvas_{st.session_state.canvas_version}",
+        ):
+
+            st.session_state.canvas_saved_text = ""
+
+            st.session_state.canvas_text = ""
+
+            st.session_state.canvas_version += 1
+
+            st.rerun()
+
+
+    # =====================================================
+    # CLOSE CANVAS
+    # =====================================================
+
+    with canvas_col3:
 
         if st.button(
             "✖ Close Canvas",
@@ -2523,13 +2930,63 @@ if st.session_state.show_notes:
         "📝 Quantum Notes"
     )
 
-    st.text_area(
+    st.caption(
+        "Write your important concepts here..."
+    )
+
+    notes_text = st.text_area(
         "Notes",
+        value=st.session_state.notes_saved_text,
         placeholder=
             "Write your important concepts here...",
         height=200,
-        key="notes_text",
+        key=f"notes_text_{st.session_state.notes_version}",
     )
+
+
+    notes_col1, notes_col2 = st.columns(
+        [1, 1]
+    )
+
+
+    # =====================================================
+    # SAVE NOTES
+    # =====================================================
+
+    with notes_col1:
+
+        if st.button(
+            "💾 Save Notes",
+            use_container_width=True,
+            key=f"save_notes_{st.session_state.notes_version}",
+        ):
+
+            st.session_state.notes_saved_text = notes_text
+
+            st.success(
+                "Quantum notes saved for this session."
+            )
+
+
+    # =====================================================
+    # CLEAR NOTES
+    # =====================================================
+
+    with notes_col2:
+
+        if st.button(
+            "🧹 Clear Notes",
+            use_container_width=True,
+            key=f"clear_notes_{st.session_state.notes_version}",
+        ):
+
+            st.session_state.notes_saved_text = ""
+
+            st.session_state.notes_text = ""
+
+            st.session_state.notes_version += 1
+
+            st.rerun()
 
 
 # =========================================================
@@ -2543,36 +3000,406 @@ if st.session_state.show_calculator:
     )
 
     st.caption(
-        "Calculate quantum expressions, probabilities and basic formulas."
+        "Solve symbolic, complex, matrix, probability and quantum-state expressions."
     )
 
     calc_expression = st.text_input(
         "Expression",
-        placeholder=
-            "Example: 0.5 + 0.25",
+        placeholder=(
+            "Examples: |1/sqrt(2)|^2  •  P(X=2)  •  det([[0,1],[1,0]])"
+        ),
         key="calculator_expression",
     )
 
-    if st.button(
-        "Calculate",
-        key="calculate_button",
-    ):
+    calc_col1, calc_col2 = st.columns([0.82, 0.18], gap="small")
 
-        try:
 
-            result = float(
-                calc_expression
-            )
+    with calc_col1:
 
-            st.success(
-                f"Result: {result}"
-            )
+        if st.button(
+            "⚡ Calculate",
+            use_container_width=True,
+            key="calculate_button",
+        ):
 
-        except Exception:
+            try:
 
-            st.info(
-                "Enter a valid numeric expression."
-            )
+                import sympy as sp
+
+                expr = calc_expression.strip()
+
+                if not expr:
+
+                    st.warning(
+                        "Please enter an expression."
+                    )
+
+                else:
+
+                    # =================================================
+                    # ADDITIONAL MATHEMATICAL PROBABILITY OPERATIONS
+                    # =================================================
+
+                    probability_result = (
+                        calculate_probability_expression(
+                            expr
+                        )
+                    )
+
+
+                    if probability_result:
+
+                        title, result, formula = (
+                            probability_result
+                        )
+
+                        st.success(
+                            f"{title}: {result}"
+                        )
+
+                        st.markdown(
+                            f"**Formula:** `{formula}`"
+                        )
+
+                        st.write(
+                            f"Decimal: {sp.N(result, 12)}"
+                        )
+
+                        if result.is_real:
+
+                            decimal_value = float(
+                                sp.N(result)
+                            )
+
+                            if 0 <= decimal_value <= 1:
+
+                                st.write(
+                                    f"Percentage: "
+                                    f"{decimal_value * 100:.4f}%"
+                                )
+
+
+                    else:
+
+                        # -------------------------------------------------
+                        # Common notation normalisation.
+                        # -------------------------------------------------
+
+                        cleaned = (
+                            expr.replace("√", "sqrt")
+                            .replace("π", "pi")
+                            .replace("−", "-")
+                            .replace("×", "*")
+                            .replace("·", "*")
+                            .replace("⟩", ">")
+                            .replace("⟨", "<")
+                            .replace("^", "**")
+                        )
+
+
+                        # -------------------------------------------------
+                        # Quantum ket/state expressions
+                        # -------------------------------------------------
+
+                        ket_pattern = re.compile(
+                            r"(?P<coef>[+\-]?\s*(?:\([^()]*\)|[^+\-]*?))\s*\|(?P<ket>[01]+)>"
+                        )
+
+                        matches = list(
+                            ket_pattern.finditer(cleaned)
+                        )
+
+
+                        if matches:
+
+                            basis = {}
+
+                            for m in matches:
+
+                                coef_text = (
+                                    m.group("coef")
+                                    .strip()
+                                    .replace(" ", "")
+                                )
+
+                                if coef_text in ("", "+"):
+
+                                    coef_text = "1"
+
+                                elif coef_text == "-":
+
+                                    coef_text = "-1"
+
+
+                                coef = sp.sympify(
+                                    coef_text,
+                                    locals={
+                                        "sqrt": sp.sqrt,
+                                        "I": sp.I,
+                                        "i": sp.I,
+                                        "pi": sp.pi
+                                    }
+                                )
+
+                                ket = m.group("ket")
+
+                                basis[ket] = sp.simplify(
+                                    basis.get(ket, 0)
+                                    + coef
+                                )
+
+
+                            parts = []
+
+                            total = sp.S(0)
+
+
+                            for ket, coef in sorted(
+                                basis.items()
+                            ):
+
+                                if coef == 0:
+                                    continue
+
+                                prob = sp.simplify(
+                                    sp.Abs(coef) ** 2
+                                )
+
+                                total += prob
+
+
+                                if coef == 1:
+
+                                    parts.append(
+                                        f"|{ket}⟩"
+                                    )
+
+                                elif coef == -1:
+
+                                    parts.append(
+                                        f"-|{ket}⟩"
+                                    )
+
+                                else:
+
+                                    parts.append(
+                                        f"({coef})|{ket}⟩"
+                                    )
+
+
+                            st.success(
+                                "Quantum state solved"
+                            )
+
+                            st.markdown(
+                                "**State:** "
+                                + " + ".join(parts)
+                                .replace("+ -", "- ")
+                            )
+
+                            st.markdown(
+                                "**Measurement probabilities:**"
+                            )
+
+
+                            for ket, coef in sorted(
+                                basis.items()
+                            ):
+
+                                prob = sp.simplify(
+                                    sp.Abs(coef) ** 2
+                                )
+
+                                percentage = (
+                                    float(
+                                        sp.N(prob)
+                                    ) * 100
+                                )
+
+                                st.write(
+                                    f"P(|{ket}⟩) = "
+                                    f"{prob}  "
+                                    f"({percentage:.4f}%)"
+                                )
+
+
+                            st.write(
+                                "**Total probability:** "
+                                f"{sp.simplify(total)}"
+                            )
+
+
+                            if sp.simplify(total - 1) != 0:
+
+                                st.info(
+                                    "The amplitudes do not form a "
+                                    "normalized quantum state. "
+                                    "The values above are |amplitude|² "
+                                    "before normalization."
+                                )
+
+
+                        # -------------------------------------------------
+                        # Absolute-value probability:
+                        # |amplitude|²
+                        # -------------------------------------------------
+
+                        else:
+
+                            prob_match = re.fullmatch(
+                                r"\|(.+)\|\s*\*\*\s*2",
+                                cleaned
+                            )
+
+
+                            if prob_match:
+
+                                amp = sp.sympify(
+                                    prob_match.group(1),
+                                    locals={
+                                        "sqrt": sp.sqrt,
+                                        "I": sp.I,
+                                        "i": sp.I,
+                                        "pi": sp.pi
+                                    }
+                                )
+
+                                prob = sp.simplify(
+                                    sp.Abs(amp) ** 2
+                                )
+
+                                st.success(
+                                    f"Quantum probability = {prob}"
+                                )
+
+                                st.write(
+                                    f"Percentage = "
+                                    f"{float(sp.N(prob))*100:.4f}%"
+                                )
+
+
+                            # -------------------------------------------------
+                            # Mathematical probability shortcuts
+                            # -------------------------------------------------
+
+                            elif re.search(
+                                r"\b(?:P\s*\(|probability|conditional|bayes)\b",
+                                cleaned,
+                                re.I
+                            ):
+
+                                try:
+
+                                    result = sp.sympify(
+                                        cleaned,
+                                        locals={
+                                            "sqrt": sp.sqrt,
+                                            "I": sp.I,
+                                            "i": sp.I,
+                                            "pi": sp.pi,
+                                            "binomial": sp.binomial,
+                                            "comb": sp.binomial,
+                                            "factorial": sp.factorial,
+                                        }
+                                    )
+
+                                    result = sp.simplify(
+                                        result
+                                    )
+
+                                    st.success(
+                                        f"Probability result: {result}"
+                                    )
+
+                                    st.write(
+                                        f"Decimal: "
+                                        f"{sp.N(result, 12)}"
+                                    )
+
+                                except Exception:
+
+                                    st.info(
+                                        "For probability calculations, "
+                                        "use formats such as "
+                                        "`probability(3,10)`, "
+                                        "`conditional(0.2,0.5)`, "
+                                        "`bayes(0.4,0.7,0.5)`, or "
+                                        "`binomial(10,3,0.5)`."
+                                    )
+
+
+                            else:
+
+                                result = sp.sympify(
+                                    cleaned,
+                                    locals={
+                                        "sqrt": sp.sqrt,
+                                        "I": sp.I,
+                                        "i": sp.I,
+                                        "pi": sp.pi,
+                                        "sin": sp.sin,
+                                        "cos": sp.cos,
+                                        "tan": sp.tan,
+                                        "log": sp.log,
+                                        "exp": sp.exp,
+                                        "abs": sp.Abs,
+
+                                        "det":
+                                            lambda x:
+                                                sp.Matrix(x).det(),
+
+                                        "trace":
+                                            lambda x:
+                                                sp.Matrix(x).trace(),
+
+                                        "simplify":
+                                            sp.simplify,
+
+                                        "factor":
+                                            sp.factor,
+
+                                        "expand":
+                                            sp.expand,
+
+                                        "Matrix":
+                                            sp.Matrix,
+                                    }
+                                )
+
+
+                                simplified = sp.simplify(
+                                    result
+                                )
+
+
+                                st.success(
+                                    f"Result: {simplified}"
+                                )
+
+                                st.write(
+                                    f"Decimal: "
+                                    f"{sp.N(simplified, 12)}"
+                                )
+
+
+            except Exception as e:
+
+                st.error(
+                    f"Could not solve the expression: {e}"
+                )
+
+
+    with calc_col2:
+
+        if st.button(
+            "✖ Close",
+            use_container_width=True,
+            key="close_calculator",
+        ):
+
+            st.session_state.show_calculator = False
+
+            st.rerun()
 
 
 # =========================================================
@@ -2685,9 +3512,49 @@ with prompt_col1:
             )
 
             st.caption(
-                "Attach a Google Drive file link."
+                "Insert a document from your Google Drive or paste its share link."
             )
 
+
+            # =================================================
+            # INSERT DOCUMENT FROM MY DRIVE
+            # =================================================
+
+            st.markdown(
+                "#### 📂 Insert document from My Drive"
+            )
+
+            st.markdown(
+                """
+                <div class="drive-insert-button">
+                """,
+                unsafe_allow_html=True,
+            )
+
+            st.link_button(
+                "📂 Insert document from My Drive",
+                "https://drive.google.com/drive/my-drive",
+                use_container_width=True,
+            )
+
+            st.markdown(
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+            st.caption(
+                "Open your Drive, copy the document's share link, "
+                "then paste it below."
+            )
+
+
+            # =================================================
+            # PASTE DRIVE LINK
+            # =================================================
+
+            st.markdown(
+                "#### 🔗 Paste Drive Link"
+            )
 
             drive_url = st.text_input(
 
@@ -2825,27 +3692,68 @@ with prompt_col1:
 with prompt_col4:
 
     audio_value = st.audio_input(
-
         "🎙️",
-
-        key=
-            f"quantum_microphone_{st.session_state.audio_version}",
-
+        key=f"quantum_microphone_{st.session_state.audio_version}",
         label_visibility="collapsed",
-
     )
+
+    audio_has_data = (
+        st.session_state.recorded_audio_bytes
+        is not None
+    )
+
+    rec_col1, rec_col2 = st.columns(
+        2,
+        gap="small"
+    )
+
+    with rec_col1:
+
+        if audio_has_data:
+
+            st.download_button(
+                "⬇ WAV",
+                data=
+                    st.session_state.recorded_audio_bytes,
+                file_name=
+                    st.session_state.recording_filename,
+                mime="audio/wav",
+                use_container_width=True,
+                key=
+                    f"download_wav_{st.session_state.audio_version}",
+            )
+
+    with rec_col2:
+
+        if audio_has_data:
+
+            if st.button(
+                "✕ Clear",
+                use_container_width=True,
+                key=
+                    f"clear_recording_{st.session_state.audio_version}",
+            ):
+
+                st.session_state.recorded_audio_bytes = None
+
+                st.session_state.processed_audio_hash = None
+
+                st.session_state.audio_version += 1
+
+                st.rerun()
 
 
 if audio_value is not None:
 
     try:
 
-        audio_bytes = (
-            audio_value.getvalue()
-        )
-
+        audio_bytes = audio_value.getvalue()
 
         if audio_bytes:
+
+            st.session_state.recorded_audio_bytes = (
+                audio_bytes
+            )
 
             audio_hash = hashlib.md5(
                 audio_bytes
@@ -2883,9 +3791,7 @@ if audio_value is not None:
                     ) as source:
 
                         recorded_audio = (
-                            recognizer.record(
-                                source
-                            )
+                            recognizer.record(source)
                         )
 
 
@@ -2921,9 +3827,9 @@ if audio_value is not None:
                     except sr.UnknownValueError:
 
                         st.session_state.voice_error = (
-                            "I couldn't understand the recording. Please try again."
+                            "I couldn't understand the recording. "
+                            "Please try again."
                         )
-
 
                     except sr.RequestError as e:
 
@@ -3005,6 +3911,11 @@ with prompt_col3:
         use_container_width=True,
 
         key="think_button",
+
+        help=(
+            "Think mode gives a more structured answer "
+            "with concept, steps, verification and final result."
+        ),
 
     )
 
@@ -3091,6 +4002,8 @@ if st.session_state.learning_mode:
 
 final_query = ""
 
+think_mode_active = False
+
 
 if (
     enter_submitted
@@ -3103,6 +4016,15 @@ if (
         final_query = (
             user_prompt.strip()
         )
+
+
+        # =================================================
+        # THINK MODE
+        # =================================================
+
+        if think_clicked:
+
+            think_mode_active = True
 
     else:
 
@@ -3117,9 +4039,25 @@ if (
 
 if final_query:
 
-    process_query(
-        final_query
-    )
+    if think_mode_active:
+
+        with st.spinner(
+            "🧠 Thinking — analyzing the question, "
+            "checking the relevant context and preparing "
+            "a structured answer..."
+        ):
+
+            process_query(
+                final_query,
+                think_mode=True,
+            )
+
+    else:
+
+        process_query(
+            final_query,
+            think_mode=False,
+        )
 
 
     # -----------------------------------------------------
